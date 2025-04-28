@@ -27,20 +27,33 @@ This guide will walk you through the process of setting up Auth0 authentication 
    - **Allowed Web Origins**: `http://localhost:5173`
 3. Scroll down and click "Save Changes"
 
-### 3. Configure Auth0 in the Memorix Application
+### 3. Configure Auth0 in the Memorix Application (Secure Method)
 
-1. Open the `src/auth/auth0-config.js` file in the Memorix project
-2. Update the config with your Auth0 application details:
+#### Using the Credential Setup Script (Recommended)
 
-```js
-export const auth0Config = {
-  domain: "YOUR_AUTH0_DOMAIN", // e.g. dev-xyz123.us.auth0.com
-  clientId: "YOUR_AUTH0_CLIENT_ID",
-  redirectUri: window.location.origin,
-  useRefreshTokens: true,
-  cacheLocation: "localstorage"
-};
-```
+We've created a simple script to help you securely store your Auth0 credentials in a local environment file:
+
+1. Run the setup script:
+   ```
+   node scripts/create-env.js
+   ```
+2. Follow the prompts to enter your Auth0 credentials
+3. The script will create a `.env.local` file with your credentials
+4. This file is automatically ignored by git, so your credentials won't be committed to the repository
+
+#### Manual Setup
+
+If you prefer to set up credentials manually:
+
+1. Create a file named `.env.local` in the project root with the following content:
+   ```
+   VITE_AUTH0_DOMAIN=your-auth0-domain.region.auth0.com
+   VITE_AUTH0_CLIENT_ID=your-auth0-client-id
+   VITE_AUTH0_AUDIENCE=your-auth0-audience-optional
+   VITE_ENV=development
+   ```
+
+2. Replace the placeholder values with your actual Auth0 credentials
 
 You can find your `domain` and `clientId` in the Auth0 application settings.
 
@@ -53,7 +66,30 @@ If your application will communicate with a backend API:
 3. Enter a name (e.g. "Memorix API")
 4. Enter an identifier (e.g. `https://api.memorix.com`)
 5. Click "Create"
-6. Add the API identifier to your `auth0-config.js` as the `audience` property
+6. Add the API identifier to your `.env.local` file as the `VITE_AUTH0_AUDIENCE` value
+
+## Security Best Practices
+
+To keep your Auth0 credentials and other sensitive information secure:
+
+1. **Never commit credentials directly into your code**
+   - Always use environment variables
+   - The `.env.local` file is already in `.gitignore` to prevent accidental commits
+
+2. **Use different Auth0 applications for development and production**
+   - Create separate Auth0 applications for each environment
+   - Use environment-specific `.env` files (e.g., `.env.production`)
+
+3. **Limit permissions and API scopes**
+   - Configure the minimum required permissions in Auth0
+
+4. **Regularly rotate credentials**
+   - Periodically rotate your Auth0 client secrets
+   - Update your environment files when credentials change
+
+5. **For production deployment**
+   - Set environment variables directly in your hosting platform (Vercel, Netlify, etc.)
+   - Never store production credentials in files or repositories
 
 ## Testing Authentication
 
@@ -68,6 +104,7 @@ If your application will communicate with a backend API:
 - [Auth0 React SDK Documentation](https://auth0.com/docs/quickstart/spa/react)
 - [Auth0 Universal Login](https://auth0.com/docs/universal-login)
 - [Auth0 Management API](https://auth0.com/docs/api/management/v2)
+- [Environment Variables in Vite](https://vitejs.dev/guide/env-and-mode.html)
 
 ## Troubleshooting
 
@@ -77,8 +114,13 @@ Ensure the callback URL in Auth0 settings exactly matches your application URL, 
 
 **Issue: Token validation errors**
 
-Verify that your domain and clientId are correctly set in the auth0-config.js file.
+Verify that your Auth0 domain and clientId are correctly set in your `.env.local` file.
 
 **Issue: User is not redirected after login**
 
-Check the `redirectUri` in your auth0-config.js and make sure it matches an allowed callback URL in your Auth0 settings. 
+Check that the `redirectUri` matches an allowed callback URL in your Auth0 settings.
+
+**Issue: Environment variables not loading**
+
+- Make sure you're using the `VITE_` prefix for all environment variables
+- Restart the development server after updating the `.env.local` file 
