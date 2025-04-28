@@ -12,6 +12,8 @@ import CloseIcon from '@mui/icons-material/Close'
 
 // Components
 import FlashcardDeck from './components/FlashcardDeck'
+import LoginButton from './components/LoginButton'
+import ProtectedRoute from './auth/ProtectedRoute'
 
 // Pages
 import Dashboard from './pages/Dashboard'
@@ -325,11 +327,11 @@ function Footer() {
 function App() {
   return (
     <Routes>
-      <Route path="/dashboard" element={<Dashboard />} />
-      <Route path="/progress" element={<Progress />} />
-      <Route path="/favorites" element={<Favorites />} />
-      <Route path="/quizzes" element={<Quizzes />} />
-      <Route path="/settings" element={<Settings />} />
+      <Route path="/dashboard" element={<ProtectedRoute element={<Dashboard />} />} />
+      <Route path="/progress" element={<ProtectedRoute element={<Progress />} />} />
+      <Route path="/favorites" element={<ProtectedRoute element={<Favorites />} />} />
+      <Route path="/quizzes" element={<ProtectedRoute element={<Quizzes />} />} />
+      <Route path="/settings" element={<ProtectedRoute element={<Settings />} />} />
       <Route path="/share/:type/:id" element={<SharedItem />} />
       <Route path="/share" element={<ShareFeature />} />
       <Route path="/" element={
