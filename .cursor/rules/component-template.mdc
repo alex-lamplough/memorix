@@ -1,0 +1,20 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Memorix Component Guidelines
+
+Use this template when creating new React components for Memorix:
+
+## Component Template
+@.cursor/templates/Component.tsx
+
+## Style Guidelines
+- Always use Tailwind CSS for styling
+- Follow the color scheme defined in rules.json
+- Primary accent color: #00ff94
+- Dark background: #18092a
+- Use responsive design with Tailwind modifiers (sm:, md:, lg:)
+- Components should be functional with React hooks
+- Organize imports: React first, third-party libraries second, local components last

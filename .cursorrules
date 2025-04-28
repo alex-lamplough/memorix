@@ -1,0 +1,20 @@
+# Memorix Application Guidelines
+
+## Project Documentation
+For full documentation on the Memorix project, please refer to the files in the .cursor/rules directory or the docs folder.
+
+## Styling Guidelines
+- Use Tailwind CSS exclusively for styling
+- Follow the color scheme with primary accent color #00ff94
+- Use responsive design with Tailwind modifiers
+- Ensure components are accessible
+
+## Component Creation
+- Create functional components with React hooks
+- Follow the established project structure
+- Organize imports: React first, third-party libraries second, local components last
+
+## Documentation
+- All new features should be well documented
+- Reference the style-guide.md for design guidelines
+- Use JSDoc comments for complex functions 

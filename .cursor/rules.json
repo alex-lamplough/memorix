@@ -1,0 +1,134 @@
+{
+  "name": "Memorix Styling Guidelines",
+  "description": "Rules to ensure consistent styling across the Memorix website",
+  "rules": [
+    {
+      "name": "Use Tailwind for styling",
+      "description": "Use Tailwind CSS classes for all styling instead of CSS modules or inline styles",
+      "pattern": "className=\"[^\"]*\"",
+      "good_examples": [
+        "className=\"text-white bg-[#18092a]/60 rounded-xl px-5 py-3.5 border border-gray-800/30\""
+      ],
+      "bad_examples": [
+        "style={{ color: 'white', backgroundColor: '#18092a' }}",
+        "css={`color: white; background-color: #18092a;`}"
+      ]
+    },
+    {
+      "name": "Color scheme",
+      "description": "Use consistent color scheme throughout the application",
+      "pattern": "\\b(text|bg|border|shadow)\\-\\[?#[0-9a-fA-F]+\\]?",
+      "good_examples": [
+        "text-[#00ff94]",
+        "bg-[#18092a]/60",
+        "border-[#00ff94]/30"
+      ],
+      "bad_examples": [
+        "text-blue-500",
+        "bg-green-400",
+        "text-[#ff00ff]"
+      ]
+    },
+    {
+      "name": "Primary accent color",
+      "description": "Use #00ff94 as the primary accent color for interactive elements",
+      "pattern": "#00ff94",
+      "good_examples": [
+        "text-[#00ff94]",
+        "border-[#00ff94]",
+        "hover:bg-[#00ff94]/20"
+      ],
+      "bad_examples": [
+        "text-green-500",
+        "text-[#00ffaa]"
+      ]
+    },
+    {
+      "name": "Background gradient",
+      "description": "Use consistent background gradient for page backgrounds",
+      "pattern": "bg-gradient-to-b from-\\[#2E0033\\] via-\\[#260041\\] to-\\[#1b1b2f\\]",
+      "good_examples": [
+        "bg-gradient-to-b from-[#2E0033] via-[#260041] to-[#1b1b2f]"
+      ],
+      "bad_examples": [
+        "bg-gradient-to-r from-purple-500 to-indigo-500",
+        "bg-gradient-to-b from-[#000033] via-[#000066] to-[#000099]"
+      ]
+    },
+    {
+      "name": "Card styling",
+      "description": "Use consistent card styling with dark background, border and shadow",
+      "pattern": "bg-\\[#[0-9a-fA-F]+\\]/[0-9]+ (rounded|border|shadow)",
+      "good_examples": [
+        "bg-[#18092a]/60 rounded-xl border border-gray-800/30 shadow-lg"
+      ],
+      "bad_examples": [
+        "bg-white rounded-md",
+        "bg-gray-100 border border-gray-200"
+      ]
+    },
+    {
+      "name": "Button styling",
+      "description": "Use consistent button styling with rounded corners and hover effects",
+      "pattern": "bg-\\[.+\\] text-\\[.+\\] (px|py)-[0-9]+ rounded-(lg|xl|full) hover:bg-\\[.+\\]",
+      "good_examples": [
+        "bg-[#00ff94]/10 text-[#00ff94] px-4 py-2 rounded-lg hover:bg-[#00ff94]/20 transition-colors border border-[#00ff94]/30"
+      ],
+      "bad_examples": [
+        "bg-blue-500 text-white px-4 py-2",
+        "rounded-md bg-green-500 hover:bg-green-600"
+      ]
+    },
+    {
+      "name": "Functional components",
+      "description": "Use functional components with React hooks",
+      "pattern": "function [A-Za-z]+\\(\\{[^}]*\\}\\)",
+      "good_examples": [
+        "function Header() {",
+        "function Hero({ title }) {"
+      ],
+      "bad_examples": [
+        "class Header extends React.Component {",
+        "const Header = (props) => {"
+      ]
+    },
+    {
+      "name": "Imports organization",
+      "description": "Organize imports with React imports first, then third-party libraries, then local components",
+      "pattern": "import [^;]+;",
+      "good_examples": [
+        "import { useState, useEffect } from 'react'",
+        "import BoltIcon from '@mui/icons-material/Bolt'",
+        "import logoWhite from './assets/MemorixLogoWhite.png'"
+      ]
+    },
+    {
+      "name": "Responsive design",
+      "description": "Use responsive classes to ensure the website looks good on all screen sizes",
+      "pattern": "(sm:|md:|lg:|xl:)",
+      "good_examples": [
+        "text-2xl sm:text-3xl md:text-4xl",
+        "flex-col md:flex-row",
+        "px-4 md:px-8"
+      ],
+      "bad_examples": [
+        "width: 100%;",
+        "font-size: 1.5rem;"
+      ]
+    },
+    {
+      "name": "Animation styles",
+      "description": "Use consistent animation styles",
+      "pattern": "(transition|transform|animate)-[a-zA-Z-]+",
+      "good_examples": [
+        "transition-all duration-500",
+        "transform-style-3d",
+        "animate-pulse"
+      ],
+      "bad_examples": [
+        "animation: 0.3s fade-in;",
+        "transition: all 0.5s ease;"
+      ]
+    }
+  ]
+} 
