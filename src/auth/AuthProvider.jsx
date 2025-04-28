@@ -1,6 +1,48 @@
-import React from 'react';
-import { Auth0Provider } from '@auth0/auth0-react';
+import React, { useEffect } from 'react';
+import { Auth0Provider, useAuth0 } from '@auth0/auth0-react';
 import { auth0Config } from './auth0-config';
+import { getEnvVariable } from '../utils/env-utils';
+
+/**
+ * User synchronization component that ensures the user exists in our database
+ */
+const UserSync = ({ children }) => {
+  const { isAuthenticated, getAccessTokenSilently, user } = useAuth0();
+  
+  useEffect(() => {
+    // Create or sync user with our database when they authenticate
+    const syncUserWithDatabase = async () => {
+      if (isAuthenticated && user) {
+        try {
+          // Get the access token to make authenticated API requests
+          const token = await getAccessTokenSilently();
+          
+          // Call our API to create/update the user
+          const apiUrl = getEnvVariable('API_URL', 'http://localhost:3000/api');
+          const response = await fetch(`${apiUrl}/users/me`, {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          });
+          
+          if (response.ok) {
+            console.log('User synchronized with database');
+          } else {
+            console.error('Failed to sync user with database');
+          }
+        } catch (error) {
+          console.error('Error syncing user with database:', error);
+        }
+      }
+    };
+    
+    syncUserWithDatabase();
+  }, [isAuthenticated, user, getAccessTokenSilently]);
+  
+  return <>{children}</>;
+};
 
 /**
  * Auth0 provider component that wraps the application
@@ -30,7 +72,9 @@ const AuthProvider = ({ children }) => {
       cacheLocation={cacheLocation}
       onRedirectCallback={onRedirectCallback}
     >
-      {children}
+      <UserSync>
+        {children}
+      </UserSync>
     </Auth0Provider>
   );
 };

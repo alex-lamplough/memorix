@@ -17,6 +17,11 @@ router.get('/me', async (req, res, next) => {
       // Extract user info from Auth0 token
       const userInfo = req.auth;
       
+      console.log('Creating new user from Auth0 profile:', { 
+        auth0Id: req.user.auth0Id,
+        email: userInfo.email || 'unknown@email.com' 
+      });
+      
       // Create new user
       user = await User.create({
         auth0Id: req.user.auth0Id,
@@ -25,6 +30,41 @@ router.get('/me', async (req, res, next) => {
         nickname: userInfo.nickname,
         picture: userInfo.picture
       });
+      
+      console.log(`✅ New user created in database: ${user._id}`);
+    } else {
+      console.log(`✅ Existing user found: ${user._id}`);
+      
+      // Update user info if it has changed in Auth0
+      const userInfo = req.auth;
+      let hasChanges = false;
+      
+      // Check if any user fields have changed
+      if (userInfo.name && user.name !== userInfo.name) {
+        user.name = userInfo.name;
+        hasChanges = true;
+      }
+      
+      if (userInfo.nickname && user.nickname !== userInfo.nickname) {
+        user.nickname = userInfo.nickname;
+        hasChanges = true;
+      }
+      
+      if (userInfo.picture && user.picture !== userInfo.picture) {
+        user.picture = userInfo.picture;
+        hasChanges = true;
+      }
+      
+      if (userInfo.email && user.email !== userInfo.email) {
+        user.email = userInfo.email;
+        hasChanges = true;
+      }
+      
+      // Only save if there are changes
+      if (hasChanges) {
+        console.log('Updating user profile with latest Auth0 data');
+        await user.save();
+      }
     }
     
     // Update last login
@@ -33,6 +73,7 @@ router.get('/me', async (req, res, next) => {
     
     res.json(user);
   } catch (error) {
+    console.error('Error getting/creating user:', error);
     next(error);
   }
 });
