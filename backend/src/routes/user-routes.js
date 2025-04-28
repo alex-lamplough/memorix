@@ -17,18 +17,27 @@ router.get('/me', async (req, res, next) => {
       // Extract user info from Auth0 token
       const userInfo = req.auth;
       
+      // Log the full user info for debugging
+      console.log('Auth0 user info received:', JSON.stringify(userInfo, null, 2));
+      
+      // Try to get email from various possible locations in the token
+      const email = userInfo.email || 
+                   (userInfo.emails && userInfo.emails[0]) || 
+                   userInfo.preferred_username ||
+                   `${userInfo.nickname || 'user'}@example.com`;
+      
       console.log('Creating new user from Auth0 profile:', { 
         auth0Id: req.user.auth0Id,
-        email: userInfo.email || 'unknown@email.com' 
+        email: email
       });
       
       // Create new user
       user = await User.create({
         auth0Id: req.user.auth0Id,
-        email: userInfo.email || 'unknown@email.com',
-        name: userInfo.name || 'Anonymous User',
-        nickname: userInfo.nickname,
-        picture: userInfo.picture
+        email: email,
+        name: userInfo.name || userInfo.nickname || 'Anonymous User',
+        nickname: userInfo.nickname || userInfo.given_name || '',
+        picture: userInfo.picture || ''
       });
       
       console.log(`✅ New user created in database: ${user._id}`);

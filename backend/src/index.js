@@ -30,23 +30,43 @@ app.use(express.json()); // Parse JSON request body
 const getMongoConnectionString = () => {
   const baseUri = process.env.MONGODB_URI || 'mongodb://localhost:27017';
   
-  // Remove any existing database name from the URI
-  const uriWithoutDb = baseUri.split('/').slice(0, 3).join('/');
+  // Check if this is a Railway MongoDB URL
+  const isRailwayMongo = baseUri.includes('railway.internal') || baseUri.includes('railway.app');
   
-  // Choose database name based on environment
-  let dbName;
-  if (process.env.NODE_ENV === 'production') {
-    dbName = 'memorix';
-  } else if (process.env.NODE_ENV === 'test') {
-    dbName = 'memorixTest';
+  if (isRailwayMongo) {
+    // For Railway MongoDB, keep the connection string as is, but ensure we're using the right database
+    // Remove any existing database name from the URI if present
+    const uriWithoutDb = baseUri.includes('/') ? baseUri.substring(0, baseUri.lastIndexOf('/')) : baseUri;
+    
+    // Choose database name based on environment
+    let dbName;
+    if (process.env.NODE_ENV === 'production') {
+      dbName = 'memorix';
+    } else if (process.env.NODE_ENV === 'test') {
+      dbName = 'memorixTest';
+    } else {
+      dbName = 'memorixDev';
+    }
+    
+    console.log(`🔧 Using ${dbName} database in ${process.env.NODE_ENV || 'development'} environment (Railway MongoDB)`);
+    return `${uriWithoutDb}/${dbName}`;
   } else {
-    dbName = 'memorixDev';
+    // For local MongoDB, use the logic we had before
+    const uriWithoutDb = baseUri.split('/').slice(0, 3).join('/');
+    
+    // Choose database name based on environment
+    let dbName;
+    if (process.env.NODE_ENV === 'production') {
+      dbName = 'memorix';
+    } else if (process.env.NODE_ENV === 'test') {
+      dbName = 'memorixTest';
+    } else {
+      dbName = 'memorixDev';
+    }
+    
+    console.log(`🔧 Using ${dbName} database in ${process.env.NODE_ENV || 'development'} environment (Local MongoDB)`);
+    return `${uriWithoutDb}/${dbName}`;
   }
-  
-  console.log(`🔧 Using ${dbName} database in ${process.env.NODE_ENV || 'development'} environment`);
-  
-  // Return the full connection string with the appropriate database name
-  return `${uriWithoutDb}/${dbName}`;
 };
 
 // Connect to MongoDB
