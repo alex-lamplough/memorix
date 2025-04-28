@@ -42,12 +42,57 @@ A modern flashcard and quiz application powered by AI, designed to help users le
    npm install
    ```
 
-3. Start the development server
+3. Set up environment variables
+   ```
+   npm run setup
+   ```
+   
+4. Start the development server
    ```
    npm run dev
    ```
 
-4. Open your browser and navigate to `http://localhost:5173`
+5. Open your browser and navigate to `http://localhost:5173`
+
+## Environment Configuration
+
+Memorix uses environment variables to manage configuration for different environments:
+
+### Development Environment
+
+In development mode, Memorix uses credentials from `.env.local` file. To set up:
+
+1. Run the setup script:
+   ```
+   npm run setup
+   ```
+
+2. Follow the prompts to enter your Auth0 credentials and other settings.
+
+3. The script creates a `.env.local` file that is excluded from git.
+
+### Production Environment
+
+For production deployment:
+
+1. Set environment variables in your hosting platform (e.g., Railway, Vercel, Netlify).
+
+2. Required variables:
+   - `VITE_AUTH0_DOMAIN`: Your Auth0 domain
+   - `VITE_AUTH0_CLIENT_ID`: Your Auth0 client ID
+   - `VITE_AUTH0_AUDIENCE`: (Optional) Your Auth0 API audience
+   - `VITE_ENV`: Set to "production"
+   - `VITE_API_URL`: Your production API URL
+
+3. The app automatically detects the environment and uses the appropriate configuration.
+
+### Validating Environment Setup
+
+To validate your environment variables:
+
+```
+npm run validate-env
+```
 
 ## Project Structure
 

@@ -8,7 +8,9 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "setup": "node scripts/create-env.js"
+    "setup": "node scripts/create-env.js",
+    "validate-env": "node -e \"import('./src/utils/validate-env.js').then(mod => mod.validateEnvironment())\"",
+    "start": "npm run build && vite preview"
   },
   "dependencies": {
     "@auth0/auth0-react": "^2.3.0",

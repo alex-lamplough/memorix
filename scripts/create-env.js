@@ -5,9 +5,13 @@
  * Run it with: node scripts/create-env.js
  */
 
-const fs = require('fs');
-const path = require('path');
-const readline = require('readline');
+import fs from 'fs';
+import path from 'path';
+import readline from 'readline';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const rl = readline.createInterface({
   input: process.stdin,
@@ -73,9 +77,13 @@ function createEnvFile() {
     if (currentVar >= envVars.length) {
       // We've got all the variables, write the file
       fs.writeFileSync(envFilePath, envFileContent);
+      
       console.log('✅ .env.local file created successfully!');
       console.log('🔒 Your credentials are now stored securely.');
       console.log('👉 Note: This file is in .gitignore and will not be committed to your repository.');
+      console.log('\n⚠️ IMPORTANT: These credentials are used only in development mode.');
+      console.log('For production deployment, set these environment variables in your hosting platform.');
+      console.log('If deploying to Railway, set these variables in your project settings.');
       rl.close();
       return;
     }
