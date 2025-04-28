@@ -1,6 +1,10 @@
 import { Link } from 'react-router-dom'
+import LoginButton from './components/LoginButton'
+import { useAuth } from './auth/useAuth'
 
 function Header() {
+  const { isAuthenticated } = useAuth();
+  
   return (
     <header className="absolute top-0 left-0 right-0 z-10 bg-transparent">
       <div className="max-w-7xl mx-auto px-8 md:px-16 py-6 flex items-center justify-between">
@@ -8,12 +12,21 @@ function Header() {
           M/
         </div>
         <div className="flex items-center gap-6">
-          <Link to="/dashboard" className="text-white text-sm font-semibold hover:text-[#00ff94] transition-colors">
-            Sign in
-          </Link>
-          <Link to="/signup" className="bg-white text-[#2a0845] text-sm px-4 py-1.5 rounded-lg font-bold hover:bg-[#00ff94] hover:text-[#2a0845] transition-colors shadow-sm border border-white/10">
-            Sign up
-          </Link>
+          {isAuthenticated ? (
+            <Link to="/dashboard" className="text-white text-sm font-semibold hover:text-[#00ff94] transition-colors">
+              Dashboard
+            </Link>
+          ) : (
+            <>
+              <Link to="/dashboard" className="text-white text-sm font-semibold hover:text-[#00ff94] transition-colors">
+                Features
+              </Link>
+              <Link to="/share" className="text-white text-sm font-semibold hover:text-[#00ff94] transition-colors">
+                Community
+              </Link>
+            </>
+          )}
+          <LoginButton />
         </div>
       </div>
     </header>
