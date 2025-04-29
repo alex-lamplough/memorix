@@ -15,10 +15,23 @@ router.use(getUserFromToken);
 router.get('/', async (req, res, next) => {
   try {
     const flashcardSets = await FlashcardSet.find({ userId: req.user.id })
-      .select('-cards')
+      .select('-cards.reviewHistory -cards.hint')
       .sort({ updatedAt: -1 });
     
-    res.json(flashcardSets);
+    // Transform the response to include card count and formatted study stats
+    const formattedSets = flashcardSets.map(set => {
+      const setObj = set.toObject();
+      return {
+        ...setObj,
+        cardCount: set.cards.length,
+        progress: set.studyStats.masteryLevel || 0,
+        lastStudied: set.studyStats.lastStudied || null,
+        // Don't send full card content to reduce payload size
+        cards: undefined
+      };
+    });
+    
+    res.json(formattedSets);
   } catch (error) {
     next(error);
   }

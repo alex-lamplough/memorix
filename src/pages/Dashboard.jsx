@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useMediaQuery } from '@mui/material'
 import { Menu as MenuIcon } from '@mui/icons-material'
 
@@ -19,8 +19,21 @@ import FlashcardSet from '../components/FlashcardSet'
 import Todo from '../components/Todo'
 import FlashcardCreationModal from '../components/FlashcardCreationModal'
 
+// Services
+import { flashcardService } from '../services/api'
+
 // This component was causing a conflict with the imported FlashcardSet
-function FlashcardCard({ title, cards, lastStudied, progress }) {
+function FlashcardCard({ title, cards, lastStudied, progress, id }) {
+  const navigate = useNavigate();
+  
+  const handleStudyClick = () => {
+    navigate(`/study/${id}`);
+  }
+  
+  const handleEditClick = () => {
+    navigate(`/edit/${id}`);
+  }
+  
   return (
     <div className="bg-[#18092a]/60 rounded-xl p-6 border border-gray-800/30 shadow-lg text-white">
       <div className="flex justify-between items-start mb-4">
@@ -48,10 +61,16 @@ function FlashcardCard({ title, cards, lastStudied, progress }) {
       </div>
       
       <div className="flex gap-2">
-        <button className="bg-[#00ff94]/10 text-[#00ff94] px-4 py-2 rounded-lg hover:bg-[#00ff94]/20 transition-colors border border-[#00ff94]/30 flex-1">
+        <button 
+          className="bg-[#00ff94]/10 text-[#00ff94] px-4 py-2 rounded-lg hover:bg-[#00ff94]/20 transition-colors border border-[#00ff94]/30 flex-1"
+          onClick={handleStudyClick}
+        >
           Study
         </button>
-        <button className="bg-[#18092a]/60 text-white px-4 py-2 rounded-lg border border-gray-800/30 hover:bg-[#18092a] transition-colors">
+        <button 
+          className="bg-[#18092a]/60 text-white px-4 py-2 rounded-lg border border-gray-800/30 hover:bg-[#18092a] transition-colors"
+          onClick={handleEditClick}
+        >
           Edit
         </button>
       </div>
@@ -119,40 +138,68 @@ function RecentActivity() {
 }
 
 function Dashboard() {
-  const [flashcardSets] = useState([
-    {
-      id: 1,
-      title: 'Physics Fundamentals',
-      cards: 24,
-      lastStudied: 'Today',
-      progress: 75
-    },
-    {
-      id: 2,
-      title: 'Spanish Vocabulary',
-      cards: 48,
-      lastStudied: 'Yesterday',
-      progress: 45
-    },
-    {
-      id: 3,
-      title: 'Web Development',
-      cards: 32,
-      lastStudied: '3 days ago',
-      progress: 90
-    },
-    {
-      id: 4,
-      title: 'IELTS Preparation',
-      cards: 56,
-      lastStudied: '1 week ago',
-      progress: 30
-    }
-  ]);
-  
+  const [flashcardSets, setFlashcardSets] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const isMobile = useMediaQuery('(max-width:768px)');
+  const navigate = useNavigate();
+  
+  // Fetch user's flashcard sets
+  useEffect(() => {
+    const fetchFlashcardSets = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        
+        const response = await flashcardService.getAllFlashcardSets();
+        console.log('Fetched flashcard sets:', response);
+        
+        // Transform data to match our component requirements
+        const transformedSets = response.map(set => ({
+          id: set._id,
+          title: set.title,
+          cards: set.cardCount || 0,
+          lastStudied: formatLastStudied(set.lastStudied),
+          progress: set.progress || 0
+        }));
+        
+        setFlashcardSets(transformedSets);
+      } catch (err) {
+        console.error('Error fetching flashcard sets:', err);
+        setError('Failed to load your flashcard sets. Please try again later.');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchFlashcardSets();
+  }, []);
+  
+  // Format the last studied date in a user-friendly way
+  const formatLastStudied = (dateString) => {
+    if (!dateString) return 'Never';
+    
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffTime = Math.abs(now - date);
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) {
+      // Check if it's today
+      return 'Today';
+    } else if (diffDays === 1) {
+      return 'Yesterday';
+    } else if (diffDays < 7) {
+      return `${diffDays} days ago`;
+    } else if (diffDays < 30) {
+      const weeks = Math.floor(diffDays / 7);
+      return `${weeks} ${weeks === 1 ? 'week' : 'weeks'} ago`;
+    } else {
+      return date.toLocaleDateString();
+    }
+  };
   
   // Lock body scroll when sidebar is open on mobile
   useEffect(() => {
@@ -169,6 +216,27 @@ function Dashboard() {
   
   const handleCreateButtonClick = () => {
     setIsCreateModalOpen(true);
+  };
+  
+  // Reload flashcard sets after creating a new set
+  const handleCloseCreateModal = () => {
+    setIsCreateModalOpen(false);
+    // Refresh flashcard sets after creating a new one
+    flashcardService.getAllFlashcardSets()
+      .then(response => {
+        const transformedSets = response.map(set => ({
+          id: set._id,
+          title: set.title,
+          cards: set.cardCount || 0,
+          lastStudied: formatLastStudied(set.lastStudied),
+          progress: set.progress || 0
+        }));
+        
+        setFlashcardSets(transformedSets);
+      })
+      .catch(err => {
+        console.error('Error refreshing flashcard sets:', err);
+      });
   };
   
   return (
@@ -226,17 +294,46 @@ function Dashboard() {
               </div>
             )}
             
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-              {flashcardSets.map(set => (
-                <FlashcardCard 
-                  key={set.id}
-                  title={set.title}
-                  cards={set.cards}
-                  lastStudied={set.lastStudied}
-                  progress={set.progress}
-                />
-              ))}
-            </div>
+            {isLoading ? (
+              <div className="flex justify-center items-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#00ff94]"></div>
+              </div>
+            ) : error ? (
+              <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-6 text-center">
+                <p className="text-white">{error}</p>
+                <button 
+                  className="mt-4 bg-[#00ff94]/10 text-[#00ff94] px-4 py-2 rounded-lg hover:bg-[#00ff94]/20 transition-colors border border-[#00ff94]/30"
+                  onClick={() => window.location.reload()}
+                >
+                  Retry
+                </button>
+              </div>
+            ) : flashcardSets.length === 0 ? (
+              <div className="bg-[#18092a]/60 rounded-xl p-8 border border-gray-800/30 shadow-lg text-center">
+                <h3 className="text-xl font-bold mb-4">No Flashcard Sets Yet</h3>
+                <p className="text-white/70 mb-6">Create your first flashcard set to start learning!</p>
+                <button 
+                  className="bg-[#00ff94]/10 text-[#00ff94] px-4 py-2 rounded-lg hover:bg-[#00ff94]/20 transition-colors border border-[#00ff94]/30 inline-flex items-center gap-1"
+                  onClick={handleCreateButtonClick}
+                >
+                  <AddCircleOutlineIcon fontSize="small" />
+                  <span>Create Your First Set</span>
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                {flashcardSets.map(set => (
+                  <FlashcardCard 
+                    key={set.id}
+                    id={set.id}
+                    title={set.title}
+                    cards={set.cards}
+                    lastStudied={set.lastStudied}
+                    progress={set.progress}
+                  />
+                ))}
+              </div>
+            )}
             
             <div className="mt-6 md:mt-8">
               <RecentActivity />
@@ -253,7 +350,7 @@ function Dashboard() {
       {/* Flashcard Creation Modal */}
       <FlashcardCreationModal 
         open={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
+        onClose={handleCloseCreateModal}
       />
     </div>
   )

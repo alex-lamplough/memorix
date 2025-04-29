@@ -41,7 +41,15 @@ export const flashcardService = {
   getAllFlashcardSets: async () => {
     try {
       const response = await api.get('/flashcards');
-      return response.data;
+      
+      // Process the response to include cardCount
+      const flashcardSets = response.data.map(set => ({
+        ...set,
+        // Add cardCount if not present (backend might not include it)
+        cardCount: set.cardCount || (set.cards ? set.cards.length : 0)
+      }));
+      
+      return flashcardSets;
     } catch (error) {
       console.error('Error fetching flashcard sets:', error);
       throw error;
