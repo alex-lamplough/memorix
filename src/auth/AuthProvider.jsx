@@ -74,12 +74,15 @@ const AuthProvider = ({ children }) => {
   const { domain, clientId, authorizationParams, useRefreshTokens, cacheLocation } = auth0Config;
   
   const onRedirectCallback = (appState) => {
-    // Handle redirect after authentication
+    // After authentication, redirect to the dashboard page
     window.history.replaceState(
       {},
       document.title,
-      appState?.returnTo || window.location.pathname
+      appState?.returnTo || '/dashboard'
     );
+    
+    // Navigate to the dashboard page
+    window.location.pathname = '/dashboard';
   };
 
   return (

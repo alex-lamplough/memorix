@@ -51,14 +51,14 @@ function Sidebar({ activePage = 'dashboard' }) {
             <img 
               src={user.picture} 
               alt={user.name} 
-              className="w-10 h-10 rounded-full border-2 border-[#00ff94]"
+              className="w-10 h-10 min-w-[2.5rem] rounded-full border-2 border-[#00ff94]"
               onError={(e) => {
                 e.target.src = `https://ui-avatars.com/api/?name=${user.name}&background=00ff94&color=18092a`;
               }}
             />
-            <div>
-              <div className="text-white font-medium">{user.name}</div>
-              <div className="text-white/50 text-xs">{user.email}</div>
+            <div className="overflow-hidden">
+              <div className="text-white font-medium truncate">{user.name}</div>
+              <div className="text-white/50 text-xs truncate" title={user.email}>{user.email}</div>
             </div>
           </div>
         </div>

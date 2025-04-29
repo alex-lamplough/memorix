@@ -40,16 +40,18 @@ const LoginButton = () => {
 
   return isAuthenticated ? (
     <div className="flex items-center gap-3">
-      <div className="hidden md:flex items-center gap-2">
+      <div className="hidden md:flex items-center gap-2 max-w-[200px]">
         <img 
           src={user?.picture} 
           alt={user?.name} 
-          className="w-8 h-8 rounded-full border-2 border-[#00ff94]"
+          className="w-8 h-8 min-w-[2rem] rounded-full border-2 border-[#00ff94]"
           onError={(e) => {
             e.target.src = `https://ui-avatars.com/api/?name=${user?.name}&background=00ff94&color=18092a`;
           }}
         />
-        <span className="text-white font-medium">{user?.name}</span>
+        <div className="overflow-hidden">
+          <span className="text-white font-medium truncate block">{user?.name}</span>
+        </div>
       </div>
       <button
         onClick={() => logout()}
