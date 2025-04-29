@@ -44,6 +44,54 @@ export const getMongoConnectionString = () => {
   if (envDbName) {
     console.log(`Using database name from MONGODB_DATABASE env variable: ${envDbName}`);
   }
+
+  // For MongoDB Atlas connection string
+  if (baseUri.includes('mongodb+srv://')) {
+    console.log('Using MongoDB Atlas connection string');
+    
+    // If MONGODB_DATABASE is explicitly set, use it
+    if (envDbName) {
+      // Find the database name in the URI
+      const dbPartIndex = baseUri.indexOf('?') > -1 ? 
+        baseUri.lastIndexOf('/', baseUri.indexOf('?')) : 
+        baseUri.lastIndexOf('/');
+      
+      if (dbPartIndex > -1) {
+        const questionMarkIndex = baseUri.indexOf('?');
+        if (questionMarkIndex > -1) {
+          // Replace the database name in the URI
+          return baseUri.substring(0, dbPartIndex + 1) + envDbName + baseUri.substring(questionMarkIndex);
+        } else {
+          // No query parameters, just replace the database name
+          return baseUri.substring(0, dbPartIndex + 1) + envDbName;
+        }
+      } else {
+        // No database in URI, append it
+        return baseUri + (baseUri.endsWith('/') ? '' : '/') + envDbName;
+      }
+    }
+    
+    // Check if we need to modify the database based on environment
+    const isProduction = process.env.NODE_ENV === 'production';
+    const dbToUse = isProduction ? 'memorix' : 'memorixDev';
+    
+    // Only modify if we're in production but the URI contains memorixDev 
+    // or we're in development but the URI contains memorix
+    if ((isProduction && baseUri.includes('/memorixDev?')) || 
+        (!isProduction && baseUri.includes('/memorix?'))) {
+      
+      console.log(`Changing database to match environment: ${dbToUse}`);
+      
+      // Replace the database name in the URI
+      const beforeDb = baseUri.substring(0, baseUri.lastIndexOf('/', baseUri.indexOf('?')) + 1);
+      const afterDb = baseUri.substring(baseUri.indexOf('?'));
+      
+      return beforeDb + dbToUse + afterDb;
+    }
+    
+    // Otherwise return the URI as is
+    return baseUri;
+  }
   
   // For Railway production, the URI already has the correct database
   if (baseUri.includes('mongodb.railway.internal')) {
@@ -105,7 +153,7 @@ export const getMongoConnectionString = () => {
   console.log(`Connecting to ${process.env.NODE_ENV || 'development'} database: ${dbName}`);
 
   // Handle standard MongoDB URLs
-  if (baseUri.includes('mongodb+srv://') || baseUri.includes('mongodb://')) {
+  if (baseUri.includes('mongodb://')) {
     // Extract the base URI without any database specification
     const lastSlashIndex = baseUri.lastIndexOf('/');
     if (lastSlashIndex !== -1 && lastSlashIndex < baseUri.length - 1) {
