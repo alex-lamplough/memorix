@@ -10,6 +10,7 @@ import flashcardRoutes from './routes/flashcard-routes.js';
 import userRoutes from './routes/user-routes.js';
 import aiRoutes from './routes/ai-routes.js';
 import { errorHandler } from './middleware/error-middleware.js';
+import { connectToMongoDB } from './db/mongodb.js';
 
 // Load environment variables
 dotenv.config();
@@ -26,80 +27,52 @@ app.use(cors({
 app.use(morgan('dev')); // Logging
 app.use(express.json()); // Parse JSON request body
 
-// Determine MongoDB connection string and database based on environment
-const getMongoConnectionString = () => {
-  const baseUri = process.env.MONGODB_URI || 'mongodb://localhost:27017';
+// Function to set up and start the server
+const setupServer = () => {
+  // API routes
+  app.use('/api/flashcards', flashcardRoutes);
+  app.use('/api/users', userRoutes);
+  app.use('/api/ai', aiRoutes);
+
+  // Health check endpoint
+  app.get('/api/health', (req, res) => {
+    res.status(200).json({ 
+      status: 'ok', 
+      time: new Date().toISOString(),
+      environment: process.env.NODE_ENV || 'development',
+      database: mongoose.connection.name
+    });
+  });
+
+  // Error handling middleware
+  app.use(errorHandler);
+
+  // Start server
+  const PORT = process.env.PORT || 3000;
   
-  // Check if this is a Railway MongoDB URL
-  const isRailwayMongo = baseUri.includes('railway.internal') || baseUri.includes('railway.app');
-  
-  if (isRailwayMongo) {
-    // For Railway MongoDB, keep the connection string as is, but ensure we're using the right database
-    // Remove any existing database name from the URI if present
-    const uriWithoutDb = baseUri.includes('/') ? baseUri.substring(0, baseUri.lastIndexOf('/')) : baseUri;
-    
-    // Choose database name based on environment
-    let dbName;
-    if (process.env.NODE_ENV === 'production') {
-      dbName = 'memorix';
-    } else if (process.env.NODE_ENV === 'test') {
-      dbName = 'memorixTest';
+  const server = app.listen(PORT, () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
+  }).on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+      console.log(`⚠️ Port ${PORT} is already in use, trying port ${PORT + 1}...`);
+      // Try another port
+      app.listen(PORT + 1, () => {
+        console.log(`🚀 Server running on port ${PORT + 1}`);
+        console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
+      });
     } else {
-      dbName = 'memorixDev';
+      console.error('Server error:', err);
     }
-    
-    console.log(`🔧 Using ${dbName} database in ${process.env.NODE_ENV || 'development'} environment (Railway MongoDB)`);
-    return `${uriWithoutDb}/${dbName}`;
-  } else {
-    // For local MongoDB, use the logic we had before
-    const uriWithoutDb = baseUri.split('/').slice(0, 3).join('/');
-    
-    // Choose database name based on environment
-    let dbName;
-    if (process.env.NODE_ENV === 'production') {
-      dbName = 'memorix';
-    } else if (process.env.NODE_ENV === 'test') {
-      dbName = 'memorixTest';
-    } else {
-      dbName = 'memorixDev';
-    }
-    
-    console.log(`🔧 Using ${dbName} database in ${process.env.NODE_ENV || 'development'} environment (Local MongoDB)`);
-    return `${uriWithoutDb}/${dbName}`;
-  }
+  });
 };
 
 // Connect to MongoDB
-mongoose.connect(getMongoConnectionString())
-  .then(() => {
-    console.log('✅ Connected to MongoDB');
+connectToMongoDB()
+  .then((connection) => {
+    setupServer();
   })
   .catch((err) => {
-    console.error('❌ MongoDB connection error:', err);
+    console.error('Failed to connect to MongoDB', err);
     process.exit(1);
-  });
-
-// API routes
-app.use('/api/flashcards', flashcardRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/ai', aiRoutes);
-
-// Health check endpoint
-app.get('/api/health', (req, res) => {
-  res.status(200).json({ 
-    status: 'ok', 
-    time: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development',
-    database: mongoose.connection.name
-  });
-});
-
-// Error handling middleware
-app.use(errorHandler);
-
-// Start server
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
-}); 
+  }); 

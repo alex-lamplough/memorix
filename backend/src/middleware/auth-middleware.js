@@ -1,6 +1,7 @@
 import { expressjwt } from 'express-jwt';
 import jwksRsa from 'jwks-rsa';
 import dotenv from 'dotenv';
+import axios from 'axios';
 
 dotenv.config();
 
@@ -16,6 +17,24 @@ export const checkJwt = expressjwt({
   issuer: `https://${process.env.AUTH0_DOMAIN}/`,
   algorithms: ['RS256']
 });
+
+// Fetch complete user profile from Auth0 Management API
+async function fetchUserProfile(userId, accessToken) {
+  try {
+    const response = await axios.get(
+      `https://${process.env.AUTH0_DOMAIN}/api/v2/users/${encodeURIComponent(userId)}`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`
+        }
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching user profile from Auth0:', error.message);
+    return null;
+  }
+}
 
 // Extract user information from token
 export const getUserFromToken = (req, res, next) => {

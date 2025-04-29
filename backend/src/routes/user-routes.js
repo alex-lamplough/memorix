@@ -1,6 +1,7 @@
 import express from 'express';
 import { checkJwt, getUserFromToken } from '../middleware/auth-middleware.js';
 import User from '../models/user-model.js';
+import { getUserProfile } from '../services/auth0-service.js';
 
 const router = express.Router();
 
@@ -16,69 +17,67 @@ router.get('/me', async (req, res, next) => {
     if (!user) {
       // Extract user info from Auth0 token
       const userInfo = req.auth;
+      const auth0Id = userInfo.sub;
       
-      // Log the full user info for debugging
-      console.log('Auth0 user info received:', JSON.stringify(userInfo, null, 2));
+      // Log the token for debugging
+      console.log('Auth0 token received:', JSON.stringify(userInfo, null, 2));
       
-      // Try to get email from various possible locations in the token
-      const email = userInfo.email || 
-                   (userInfo.emails && userInfo.emails[0]) || 
-                   userInfo.preferred_username ||
-                   `${userInfo.nickname || 'user'}@example.com`;
+      // Try to get full profile from Auth0 Management API
+      console.log('Fetching full profile from Auth0 Management API');
+      const auth0Profile = await getUserProfile(auth0Id);
       
-      console.log('Creating new user from Auth0 profile:', { 
-        auth0Id: req.user.auth0Id,
-        email: email
-      });
+      let email, name, picture;
+      
+      if (auth0Profile && auth0Profile.email) {
+        // Get details from Auth0 Management API
+        email = auth0Profile.email;
+        name = auth0Profile.name || auth0Profile.nickname || 'Memorix User';
+        picture = auth0Profile.picture || '';
+        
+        console.log('Using email from Auth0 Management API:', email);
+      } else {
+        // Fallback to token data or generate placeholder
+        email = userInfo.email || `${auth0Id.replace(/[|]/g, '-')}@memorix-user.com`;
+        name = userInfo.name || userInfo.nickname || 'Memorix User';
+        picture = userInfo.picture || '';
+        
+        console.log('Using fallback email:', email);
+      }
       
       // Create new user
       user = await User.create({
-        auth0Id: req.user.auth0Id,
-        email: email,
-        name: userInfo.name || userInfo.nickname || 'Anonymous User',
-        nickname: userInfo.nickname || userInfo.given_name || '',
-        picture: userInfo.picture || ''
+        auth0Id,
+        email,
+        name,
+        picture
       });
       
       console.log(`✅ New user created in database: ${user._id}`);
+      
+      // Flag for profile update if using placeholder email
+      if (email.includes('@memorix-user.com')) {
+        user.needsProfileUpdate = true;
+      }
     } else {
       console.log(`✅ Existing user found: ${user._id}`);
       
-      // Update user info if it has changed in Auth0
-      const userInfo = req.auth;
-      let hasChanges = false;
-      
-      // Check if any user fields have changed
-      if (userInfo.name && user.name !== userInfo.name) {
-        user.name = userInfo.name;
-        hasChanges = true;
+      // Try to update user profile with Auth0 data if needed
+      if (user.email.includes('@memorix-user.com')) {
+        console.log('User has placeholder email, checking Auth0 for real email');
+        const auth0Profile = await getUserProfile(user.auth0Id);
+        
+        if (auth0Profile && auth0Profile.email) {
+          console.log(`Updating email from ${user.email} to ${auth0Profile.email}`);
+          user.email = auth0Profile.email;
+          user.needsProfileUpdate = false;
+          await user.save();
+        }
       }
       
-      if (userInfo.nickname && user.nickname !== userInfo.nickname) {
-        user.nickname = userInfo.nickname;
-        hasChanges = true;
-      }
-      
-      if (userInfo.picture && user.picture !== userInfo.picture) {
-        user.picture = userInfo.picture;
-        hasChanges = true;
-      }
-      
-      if (userInfo.email && user.email !== userInfo.email) {
-        user.email = userInfo.email;
-        hasChanges = true;
-      }
-      
-      // Only save if there are changes
-      if (hasChanges) {
-        console.log('Updating user profile with latest Auth0 data');
-        await user.save();
-      }
+      // Update last login time
+      user.lastLogin = new Date();
+      await user.save();
     }
-    
-    // Update last login
-    user.lastLogin = new Date();
-    await user.save();
     
     res.json(user);
   } catch (error) {
