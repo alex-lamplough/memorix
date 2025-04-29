@@ -5,52 +5,47 @@
 /**
  * Validates a flashcard generation request
  * @param {Object} requestBody - The request body to validate
- * @returns {Object} Validation result with isValid flag and error message if invalid
+ * @returns {string|null} Error message if invalid, null if valid
  */
 export const validateFlashcardRequest = (requestBody) => {
   // Check if request body exists
   if (!requestBody) {
-    return {
-      isValid: false,
-      error: 'Request body is required'
-    };
+    return 'Request body is required';
   }
 
   // Check if either content or subject is provided
   const { content, subject } = requestBody;
-  if (!content && !subject) {
-    return {
-      isValid: false,
-      error: 'Either content or subject is required'
-    };
+  
+  // Content is required for generation
+  if (!content || typeof content !== 'string' || content.trim().length === 0) {
+    return 'Content is required and must be a non-empty string';
+  }
+  
+  // If content is too long, it might cause issues with the API
+  if (content.length > 10000) {
+    return 'Content is too long (maximum 10,000 characters)';
   }
 
   // Validate count if provided
   const count = requestBody.count;
   if (count !== undefined) {
-    if (!Number.isInteger(count) || count < 1 || count > 20) {
-      return {
-        isValid: false,
-        error: 'Count must be an integer between 1 and 20'
-      };
+    const parsedCount = parseInt(count, 10);
+    if (isNaN(parsedCount) || parsedCount < 1 || parsedCount > 20) {
+      return 'Count must be an integer between 1 and 20';
     }
   }
 
   // Validate difficulty if provided
   const difficulty = requestBody.difficulty;
   if (difficulty !== undefined) {
-    const validDifficulties = ['beginner', 'easy', 'medium', 'hard', 'expert'];
+    const validDifficulties = ['beginner', 'intermediate', 'advanced', 'expert', 'easy', 'medium', 'hard'];
     if (!validDifficulties.includes(difficulty.toLowerCase())) {
-      return {
-        isValid: false,
-        error: `Difficulty must be one of: ${validDifficulties.join(', ')}`
-      };
+      return `Difficulty must be one of: ${validDifficulties.join(', ')}`;
     }
   }
 
-  return {
-    isValid: true
-  };
+  // If we got here, validation passed
+  return null;
 };
 
 /**

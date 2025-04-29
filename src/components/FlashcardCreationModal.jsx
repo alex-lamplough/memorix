@@ -16,7 +16,15 @@ import {
   Tooltip,
   Paper,
   Snackbar,
-  Alert
+  Alert,
+  Grid,
+  Slider,
+  MenuItem,
+  Select,
+  FormControl,
+  InputLabel,
+  Switch,
+  FormControlLabel
 } from '@mui/material'
 
 // Icons
@@ -27,6 +35,7 @@ import EditIcon from '@mui/icons-material/Edit'
 import SaveIcon from '@mui/icons-material/Save'
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
 import CheckCircleIcon from '@mui/icons-material/CheckCircle'
+import FlashOnIcon from '@mui/icons-material/FlashOn'
 
 // Services
 import { flashcardService } from '../services/api'
@@ -198,11 +207,22 @@ const FlashcardCreationModal = ({ open, onClose }) => {
             backgroundColor: '#18092a',
             color: 'white',
             borderRadius: '12px',
+            overflow: 'hidden', // Prevent scrollbars from appearing on the dialog itself
+            maxHeight: '90vh',  // Limit height to prevent overflowing screen
           }
         }}
       >
-        <DialogTitle className="flex justify-between items-center">
-          <Typography variant="h6">
+        <DialogTitle 
+          sx={{ 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center', 
+            padding: '16px 24px',
+            borderBottom: '1px solid rgba(255, 255, 255, 0.08)'
+          }}
+        >
+          <Typography variant="h6" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
+            <FlashOnIcon sx={{ color: '#00ff94' }} />
             Create Flashcard Set
           </Typography>
           {!isLoading && (
@@ -212,227 +232,23 @@ const FlashcardCreationModal = ({ open, onClose }) => {
           )}
         </DialogTitle>
         
-        <DialogContent>
-          <Box className="mb-6">
-            <TextField
-              fullWidth
-              label="Title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              margin="normal"
-              required
-              InputLabelProps={{
-                style: { color: 'rgba(255, 255, 255, 0.7)' },
-              }}
-              InputProps={{
-                sx: { 
-                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                  color: 'white',
-                  '& .MuiOutlinedInput-notchedOutline': {
-                    borderColor: 'rgba(255, 255, 255, 0.2)',
-                  },
-                }
-              }}
-            />
-            
-            <TextField
-              fullWidth
-              label="Description (optional)"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              margin="normal"
-              multiline
-              rows={2}
-              InputLabelProps={{
-                style: { color: 'rgba(255, 255, 255, 0.7)' },
-              }}
-              InputProps={{
-                sx: { 
-                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                  color: 'white',
-                  '& .MuiOutlinedInput-notchedOutline': {
-                    borderColor: 'rgba(255, 255, 255, 0.2)',
-                  },
-                }
-              }}
-            />
-            
-            <TextField
-              fullWidth
-              label="Category (optional)"
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              margin="normal"
-              InputLabelProps={{
-                style: { color: 'rgba(255, 255, 255, 0.7)' },
-              }}
-              InputProps={{
-                sx: { 
-                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                  color: 'white',
-                  '& .MuiOutlinedInput-notchedOutline': {
-                    borderColor: 'rgba(255, 255, 255, 0.2)',
-                  },
-                }
-              }}
-            />
-          </Box>
-          
-          <Divider sx={{ backgroundColor: 'rgba(255, 255, 255, 0.1)', my: 2 }} />
-          
-          <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-            <Tabs 
-              value={activeTab} 
-              onChange={handleTabChange}
-              sx={{
-                '& .MuiTab-root': { color: 'rgba(255, 255, 255, 0.7)' },
-                '& .Mui-selected': { color: '#00ff94' },
-                '& .MuiTabs-indicator': { backgroundColor: '#00ff94' },
-              }}
-            >
-              <Tab 
-                label="Manual Creation" 
-                icon={<EditIcon />} 
-                iconPosition="start" 
-                disabled={isLoading}
-              />
-              <Tab 
-                label="AI-Assisted" 
-                icon={<AutoAwesomeIcon />} 
-                iconPosition="start"
-                disabled={isLoading}
-              />
-            </Tabs>
-          </Box>
-          
-          {activeTab === 0 ? (
-            // Manual creation tab
-            <Box>
-              <Typography variant="subtitle1" className="mb-4 font-medium">Create Flashcards</Typography>
-              
-              <Box className="space-y-6 max-h-[400px] overflow-y-auto pr-2">
-                {cards.map((card, index) => (
-                  <Paper 
-                    key={index} 
-                    elevation={0}
-                    sx={{ 
-                      p: 2, 
-                      backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                      border: '1px solid rgba(255, 255, 255, 0.1)',
-                      borderRadius: '8px',
-                    }}
-                  >
-                    <Box className="flex justify-between items-center mb-2">
-                      <Typography variant="subtitle2">Card {index + 1}</Typography>
-                      <IconButton 
-                        onClick={() => removeCard(index)}
-                        size="small"
-                        sx={{ color: 'rgba(255, 255, 255, 0.7)' }}
-                      >
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                    </Box>
-                    
-                    <TextField
-                      fullWidth
-                      label="Front"
-                      value={card.front}
-                      onChange={(e) => handleCardChange(index, 'front', e.target.value)}
-                      margin="dense"
-                      required
-                      InputLabelProps={{
-                        style: { color: 'rgba(255, 255, 255, 0.7)' },
-                      }}
-                      InputProps={{
-                        sx: { 
-                          backgroundColor: 'rgba(255, 255, 255, 0.03)',
-                          color: 'white',
-                          '& .MuiOutlinedInput-notchedOutline': {
-                            borderColor: 'rgba(255, 255, 255, 0.1)',
-                          },
-                        }
-                      }}
-                    />
-                    
-                    <TextField
-                      fullWidth
-                      label="Back"
-                      value={card.back}
-                      onChange={(e) => handleCardChange(index, 'back', e.target.value)}
-                      margin="dense"
-                      required
-                      multiline
-                      rows={2}
-                      InputLabelProps={{
-                        style: { color: 'rgba(255, 255, 255, 0.7)' },
-                      }}
-                      InputProps={{
-                        sx: { 
-                          backgroundColor: 'rgba(255, 255, 255, 0.03)',
-                          color: 'white',
-                          '& .MuiOutlinedInput-notchedOutline': {
-                            borderColor: 'rgba(255, 255, 255, 0.1)',
-                          },
-                        }
-                      }}
-                    />
-                  </Paper>
-                ))}
-              </Box>
-              
-              <Button 
-                startIcon={<AddIcon />}
-                onClick={addCard}
-                sx={{ 
-                  mt: 2,
-                  color: '#00ff94',
-                  borderColor: 'rgba(0, 255, 148, 0.5)',
-                  '&:hover': {
-                    backgroundColor: 'rgba(0, 255, 148, 0.1)',
-                    borderColor: '#00ff94',
-                  }
-                }}
-                variant="outlined"
-              >
-                Add Card
-              </Button>
-            </Box>
-          ) : (
-            // AI-assisted tab
-            <Box>
-              <Typography variant="subtitle1" className="mb-4 font-medium">Generate Flashcards with AI</Typography>
-              
-              <TextField
-                fullWidth
-                label="Enter a topic or paste content"
-                value={aiPrompt}
-                onChange={(e) => setAiPrompt(e.target.value)}
-                margin="normal"
-                required
-                multiline
-                rows={4}
-                InputLabelProps={{
-                  style: { color: 'rgba(255, 255, 255, 0.7)' },
-                }}
-                InputProps={{
-                  sx: { 
-                    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                    color: 'white',
-                    '& .MuiOutlinedInput-notchedOutline': {
-                      borderColor: 'rgba(255, 255, 255, 0.2)',
-                    },
-                  }
-                }}
-              />
-              
-              <Box className="flex gap-4 mt-4">
+        <DialogContent sx={{ padding: '20px 24px', height: 'auto', overflow: 'hidden' }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+            {/* Header info */}
+            <Grid container spacing={2} sx={{ mb: 3 }}>
+              <Grid item xs={12} md={6}>
                 <TextField
-                  label="Number of cards"
-                  type="number"
-                  value={cardCount}
-                  onChange={(e) => setCardCount(Math.max(1, Math.min(20, parseInt(e.target.value) || 5)))}
+                  fullWidth
+                  label="Title"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  variant="outlined"
+                  size="small"
+                  required
+                  InputLabelProps={{
+                    style: { color: 'rgba(255, 255, 255, 0.7)' },
+                  }}
                   InputProps={{
-                    inputProps: { min: 1, max: 20 },
                     sx: { 
                       backgroundColor: 'rgba(255, 255, 255, 0.05)',
                       color: 'white',
@@ -440,20 +256,19 @@ const FlashcardCreationModal = ({ open, onClose }) => {
                         borderColor: 'rgba(255, 255, 255, 0.2)',
                       },
                     }
-                  }}
-                  InputLabelProps={{
-                    style: { color: 'rgba(255, 255, 255, 0.7)' },
                   }}
                 />
-                
+              </Grid>
+              <Grid item xs={12} md={6}>
                 <TextField
-                  select
-                  label="Difficulty"
-                  value={difficulty}
-                  onChange={(e) => setDifficulty(e.target.value)}
-                  SelectProps={{
-                    native: true,
-                    sx: { color: 'white' }
+                  fullWidth
+                  label="Category"
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  variant="outlined"
+                  size="small"
+                  InputLabelProps={{
+                    style: { color: 'rgba(255, 255, 255, 0.7)' },
                   }}
                   InputProps={{
                     sx: { 
@@ -464,122 +279,413 @@ const FlashcardCreationModal = ({ open, onClose }) => {
                       },
                     }
                   }}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  variant="outlined"
+                  size="small"
                   InputLabelProps={{
                     style: { color: 'rgba(255, 255, 255, 0.7)' },
                   }}
-                >
-                  <option value="beginner">Beginner</option>
-                  <option value="intermediate">Intermediate</option>
-                  <option value="advanced">Advanced</option>
-                </TextField>
-              </Box>
-              
-              <Button
-                variant="contained"
-                startIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : <AutoAwesomeIcon />}
-                onClick={generateCardsWithAI}
-                disabled={isLoading || !aiPrompt}
-                sx={{ 
-                  mt: 3,
-                  mb: 3,
-                  backgroundColor: '#00ff94', 
-                  color: 'black',
-                  '&:hover': {
-                    backgroundColor: '#00cc78',
-                  },
-                  '&.Mui-disabled': {
-                    backgroundColor: 'rgba(0, 255, 148, 0.3)',
-                    color: 'rgba(0, 0, 0, 0.7)'
+                  InputProps={{
+                    sx: { 
+                      backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                      color: 'white',
+                      '& .MuiOutlinedInput-notchedOutline': {
+                        borderColor: 'rgba(255, 255, 255, 0.2)',
+                      },
+                    }
+                  }}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <FormControlLabel
+                  control={
+                    <Switch 
+                      checked={isPublic}
+                      onChange={(e) => setIsPublic(e.target.checked)}
+                      sx={{
+                        '& .MuiSwitch-switchBase.Mui-checked': {
+                          color: '#00ff94',
+                        },
+                        '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': {
+                          backgroundColor: '#00ff94',
+                        },
+                      }}
+                    />
                   }
+                  label="Make deck public"
+                  sx={{ color: 'rgba(255, 255, 255, 0.8)' }}
+                />
+              </Grid>
+            </Grid>
+            
+            {/* Tabs */}
+            <Box sx={{ mb: 2 }}>
+              <Tabs 
+                value={activeTab} 
+                onChange={handleTabChange}
+                variant="fullWidth"
+                sx={{
+                  '& .MuiTab-root': { 
+                    color: 'rgba(255, 255, 255, 0.7)',
+                    textTransform: 'none',
+                    fontWeight: 500,
+                  },
+                  '& .Mui-selected': { color: '#00ff94' },
+                  '& .MuiTabs-indicator': { backgroundColor: '#00ff94' },
+                  borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
                 }}
               >
-                {isLoading ? 'Generating...' : 'Generate Flashcards'}
-              </Button>
-              
-              {aiGeneratedCards.length > 0 && (
-                <>
-                  <Divider sx={{ backgroundColor: 'rgba(255, 255, 255, 0.1)', my: 2 }} />
-                  
-                  <Box className="flex justify-between items-center mb-3">
+                <Tab 
+                  label="Manual Creation" 
+                  icon={<EditIcon />} 
+                  iconPosition="start" 
+                  disabled={isLoading}
+                />
+                <Tab 
+                  label="AI-Assisted" 
+                  icon={<AutoAwesomeIcon />} 
+                  iconPosition="start"
+                  disabled={isLoading}
+                />
+              </Tabs>
+            </Box>
+            
+            {/* Tab content - using fixed height and overflow auto only on the content section */}
+            <Box sx={{ flexGrow: 1, overflow: 'hidden', height: '50vh', maxHeight: '350px' }}>
+              {activeTab === 0 ? (
+                // Manual creation tab
+                <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                     <Typography variant="subtitle1" className="font-medium">
-                      Generated Flashcards ({aiGeneratedCards.length})
+                      {cards.length} {cards.length === 1 ? 'Card' : 'Cards'}
                     </Typography>
-                    
-                    <Tooltip title="Use these cards (will switch to manual tab)">
-                      <Button
-                        variant="outlined"
-                        startIcon={<CheckCircleIcon />}
-                        onClick={useGeneratedCards}
-                        sx={{ 
-                          color: '#00ff94',
-                          borderColor: 'rgba(0, 255, 148, 0.5)',
-                          '&:hover': {
-                            backgroundColor: 'rgba(0, 255, 148, 0.1)',
-                            borderColor: '#00ff94',
-                          }
-                        }}
-                      >
-                        Use These Cards
-                      </Button>
-                    </Tooltip>
+                    <Button
+                      startIcon={<AddIcon />}
+                      onClick={addCard}
+                      variant="outlined"
+                      size="small"
+                      sx={{ 
+                        color: '#00ff94', 
+                        borderColor: '#00ff94',
+                        '&:hover': {
+                          borderColor: '#00ff94',
+                          backgroundColor: 'rgba(0, 255, 148, 0.1)',
+                        }
+                      }}
+                    >
+                      Add Card
+                    </Button>
                   </Box>
                   
-                  <Box className="space-y-4 max-h-[300px] overflow-y-auto pr-2">
-                    {aiGeneratedCards.map((card, index) => (
-                      <Paper 
-                        key={index} 
-                        elevation={0}
-                        sx={{ 
-                          p: 2, 
-                          backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                          border: '1px solid rgba(255, 255, 255, 0.1)',
-                          borderRadius: '8px',
-                        }}
-                      >
-                        <Typography variant="subtitle2" className="mb-1">
-                          Card {index + 1}
-                        </Typography>
-                        <Typography variant="body2" className="font-medium">
-                          Front: {card.front || card.question}
-                        </Typography>
-                        <Typography variant="body2" className="text-white/70 mt-2">
-                          Back: {card.back || card.answer}
-                        </Typography>
-                      </Paper>
-                    ))}
+                  <Box sx={{ 
+                    overflowY: 'auto', 
+                    flexGrow: 1,
+                    pr: 1,
+                    '&::-webkit-scrollbar': {
+                      width: '6px',
+                    },
+                    '&::-webkit-scrollbar-thumb': {
+                      backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                      borderRadius: '3px',
+                    },
+                  }}>
+                    <Grid container spacing={2}>
+                      {cards.map((card, index) => (
+                        <Grid item xs={12} key={index}>
+                          <Paper 
+                            elevation={0}
+                            sx={{ 
+                              p: 2, 
+                              backgroundColor: 'rgba(255, 255, 255, 0.03)',
+                              border: '1px solid rgba(255, 255, 255, 0.08)',
+                              borderRadius: '8px',
+                              transition: 'all 0.2s ease',
+                              '&:hover': {
+                                borderColor: 'rgba(0, 255, 148, 0.3)',
+                              }
+                            }}
+                          >
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                              <Typography variant="subtitle2" sx={{ color: '#00ff94' }}>Card {index + 1}</Typography>
+                              <IconButton 
+                                onClick={() => removeCard(index)}
+                                size="small"
+                                sx={{ 
+                                  color: 'rgba(255, 255, 255, 0.5)',
+                                  '&:hover': {
+                                    color: '#ff6b6b',
+                                    backgroundColor: 'rgba(255, 107, 107, 0.1)',
+                                  }
+                                }}
+                              >
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                            </Box>
+                            
+                            <Grid container spacing={2}>
+                              <Grid item xs={12} sm={6}>
+                                <TextField
+                                  fullWidth
+                                  label="Front"
+                                  value={card.front}
+                                  onChange={(e) => handleCardChange(index, 'front', e.target.value)}
+                                  variant="outlined"
+                                  size="small"
+                                  required
+                                  InputLabelProps={{
+                                    style: { color: 'rgba(255, 255, 255, 0.7)' },
+                                  }}
+                                  InputProps={{
+                                    sx: { 
+                                      backgroundColor: 'rgba(255, 255, 255, 0.02)',
+                                      color: 'white',
+                                      '& .MuiOutlinedInput-notchedOutline': {
+                                        borderColor: 'rgba(255, 255, 255, 0.1)',
+                                      },
+                                    }
+                                  }}
+                                />
+                              </Grid>
+                              <Grid item xs={12} sm={6}>
+                                <TextField
+                                  fullWidth
+                                  label="Back"
+                                  value={card.back}
+                                  onChange={(e) => handleCardChange(index, 'back', e.target.value)}
+                                  variant="outlined"
+                                  size="small"
+                                  required
+                                  InputLabelProps={{
+                                    style: { color: 'rgba(255, 255, 255, 0.7)' },
+                                  }}
+                                  InputProps={{
+                                    sx: { 
+                                      backgroundColor: 'rgba(255, 255, 255, 0.02)',
+                                      color: 'white',
+                                      '& .MuiOutlinedInput-notchedOutline': {
+                                        borderColor: 'rgba(255, 255, 255, 0.1)',
+                                      },
+                                    }
+                                  }}
+                                />
+                              </Grid>
+                            </Grid>
+                          </Paper>
+                        </Grid>
+                      ))}
+                    </Grid>
                   </Box>
-                </>
+                </Box>
+              ) : (
+                // AI-assisted tab
+                <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                  <Box sx={{ mb: 3 }}>
+                    <TextField
+                      fullWidth
+                      label="What would you like to create flashcards about?"
+                      value={aiPrompt}
+                      onChange={(e) => setAiPrompt(e.target.value)}
+                      variant="outlined"
+                      size="small"
+                      multiline
+                      rows={3}
+                      placeholder="E.g., The cell structure and function of organelles"
+                      InputLabelProps={{
+                        style: { color: 'rgba(255, 255, 255, 0.7)' },
+                      }}
+                      InputProps={{
+                        sx: { 
+                          backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                          color: 'white',
+                          '& .MuiOutlinedInput-notchedOutline': {
+                            borderColor: 'rgba(255, 255, 255, 0.2)',
+                          },
+                        }
+                      }}
+                    />
+                  </Box>
+                  
+                  <Grid container spacing={2} sx={{ mb: 3 }}>
+                    <Grid item xs={12} sm={6}>
+                      <Typography variant="body2" sx={{ mb: 1, color: 'rgba(255, 255, 255, 0.7)' }}>
+                        Number of Cards: {cardCount}
+                      </Typography>
+                      <Slider
+                        value={cardCount}
+                        onChange={(_, value) => setCardCount(value)}
+                        min={3}
+                        max={20}
+                        step={1}
+                        valueLabelDisplay="auto"
+                        sx={{
+                          color: '#00ff94',
+                          '& .MuiSlider-thumb': {
+                            '&:hover, &.Mui-focusVisible': {
+                              boxShadow: '0 0 0 8px rgba(0, 255, 148, 0.16)',
+                            },
+                          },
+                          '& .MuiSlider-rail': {
+                            backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                          },
+                        }}
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <FormControl fullWidth size="small" sx={{ mt: 1 }}>
+                        <InputLabel sx={{ color: 'rgba(255, 255, 255, 0.7)' }}>Difficulty Level</InputLabel>
+                        <Select
+                          value={difficulty}
+                          onChange={(e) => setDifficulty(e.target.value)}
+                          sx={{
+                            backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                            color: 'white',
+                            '& .MuiOutlinedInput-notchedOutline': {
+                              borderColor: 'rgba(255, 255, 255, 0.2)',
+                            },
+                          }}
+                        >
+                          <MenuItem value="beginner">Beginner</MenuItem>
+                          <MenuItem value="intermediate">Intermediate</MenuItem>
+                          <MenuItem value="advanced">Advanced</MenuItem>
+                          <MenuItem value="expert">Expert</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </Grid>
+                  </Grid>
+                  
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    onClick={generateCardsWithAI}
+                    disabled={!aiPrompt || isLoading}
+                    startIcon={isLoading ? <CircularProgress size={20} /> : <AutoAwesomeIcon />}
+                    sx={{
+                      bgcolor: '#00ff94',
+                      color: '#18092a',
+                      fontWeight: 'bold',
+                      '&:hover': {
+                        bgcolor: '#00cc75',
+                      },
+                      '&.Mui-disabled': {
+                        bgcolor: 'rgba(0, 255, 148, 0.3)',
+                        color: 'rgba(24, 9, 42, 0.7)',
+                      },
+                      mb: 2
+                    }}
+                  >
+                    {isLoading ? 'Generating...' : 'Generate Flashcards'}
+                  </Button>
+                  
+                  {/* Generated cards section */}
+                  {aiGeneratedCards.length > 0 && (
+                    <Box sx={{ 
+                      overflowY: 'auto', 
+                      flexGrow: 1,
+                      mt: 1,
+                      pr: 1,
+                      '&::-webkit-scrollbar': {
+                        width: '6px',
+                      },
+                      '&::-webkit-scrollbar-thumb': {
+                        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                        borderRadius: '3px',
+                      },
+                    }}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                        <Typography variant="subtitle1" sx={{ color: '#00ff94', display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <CheckCircleIcon fontSize="small" />
+                          Generated {aiGeneratedCards.length} Cards
+                        </Typography>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          onClick={useGeneratedCards}
+                          sx={{ 
+                            color: '#00ff94', 
+                            borderColor: '#00ff94',
+                            '&:hover': {
+                              borderColor: '#00ff94',
+                              backgroundColor: 'rgba(0, 255, 148, 0.1)',
+                            }
+                          }}
+                        >
+                          Use These Cards
+                        </Button>
+                      </Box>
+                      
+                      <Grid container spacing={2}>
+                        {aiGeneratedCards.map((card, index) => (
+                          <Grid item xs={12} sm={6} key={index}>
+                            <Paper 
+                              elevation={0}
+                              sx={{ 
+                                p: 2, 
+                                backgroundColor: 'rgba(255, 255, 255, 0.03)',
+                                border: '1px solid rgba(255, 255, 255, 0.08)',
+                                borderRadius: '8px',
+                                height: '100%'
+                              }}
+                            >
+                              <Typography variant="subtitle2" sx={{ color: '#00ff94', mb: 1 }}>Card {index + 1}</Typography>
+                              <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1 }}>
+                                {card.front || card.question}
+                              </Typography>
+                              <Divider sx={{ borderColor: 'rgba(255, 255, 255, 0.1)', my: 1 }} />
+                              <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.8)' }}>
+                                {card.back || card.answer}
+                              </Typography>
+                            </Paper>
+                          </Grid>
+                        ))}
+                      </Grid>
+                    </Box>
+                  )}
+                </Box>
               )}
             </Box>
-          )}
+          </Box>
         </DialogContent>
         
-        <DialogActions sx={{ padding: '16px 24px', justifyContent: 'space-between' }}>
+        <DialogActions sx={{ 
+          borderTop: '1px solid rgba(255, 255, 255, 0.08)', 
+          padding: '12px 24px',
+          justifyContent: 'space-between' 
+        }}>
           <Button 
-            onClick={onClose} 
-            variant="outlined"
+            onClick={onClose}
             disabled={isLoading}
             sx={{ 
-              color: 'white', 
-              borderColor: 'rgba(255, 255, 255, 0.5)',
+              color: 'rgba(255, 255, 255, 0.7)',
               '&:hover': {
-                borderColor: 'white',
                 backgroundColor: 'rgba(255, 255, 255, 0.05)',
-              }
+              } 
             }}
           >
             Cancel
           </Button>
-          <Button 
-            variant="contained" 
+          <Button
+            variant="contained"
+            color="primary"
             onClick={saveFlashcardSet}
             disabled={isLoading}
-            startIcon={isLoading ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
-            sx={{ 
-              backgroundColor: '#00ff94', 
-              color: 'black',
+            startIcon={isLoading ? <CircularProgress size={20} /> : <SaveIcon />}
+            sx={{
+              bgcolor: '#00ff94',
+              color: '#18092a',
+              fontWeight: 'bold',
               '&:hover': {
-                backgroundColor: '#00cc78',
+                bgcolor: '#00cc75',
+              },
+              '&.Mui-disabled': {
+                bgcolor: 'rgba(0, 255, 148, 0.3)',
+                color: 'rgba(24, 9, 42, 0.7)',
               }
             }}
           >
@@ -588,19 +694,20 @@ const FlashcardCreationModal = ({ open, onClose }) => {
         </DialogActions>
       </Dialog>
       
-      <Snackbar
-        open={showSnackbar}
-        autoHideDuration={4000}
+      {/* Snackbar for notifications */}
+      <Snackbar 
+        open={showSnackbar} 
+        autoHideDuration={4000} 
         onClose={() => setShowSnackbar(false)}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
         <Alert 
           onClose={() => setShowSnackbar(false)} 
-          severity={snackbarSeverity} 
+          severity={snackbarSeverity}
           sx={{ 
-            width: '100%', 
             backgroundColor: snackbarSeverity === 'success' ? '#00ff94' : undefined,
-            color: snackbarSeverity === 'success' ? 'black' : undefined
+            color: snackbarSeverity === 'success' ? '#18092a' : undefined,
+            fontWeight: snackbarSeverity === 'success' ? 'bold' : undefined
           }}
         >
           {snackbarMessage}
