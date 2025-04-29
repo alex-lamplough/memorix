@@ -43,29 +43,38 @@ export const getMongoConnectionString = () => {
   if (baseUri.includes('mongodb.railway.internal')) {
     console.log('Using Railway-provided MongoDB URI');
     
-    // Extract parts of the URI
-    const uriParts = new URL(baseUri);
-    const pathParts = uriParts.pathname.split('/');
-    const currentDb = pathParts.length > 1 ? pathParts[1] : '';
-    const params = uriParts.search;
-    
-    // Always use 'memorix' database in production
-    if (process.env.NODE_ENV === 'production') {
-      console.log(`Replacing database "${currentDb || 'none'}" with "memorix" in Railway URI`);
+    try {
+      // Parse the URI using URL
+      const uriParts = new URL(baseUri);
       
-      // Rebuild the URI with 'memorix' database
-      uriParts.pathname = '/memorix';
-      return uriParts.toString();
+      // Extract the database name or use empty string if none
+      const pathParts = uriParts.pathname.split('/');
+      const currentDb = pathParts.length > 1 ? pathParts[1] : '';
+      
+      // In production, set database to 'memorix'
+      if (process.env.NODE_ENV === 'production') {
+        const targetDb = 'memorix';
+        console.log(`Replacing database "${currentDb || 'none'}" with "${targetDb}" in Railway URI`);
+        
+        // IMPORTANT: preserve the original auth information (username/password)
+        // Just update the path portion to use the correct database name
+        uriParts.pathname = `/${targetDb}`;
+        return uriParts.toString();
+      }
+      
+      // For non-production, if no database specified, use memorixDev
+      if (!currentDb) {
+        console.log('No database specified in Railway URI, appending "memorixDev"');
+        uriParts.pathname = '/memorixDev';
+        return uriParts.toString();
+      }
+      
+      return baseUri;
+    } catch (error) {
+      console.error('Error parsing MongoDB URI:', error.message);
+      console.log('Falling back to original URI');
+      return baseUri;
     }
-    
-    // For non-production, use memorixDev if no database specified
-    if (!currentDb) {
-      console.log('No database specified in Railway URI, appending "memorixDev"');
-      uriParts.pathname = '/memorixDev';
-      return uriParts.toString();
-    }
-    
-    return baseUri;
   }
   
   // For other URIs, handle database selection
