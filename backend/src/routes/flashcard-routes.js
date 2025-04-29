@@ -71,21 +71,38 @@ router.post('/generate', async (req, res, next) => {
       return res.status(400).json({ error: 'Content is required' });
     }
     
-    // Generate flashcards using OpenAI
-    const cards = await openaiService.generateFlashcards(content, count, difficulty);
+    console.log(`Generating flashcards with: content length=${content.length}, count=${count}, difficulty=${difficulty}`);
     
-    // Generate a title for the flashcard set
-    const title = await openaiService.generateFlashcardSetTitle(content);
-    
-    // Return the generated flashcards and title
-    res.json({
-      cards,
-      title,
-      count: cards.length
-    });
+    try {
+      // Generate flashcards using OpenAI
+      const cards = await openaiService.generateFlashcards(content, count, difficulty);
+      
+      // Generate a title for the flashcard set
+      const title = await openaiService.generateFlashcardSetTitle(content);
+      
+      // Log success
+      console.log(`Successfully generated ${cards.length} flashcards`);
+      
+      // Return the generated flashcards and title
+      res.json({
+        cards,
+        title,
+        count: cards.length
+      });
+    } catch (openaiError) {
+      console.error('OpenAI service error:', openaiError);
+      return res.status(500).json({ 
+        error: 'Failed to generate flashcards',
+        message: openaiError.message,
+        details: process.env.NODE_ENV === 'development' ? openaiError.stack : undefined
+      });
+    }
   } catch (error) {
-    console.error('Error generating flashcards:', error);
-    res.status(500).json({ error: 'Failed to generate flashcards' });
+    console.error('Unexpected error in flashcard generation route:', error);
+    res.status(500).json({ 
+      error: 'Failed to generate flashcards',
+      message: error.message 
+    });
   }
 });
 

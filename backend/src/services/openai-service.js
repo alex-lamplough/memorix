@@ -38,15 +38,17 @@ The flashcards should be at ${complexity} level.
 - Intermediate: Cover moderate complexity, relationships between concepts, and practical applications.
 - Advanced: Include complex details, edge cases, and deeper analysis.
 
-Format your response as a valid JSON array of objects with this structure:
-[
-  {
-    "front": "Question or prompt",
-    "back": "Answer or explanation"
-  },
-  ...
-]
-IMPORTANT: Ensure your response is ONLY the JSON array, nothing else.`;
+Format your response as a valid JSON with a structure like this:
+{
+  "cards": [
+    {
+      "front": "Question or prompt",
+      "back": "Answer or explanation"
+    },
+    ...
+  ]
+}
+IMPORTANT: Make sure to wrap the array in a JSON object with the "cards" key.`;
 
     // Make the API call to OpenAI
     const completion = await openai.chat.completions.create({
@@ -61,16 +63,45 @@ IMPORTANT: Ensure your response is ONLY the JSON array, nothing else.`;
     
     // Extract and parse the response
     const responseText = completion.choices[0].message.content;
-    const parsedResponse = JSON.parse(responseText);
+    let parsedResponse;
     
-    if (!parsedResponse.cards || !Array.isArray(parsedResponse.cards)) {
-      throw new Error('Invalid response format from OpenAI');
+    try {
+      parsedResponse = JSON.parse(responseText);
+    } catch (error) {
+      console.error('Failed to parse JSON response:', error);
+      throw new Error('Invalid JSON response from OpenAI');
+    }
+    
+    // Handle both possible formats - array directly or wrapped in cards property
+    let cards;
+    if (Array.isArray(parsedResponse)) {
+      // If the response is an array directly
+      cards = parsedResponse;
+    } else if (parsedResponse.cards && Array.isArray(parsedResponse.cards)) {
+      // If the response has a cards property with an array
+      cards = parsedResponse.cards;
+    } else {
+      // Try to find an array property if neither format matches
+      const arrayProps = Object.keys(parsedResponse).filter(key => 
+        Array.isArray(parsedResponse[key]) && parsedResponse[key].length > 0
+      );
+      
+      if (arrayProps.length > 0) {
+        cards = parsedResponse[arrayProps[0]];
+      } else {
+        throw new Error('Could not find flashcards array in OpenAI response');
+      }
+    }
+    
+    // Validate flashcards
+    if (!cards || !Array.isArray(cards) || cards.length === 0) {
+      throw new Error('No valid flashcards found in OpenAI response');
     }
     
     // Map the response to our flashcard model format
-    return parsedResponse.cards.map(card => ({
-      front: card.front,
-      back: card.back,
+    return cards.map(card => ({
+      front: card.front || card.question || '',
+      back: card.back || card.answer || '',
       difficulty: 3, // Default difficulty level
       lastReviewed: null,
       nextReviewDate: null,
