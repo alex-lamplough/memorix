@@ -22,8 +22,10 @@ if (isDevelopment()) {
 export const auth0Config = {
   domain,
   clientId,
-  audience: audience || undefined,
-  redirectUri: isProd ? window.location.origin : window.location.origin,
+  authorizationParams: {
+    redirect_uri: window.location.origin,
+    audience: audience || undefined,
+  },
   useRefreshTokens: true,
   cacheLocation: "localstorage"
 }; 

@@ -12,7 +12,8 @@
     "validate-env": "node -e \"import('./src/utils/validate-env.js').then(mod => mod.validateEnvironment())\"",
     "start": "npm run build && vite preview",
     "test:auth0": "node backend/src/scripts/test-auth0-credentials.js",
-    "test:auth0:prod": "NODE_ENV=production node backend/src/scripts/test-auth0-credentials.js"
+    "test:auth0:prod": "NODE_ENV=production node backend/src/scripts/test-auth0-credentials.js",
+    "test:auth-signup": "node src/scripts/test-auth-signup.js"
   },
   "dependencies": {
     "@auth0/auth0-react": "^2.3.0",
