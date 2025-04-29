@@ -29,7 +29,7 @@ const loadEnvLocal = () => {
 
 /**
  * Builds the MongoDB connection string based on environment variables
- * Handles different MongoDB URI formats (local, Railway, Atlas, etc.)
+ * Handles different MongoDB URI formats with a focus on MongoDB Atlas
  * @returns {string} MongoDB connection string with correct database
  */
 export const getMongoConnectionString = () => {
@@ -93,66 +93,10 @@ export const getMongoConnectionString = () => {
     return baseUri;
   }
   
-  // For Railway production, the URI already has the correct database
-  if (baseUri.includes('mongodb.railway.internal')) {
-    console.log('Using Railway-provided MongoDB URI');
-    
-    // If MONGODB_DATABASE is set, use it
-    if (envDbName) {
-      const lastSlashIndex = baseUri.lastIndexOf('/');
-      const questionMarkIndex = baseUri.indexOf('?', lastSlashIndex);
-      
-      if (lastSlashIndex !== -1) {
-        // URI has a path component
-        if (questionMarkIndex !== -1) {
-          // URI has parameters
-          return baseUri.substring(0, lastSlashIndex + 1) + envDbName + baseUri.substring(questionMarkIndex);
-        } else {
-          // URI has no parameters
-          return baseUri.substring(0, lastSlashIndex + 1) + envDbName;
-        }
-      } else {
-        // No path component, append the database name
-        return baseUri + (baseUri.endsWith('/') ? '' : '/') + envDbName;
-      }
-    }
-    
-    // Extract the database name from the URI or use a default
-    const lastSlashIndex = baseUri.lastIndexOf('/');
-    const questionMarkIndex = baseUri.indexOf('?', lastSlashIndex);
-    
-    // If there's a database name in the URI
-    if (lastSlashIndex !== -1 && lastSlashIndex < baseUri.length - 1) {
-      let dbName;
-      if (questionMarkIndex !== -1) {
-        dbName = baseUri.substring(lastSlashIndex + 1, questionMarkIndex);
-      } else {
-        dbName = baseUri.substring(lastSlashIndex + 1);
-      }
-      
-      // If the database name is 'test' (Railway default), replace it with 'memorix'
-      if (dbName === 'test' && process.env.NODE_ENV === 'production') {
-        console.log('Replacing default Railway database "test" with "memorix"');
-        if (questionMarkIndex !== -1) {
-          return baseUri.substring(0, lastSlashIndex + 1) + 'memorix' + baseUri.substring(questionMarkIndex);
-        } else {
-          return baseUri.substring(0, lastSlashIndex + 1) + 'memorix';
-        }
-      }
-    } else {
-      // No database specified, append our database
-      console.log('No database specified in Railway URI, appending "memorix"');
-      return baseUri + (baseUri.endsWith('/') ? '' : '/') + 'memorix';
-    }
-    
-    return baseUri;
-  }
-  
-  // For other URIs, handle database selection
+  // For standard MongoDB URLs (non-Atlas)
   const dbName = envDbName || (process.env.NODE_ENV === 'production' ? 'memorix' : 'memorixDev');
   console.log(`Connecting to ${process.env.NODE_ENV || 'development'} database: ${dbName}`);
 
-  // Handle standard MongoDB URLs
   if (baseUri.includes('mongodb://')) {
     // Extract the base URI without any database specification
     const lastSlashIndex = baseUri.lastIndexOf('/');

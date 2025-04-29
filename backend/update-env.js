@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * This script helps update the .env file with the Railway MongoDB URI
+ * This script helps update the .env file with the MongoDB Atlas connection string
  * Run it with: node backend/update-env.js
  */
 
@@ -30,12 +30,12 @@ if (!fs.existsSync(envFilePath)) {
 const envContent = fs.readFileSync(envFilePath, 'utf8');
 let updatedContent = envContent;
 
-console.log('🔧 Update MongoDB connection string in .env file');
+console.log('🔧 Update MongoDB Atlas connection string in .env file');
 console.log('Current content:');
 console.log(envContent);
 console.log('\n');
 
-rl.question('Enter your Railway MongoDB URI: ', (mongoUri) => {
+rl.question('Enter your MongoDB Atlas connection string: ', (mongoUri) => {
   if (!mongoUri) {
     console.log('❌ No URI provided. Exiting without changes.');
     rl.close();
