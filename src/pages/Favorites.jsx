@@ -53,24 +53,20 @@ function Favorites() {
         </div>
       )}
       
+      {/* Overlay for mobile when sidebar is open */}
+      {isMobile && sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-30" 
+          onClick={() => setSidebarOpen(false)}
+        ></div>
+      )}
+      
       {/* Sidebar - hidden on mobile by default */}
-      <div className={`
-        ${isMobile ? 'fixed inset-0 z-20 transform transition-transform duration-300 ease-in-out' : ''}
-        ${isMobile && !sidebarOpen ? '-translate-x-full' : ''}
-        ${isMobile && sidebarOpen ? 'translate-x-0' : ''}
-      `}>
+      <div className={`z-40 ${isMobile ? 'fixed inset-0 transform transition-transform duration-300 ease-in-out' : ''} ${isMobile && !sidebarOpen ? '-translate-x-full' : ''} ${isMobile && sidebarOpen ? 'translate-x-0' : ''}`}>
         <Sidebar activePage="favorites" />
-        
-        {/* Overlay for mobile when sidebar is open */}
-        {isMobile && sidebarOpen && (
-          <div 
-            className="fixed inset-0 bg-black/50 z-10" 
-            onClick={() => setSidebarOpen(false)}
-          ></div>
-        )}
       </div>
       
-      <div className="flex-1 flex flex-col">
+      <div className={`flex-1 flex flex-col ${isMobile && sidebarOpen ? 'blur-sm' : ''}`}>
         {!isMobile && (
           <DashboardHeader 
             title="Favorites" 

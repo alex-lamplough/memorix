@@ -40,8 +40,8 @@ function Sidebar({ activePage = 'dashboard' }) {
   const isMobile = useMediaQuery('(max-width:768px)');
   
   return (
-    <div className={`w-64 bg-gradient-to-b from-[#2E0033] via-[#260041] to-[#1b1b2f] border-r border-gray-800/30 flex flex-col
-      ${isMobile ? 'h-screen overflow-y-auto' : 'h-full'}`}>
+    <div className={`w-64 bg-gradient-to-b from-[#2E0033] via-[#260041] to-[#1b1b2f] border-r border-gray-800/30 flex flex-col h-full 
+      ${isMobile ? 'fixed left-0 top-0 bottom-0 z-40 overflow-y-auto' : ''}`}>
       <div className="sticky top-0 z-10 bg-[#2E0033] p-4 pb-2">
         <div className="flex items-center gap-2 px-4 py-3 mb-6">
           <Link to="/" className="text-2xl font-black tracking-widest text-[#00ff94]">M/</Link>

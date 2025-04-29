@@ -361,8 +361,9 @@ function SettingsContent({ activeSection }) {
 function Settings() {
   const [activeSection, setActiveSection] = useState('account');
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [showSettingsMenu, setShowSettingsMenu] = useState(false);
   const isMobile = useMediaQuery('(max-width:768px)');
+  const isTablet = useMediaQuery('(max-width:1024px)');
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
   
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#2E0033] via-[#260041] to-[#1b1b2f] text-white flex flex-col md:flex-row">
@@ -382,102 +383,66 @@ function Settings() {
         </div>
       )}
       
+      {/* Overlay for mobile when sidebar is open */}
+      {isMobile && sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-30" 
+          onClick={() => setSidebarOpen(false)}
+        ></div>
+      )}
+      
       {/* Sidebar - hidden on mobile by default */}
-      <div className={`
-        ${isMobile ? 'fixed inset-0 z-20 transform transition-transform duration-300 ease-in-out' : ''}
-        ${isMobile && !sidebarOpen ? '-translate-x-full' : ''}
-        ${isMobile && sidebarOpen ? 'translate-x-0' : ''}
-      `}>
+      <div className={`z-40 ${isMobile ? 'fixed inset-0 transform transition-transform duration-300 ease-in-out' : ''} ${isMobile && !sidebarOpen ? '-translate-x-full' : ''} ${isMobile && sidebarOpen ? 'translate-x-0' : ''}`}>
         <Sidebar activePage="settings" />
-        
-        {/* Overlay for mobile when sidebar is open */}
-        {isMobile && sidebarOpen && (
-          <div 
-            className="fixed inset-0 bg-black/50 z-10" 
-            onClick={() => setSidebarOpen(false)}
-          ></div>
-        )}
       </div>
       
-      <div className="flex-1 flex flex-col">
-        {!isMobile && <DashboardHeader title="Settings" />}
+      <div className={`flex-1 flex flex-col ${isMobile && sidebarOpen ? 'blur-sm' : ''}`}>
+        {!isMobile && <DashboardHeader title="Settings" searchEnabled={false} filterEnabled={false} />}
         
         <div className="flex-1 p-4 md:p-6">
           <div className="container mx-auto max-w-6xl">
             {isMobile && (
-              <div className="mb-4">
-                {showSettingsMenu ? (
-                  <div className="mb-4">
-                    <button 
-                      onClick={() => setShowSettingsMenu(false)}
-                      className="flex items-center gap-2 text-white mb-2"
-                    >
-                      <KeyboardArrowLeftIcon />
-                      <span>Back to Settings</span>
-                    </button>
-                    <h1 className="text-2xl font-bold text-white">
-                      {activeSection.charAt(0).toUpperCase() + activeSection.slice(1)} Settings
-                    </h1>
-                  </div>
+              <div className="mb-4 flex items-center">
+                {showMobileMenu ? (
+                  <button 
+                    onClick={() => setShowMobileMenu(false)}
+                    className="flex items-center gap-1 text-white/70 hover:text-white"
+                  >
+                    <KeyboardArrowLeftIcon fontSize="small" />
+                    <span>Back</span>
+                  </button>
                 ) : (
-                  <div className="mb-4">
-                    <h1 className="text-2xl font-bold text-white mb-6">Settings</h1>
-                    <div className="bg-[#18092a]/60 rounded-xl border border-gray-800/30 shadow-lg text-white">
-                      <div className="divide-y divide-gray-800/30">
-                        {[
-                          { id: 'account', label: 'Account', icon: <AccountCircleIcon fontSize="small" /> },
-                          { id: 'appearance', label: 'Appearance', icon: <DarkModeIcon fontSize="small" /> },
-                          { id: 'notifications', label: 'Notifications', icon: <NotificationsIcon fontSize="small" /> },
-                          { id: 'language', label: 'Language', icon: <LanguageIcon fontSize="small" /> },
-                          { id: 'security', label: 'Security & Privacy', icon: <SecurityIcon fontSize="small" /> },
-                          { id: 'sync', label: 'Data & Sync', icon: <CloudSyncIcon fontSize="small" /> },
-                          { id: 'data', label: 'Data Management', icon: <DeleteIcon fontSize="small" /> },
-                          { id: 'help', label: 'Help & Support', icon: <HelpIcon fontSize="small" /> },
-                        ].map((section) => (
-                          <div 
-                            key={section.id}
-                            onClick={() => {
-                              setActiveSection(section.id);
-                              setShowSettingsMenu(true);
-                            }}
-                            className="flex items-center justify-between p-4 hover:bg-white/5 cursor-pointer"
-                          >
-                            <div className="flex items-center gap-3">
-                              <div className="text-[#00ff94]">{section.icon}</div>
-                              <span>{section.label}</span>
-                            </div>
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 text-white/50">
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-                            </svg>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
+                  <h1 className="text-2xl font-bold text-white">Settings</h1>
                 )}
               </div>
             )}
             
-            {(!isMobile || (isMobile && showSettingsMenu)) && (
-              <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                {!isMobile && (
-                  <div className="lg:col-span-1">
-                    <SettingsNav 
-                      activeSection={activeSection}
-                      setActiveSection={setActiveSection}
-                    />
-                  </div>
-                )}
-                <div className={isMobile ? "col-span-1" : "lg:col-span-3"}>
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+              {(!isMobile || !showMobileMenu) && (
+                <div className="lg:col-span-1">
+                  <SettingsNav
+                    activeSection={activeSection}
+                    setActiveSection={(section) => {
+                      setActiveSection(section);
+                      if (isMobile) {
+                        setShowMobileMenu(true);
+                      }
+                    }}
+                  />
+                </div>
+              )}
+              
+              {(!isMobile || showMobileMenu) && (
+                <div className="lg:col-span-3">
                   <SettingsContent activeSection={activeSection} />
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
       </div>
     </div>
-  )
+  );
 }
 
 export default Settings 
