@@ -12,6 +12,7 @@ router.use(getUserFromToken);
 // Get current user profile
 router.get('/me', async (req, res, next) => {
   try {
+    console.log(`🔍 Looking up user with Auth0 ID: ${req.user.auth0Id}`);
     let user = await User.findOne({ auth0Id: req.user.auth0Id });
     
     if (!user) {
@@ -20,10 +21,11 @@ router.get('/me', async (req, res, next) => {
       const auth0Id = userInfo.sub;
       
       // Log the token for debugging
-      console.log('Auth0 token received:', JSON.stringify(userInfo, null, 2));
+      console.log('📝 Auth0 token received:', JSON.stringify(userInfo, null, 2));
+      console.log(`💡 NODE_ENV: ${process.env.NODE_ENV}`);
       
       // Try to get full profile from Auth0 Management API
-      console.log('Fetching full profile from Auth0 Management API');
+      console.log('🔍 Fetching full profile from Auth0 Management API');
       const auth0Profile = await getUserProfile(auth0Id);
       
       let email, name, picture;
@@ -34,15 +36,24 @@ router.get('/me', async (req, res, next) => {
         name = auth0Profile.name || auth0Profile.nickname || 'Memorix User';
         picture = auth0Profile.picture || '';
         
-        console.log('Using email from Auth0 Management API:', email);
+        console.log('✅ Using email from Auth0 Management API:', email);
       } else {
         // Fallback to token data or generate placeholder
         email = userInfo.email || `${auth0Id.replace(/[|]/g, '-')}@memorix-user.com`;
         name = userInfo.name || userInfo.nickname || 'Memorix User';
         picture = userInfo.picture || '';
         
-        console.log('Using fallback email:', email);
+        console.log('⚠️ Using fallback email:', email);
+        if (auth0Profile === null) {
+          console.log('❌ Auth0 Management API call failed or returned null');
+        }
       }
+      
+      console.log('🔧 Creating new user with:', { 
+        auth0Id, 
+        email, 
+        name 
+      });
       
       // Create new user
       user = await User.create({
@@ -63,11 +74,11 @@ router.get('/me', async (req, res, next) => {
       
       // Try to update user profile with Auth0 data if needed
       if (user.email.includes('@memorix-user.com')) {
-        console.log('User has placeholder email, checking Auth0 for real email');
+        console.log('🔍 User has placeholder email, checking Auth0 for real email');
         const auth0Profile = await getUserProfile(user.auth0Id);
         
         if (auth0Profile && auth0Profile.email) {
-          console.log(`Updating email from ${user.email} to ${auth0Profile.email}`);
+          console.log(`✅ Updating email from ${user.email} to ${auth0Profile.email}`);
           user.email = auth0Profile.email;
           user.needsProfileUpdate = false;
           await user.save();
@@ -81,7 +92,7 @@ router.get('/me', async (req, res, next) => {
     
     res.json(user);
   } catch (error) {
-    console.error('Error getting/creating user:', error);
+    console.error('❌ Error getting/creating user:', error);
     next(error);
   }
 });

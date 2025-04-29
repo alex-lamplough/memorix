@@ -1,134 +1,77 @@
-import axios from 'axios';
 import dotenv from 'dotenv';
-import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { ManagementClient } from 'auth0';
 
-// For ES modules
+// Setup dirname for ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Load environment variables
-dotenv.config();
+// Load environment variables based on NODE_ENV
+const envFile = process.env.NODE_ENV === 'production' 
+  ? '.env.production' 
+  : '.env.local';
 
-// Also load .env.local if it exists
-const envLocalPath = path.join(__dirname, '../../.env');
-if (fs.existsSync(envLocalPath)) {
-  const envLocalConfig = dotenv.parse(fs.readFileSync(envLocalPath));
-  for (const key in envLocalConfig) {
-    process.env[key] = envLocalConfig[key];
-  }
-  console.log('✅ Loaded variables from .env');
+dotenv.config({ 
+  path: path.resolve(__dirname, '../../../../', envFile) 
+});
+
+console.log(`Testing Auth0 credentials in ${process.env.NODE_ENV || 'development'} environment`);
+console.log(`Using environment file: ${envFile}`);
+
+// Check if required Auth0 environment variables are set
+const requiredEnvVars = [
+  'AUTH0_DOMAIN',
+  'AUTH0_CLIENT_ID',
+  'AUTH0_CLIENT_SECRET',
+  'AUTH0_AUDIENCE'
+];
+
+const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
+
+if (missingVars.length > 0) {
+  console.error('❌ Missing required environment variables:');
+  missingVars.forEach(varName => {
+    console.error(`  - ${varName}`);
+  });
+  process.exit(1);
 }
 
-// Use variables from command line arguments if provided
-const clientId = process.argv[2] || process.env.AUTH0_MGMT_CLIENT_ID;
-const clientSecret = process.argv[3] || process.env.AUTH0_MGMT_CLIENT_SECRET;
-const domain = process.argv[4] || process.env.AUTH0_DOMAIN;
+console.log('✅ All required Auth0 environment variables are set');
 
-console.log('\n🔐 Testing Auth0 Management API credentials:');
-console.log(`Domain: ${domain}`);
-console.log(`Client ID: ${clientId ? clientId.substring(0, 5) + '...' : 'Not set'}`);
-console.log(`Client Secret: ${clientSecret ? '******' : 'Not set'}`);
+// Test Auth0 Management API connection
+const auth0 = new ManagementClient({
+  domain: process.env.AUTH0_DOMAIN,
+  clientId: process.env.AUTH0_CLIENT_ID,
+  clientSecret: process.env.AUTH0_CLIENT_SECRET,
+  audience: `https://${process.env.AUTH0_DOMAIN}/api/v2/`,
+  scope: 'read:users update:users create:users'
+});
 
-// Function to get an Auth0 management token
-async function getManagementToken() {
-  try {
-    console.log('\n📡 Requesting Auth0 Management API token...');
+// Test retrieving users
+console.log('Testing Auth0 Management API connection...');
+auth0.getUsers({ per_page: 1, page: 0 })
+  .then(users => {
+    console.log('✅ Successfully connected to Auth0 Management API');
+    console.log(`Retrieved ${users.length} user(s) from Auth0`);
+    console.log('Auth0 configuration is working correctly');
+  })
+  .catch(error => {
+    console.error('❌ Failed to connect to Auth0 Management API:');
+    console.error(error.message);
     
-    const response = await axios.post(
-      `https://${domain}/oauth/token`,
-      {
-        client_id: clientId,
-        client_secret: clientSecret,
-        audience: `https://${domain}/api/v2/`,
-        grant_type: 'client_credentials'
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      }
-    );
-    
-    console.log('✅ Successfully obtained Management API token!');
-    return response.data.access_token;
-  } catch (error) {
-    console.error('❌ Error getting Management API token:');
-    if (error.response) {
-      console.error(`Status: ${error.response.status}`);
-      console.error('Error details:', error.response.data);
-    } else {
-      console.error(error.message);
-    }
-    return null;
-  }
-}
-
-// Function to get users list as a test
-async function getUsers(token) {
-  try {
-    console.log('\n📡 Testing token by fetching users...');
-    
-    const response = await axios.get(
-      `https://${domain}/api/v2/users?page=0&per_page=5`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      }
-    );
-    
-    console.log('✅ Successfully retrieved users!');
-    console.log(`Total users retrieved: ${response.data.length}`);
-    
-    // Print user details (safely)
-    response.data.forEach((user, index) => {
-      console.log(`\nUser ${index + 1}:`);
-      console.log(`- ID: ${user.user_id}`);
-      console.log(`- Email: ${user.email}`);
-      console.log(`- Name: ${user.name || 'Not set'}`);
-      console.log(`- Created: ${user.created_at}`);
-    });
-    
-    return response.data;
-  } catch (error) {
-    console.error('❌ Error fetching users:');
-    if (error.response) {
-      console.error(`Status: ${error.response.status}`);
-      console.error('Error details:', error.response.data);
-    } else {
-      console.error(error.message);
-    }
-    return null;
-  }
-}
-
-// Run the test
-async function runTest() {
-  try {
-    // Check if we have all required credentials
-    if (!clientId || !clientSecret || !domain) {
-      console.error('\n❌ Missing required Auth0 credentials!');
-      console.error('Please provide credentials in .env.local or as command line arguments:');
-      console.error('node src/scripts/test-auth0-credentials.js CLIENT_ID CLIENT_SECRET DOMAIN');
-      return;
+    if (error.message.includes('invalid_client')) {
+      console.error('\nPossible issues:');
+      console.error('- Client ID or Client Secret is incorrect');
+      console.error('- The application does not have the required API permissions');
     }
     
-    // Get a token
-    const token = await getManagementToken();
-    if (!token) {
-      return;
+    if (error.message.includes('unauthorized')) {
+      console.error('\nPossible issues:');
+      console.error('- The Management API audience is incorrect');
+      console.error('- The application does not have the required scopes');
     }
     
-    // Try to get users
-    await getUsers(token);
-    
-    console.log('\n🎉 Auth0 Management API test completed successfully!');
-    console.log('Your application should be able to retrieve user profiles now.');
-  } catch (error) {
-    console.error('\n❌ An unexpected error occurred:', error.message);
-  }
-}
-
-runTest(); 
+    console.error('\nVerify your Auth0 credentials in the Auth0 dashboard and update your environment variables.');
+    process.exit(1);
+  }); 
