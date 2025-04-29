@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { useMediaQuery } from '@mui/material'
+import { Menu as MenuIcon } from '@mui/icons-material'
 
 // Components
 import Sidebar from '../components/Sidebar'
@@ -14,6 +16,7 @@ import CloudSyncIcon from '@mui/icons-material/CloudSync'
 import DeleteIcon from '@mui/icons-material/Delete'
 import HelpIcon from '@mui/icons-material/Help'
 import CheckIcon from '@mui/icons-material/Check'
+import KeyboardArrowLeftIcon from '@mui/icons-material/KeyboardArrowLeft'
 
 function SettingsNavItem({ icon, label, active, onClick }) {
   return (
@@ -64,7 +67,7 @@ function AccountSettings() {
       <h2 className="text-xl font-bold mb-6">Account Settings</h2>
       
       <div className="mb-8">
-        <div className="flex items-center gap-4 mb-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-6">
           <div className="w-16 h-16 bg-[#a259ff]/20 rounded-full flex items-center justify-center">
             <AccountCircleIcon style={{ fontSize: '2rem' }} className="text-[#a259ff]" />
           </div>
@@ -72,7 +75,7 @@ function AccountSettings() {
             <h3 className="font-bold text-lg">Alex Lamplough</h3>
             <p className="text-white/70 text-sm">Free Plan</p>
           </div>
-          <button className="ml-auto bg-[#00ff94]/10 text-[#00ff94] px-4 py-2 rounded-lg hover:bg-[#00ff94]/20 transition-colors border border-[#00ff94]/30">
+          <button className="sm:ml-auto bg-[#00ff94]/10 text-[#00ff94] px-4 py-2 rounded-lg hover:bg-[#00ff94]/20 transition-colors border border-[#00ff94]/30">
             Upgrade Plan
           </button>
         </div>
@@ -114,7 +117,7 @@ function AccountSettings() {
             </div>
             <span className="bg-white/10 px-3 py-1 rounded-full text-xs text-white/80">Current</span>
           </div>
-          <div className="mt-3 grid grid-cols-2 gap-2 text-sm text-white/70">
+          <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-white/70">
             <div className="flex items-center gap-2">
               <CheckIcon fontSize="small" className="text-[#00ff94]" />
               <span>50 cards per day</span>
@@ -142,7 +145,7 @@ function AccountSettings() {
             </div>
             <span className="bg-[#00ff94]/10 px-3 py-1 rounded-full text-xs text-[#00ff94]">Recommended</span>
           </div>
-          <div className="mt-3 grid grid-cols-2 gap-2 text-sm text-white/70">
+          <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-white/70">
             <div className="flex items-center gap-2">
               <CheckIcon fontSize="small" className="text-[#00ff94]" />
               <span>Unlimited cards</span>
@@ -187,7 +190,7 @@ function AppearanceSettings() {
       <div className="space-y-6">
         <div>
           <h3 className="font-bold mb-4">Theme</h3>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="bg-[#18092a] border-2 border-[#00ff94] p-4 rounded-lg text-center cursor-pointer">
               <div className="h-24 bg-gradient-to-b from-[#2E0033] via-[#260041] to-[#1b1b2f] rounded mb-2"></div>
               <span className="text-sm font-medium">Dark</span>
@@ -357,27 +360,119 @@ function SettingsContent({ activeSection }) {
 
 function Settings() {
   const [activeSection, setActiveSection] = useState('account');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showSettingsMenu, setShowSettingsMenu] = useState(false);
+  const isMobile = useMediaQuery('(max-width:768px)');
   
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#2E0033] via-[#260041] to-[#1b1b2f] text-white flex">
-      <Sidebar activePage="settings" />
+    <div className="min-h-screen bg-gradient-to-b from-[#2E0033] via-[#260041] to-[#1b1b2f] text-white flex flex-col md:flex-row">
+      {/* Mobile menu button */}
+      {isMobile && (
+        <div className="bg-[#18092a]/80 p-3 flex items-center justify-between sticky top-0 z-10">
+          <div className="flex items-center gap-2">
+            <span className="text-xl font-black tracking-widest text-[#00ff94]">M/</span>
+            <span className="text-white font-bold">Memorix</span>
+          </div>
+          <button 
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="p-2 text-white rounded-lg bg-[#18092a] hover:bg-[#18092a]/80"
+          >
+            <MenuIcon />
+          </button>
+        </div>
+      )}
+      
+      {/* Sidebar - hidden on mobile by default */}
+      <div className={`
+        ${isMobile ? 'fixed inset-0 z-20 transform transition-transform duration-300 ease-in-out' : ''}
+        ${isMobile && !sidebarOpen ? '-translate-x-full' : ''}
+        ${isMobile && sidebarOpen ? 'translate-x-0' : ''}
+      `}>
+        <Sidebar activePage="settings" />
+        
+        {/* Overlay for mobile when sidebar is open */}
+        {isMobile && sidebarOpen && (
+          <div 
+            className="fixed inset-0 bg-black/50 z-10" 
+            onClick={() => setSidebarOpen(false)}
+          ></div>
+        )}
+      </div>
       
       <div className="flex-1 flex flex-col">
-        <DashboardHeader title="Settings" />
+        {!isMobile && <DashboardHeader title="Settings" />}
         
-        <div className="flex-1 p-6">
-          <div className="container mx-auto">
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-              <div className="lg:col-span-1">
-                <SettingsNav 
-                  activeSection={activeSection}
-                  setActiveSection={setActiveSection}
-                />
+        <div className="flex-1 p-4 md:p-6">
+          <div className="container mx-auto max-w-6xl">
+            {isMobile && (
+              <div className="mb-4">
+                {showSettingsMenu ? (
+                  <div className="mb-4">
+                    <button 
+                      onClick={() => setShowSettingsMenu(false)}
+                      className="flex items-center gap-2 text-white mb-2"
+                    >
+                      <KeyboardArrowLeftIcon />
+                      <span>Back to Settings</span>
+                    </button>
+                    <h1 className="text-2xl font-bold text-white">
+                      {activeSection.charAt(0).toUpperCase() + activeSection.slice(1)} Settings
+                    </h1>
+                  </div>
+                ) : (
+                  <div className="mb-4">
+                    <h1 className="text-2xl font-bold text-white mb-6">Settings</h1>
+                    <div className="bg-[#18092a]/60 rounded-xl border border-gray-800/30 shadow-lg text-white">
+                      <div className="divide-y divide-gray-800/30">
+                        {[
+                          { id: 'account', label: 'Account', icon: <AccountCircleIcon fontSize="small" /> },
+                          { id: 'appearance', label: 'Appearance', icon: <DarkModeIcon fontSize="small" /> },
+                          { id: 'notifications', label: 'Notifications', icon: <NotificationsIcon fontSize="small" /> },
+                          { id: 'language', label: 'Language', icon: <LanguageIcon fontSize="small" /> },
+                          { id: 'security', label: 'Security & Privacy', icon: <SecurityIcon fontSize="small" /> },
+                          { id: 'sync', label: 'Data & Sync', icon: <CloudSyncIcon fontSize="small" /> },
+                          { id: 'data', label: 'Data Management', icon: <DeleteIcon fontSize="small" /> },
+                          { id: 'help', label: 'Help & Support', icon: <HelpIcon fontSize="small" /> },
+                        ].map((section) => (
+                          <div 
+                            key={section.id}
+                            onClick={() => {
+                              setActiveSection(section.id);
+                              setShowSettingsMenu(true);
+                            }}
+                            className="flex items-center justify-between p-4 hover:bg-white/5 cursor-pointer"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="text-[#00ff94]">{section.icon}</div>
+                              <span>{section.label}</span>
+                            </div>
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 text-white/50">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                            </svg>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
-              <div className="lg:col-span-3">
-                <SettingsContent activeSection={activeSection} />
+            )}
+            
+            {(!isMobile || (isMobile && showSettingsMenu)) && (
+              <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                {!isMobile && (
+                  <div className="lg:col-span-1">
+                    <SettingsNav 
+                      activeSection={activeSection}
+                      setActiveSection={setActiveSection}
+                    />
+                  </div>
+                )}
+                <div className={isMobile ? "col-span-1" : "lg:col-span-3"}>
+                  <SettingsContent activeSection={activeSection} />
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </div>

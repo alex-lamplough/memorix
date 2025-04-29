@@ -1,4 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useMediaQuery } from '@mui/material'
+import { Menu as MenuIcon } from '@mui/icons-material'
 
 // Components
 import Sidebar from '../components/Sidebar'
@@ -121,21 +123,76 @@ function PerformanceBySubject() {
 }
 
 function Progress() {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const isMobile = useMediaQuery('(max-width:768px)');
+  
+  // Lock body scroll when sidebar is open on mobile
+  useEffect(() => {
+    if (isMobile && sidebarOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'auto';
+    }
+    
+    return () => {
+      document.body.style.overflow = 'auto';
+    };
+  }, [isMobile, sidebarOpen]);
+  
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#2E0033] via-[#260041] to-[#1b1b2f] text-white flex">
-      <Sidebar activePage="progress" />
+    <div className="min-h-screen bg-gradient-to-b from-[#2E0033] via-[#260041] to-[#1b1b2f] text-white flex flex-col md:flex-row">
+      {/* Mobile menu button */}
+      {isMobile && (
+        <div className="bg-[#18092a]/80 p-3 flex items-center justify-between sticky top-0 z-10">
+          <div className="flex items-center gap-2">
+            <span className="text-xl font-black tracking-widest text-[#00ff94]">M/</span>
+            <span className="text-white font-bold">Memorix</span>
+          </div>
+          <button 
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="p-2 text-white rounded-lg bg-[#18092a] hover:bg-[#18092a]/80"
+          >
+            <MenuIcon />
+          </button>
+        </div>
+      )}
       
-      <div className="flex-1 flex flex-col">
-        <DashboardHeader 
-          title="Progress Analytics" 
-          searchEnabled={false}
-          filterEnabled={false}
-        />
+      {/* Sidebar - hidden on mobile by default */}
+      <div className={`
+        ${isMobile ? 'fixed inset-0 z-30 transform transition-transform duration-300 ease-in-out' : ''}
+        ${isMobile && !sidebarOpen ? '-translate-x-full' : ''}
+        ${isMobile && sidebarOpen ? 'translate-x-0' : ''}
+      `}>
+        <Sidebar activePage="progress" />
         
-        <div className="flex-1 p-6">
-          <div className="container mx-auto">
+        {/* Overlay for mobile when sidebar is open */}
+        {isMobile && sidebarOpen && (
+          <div 
+            className="fixed inset-0 bg-black/50 z-20" 
+            onClick={() => setSidebarOpen(false)}
+          ></div>
+        )}
+      </div>
+      
+      <div className={`flex-1 flex flex-col ${isMobile && sidebarOpen ? 'blur-sm' : ''}`}>
+        {!isMobile && (
+          <DashboardHeader 
+            title="Progress Analytics" 
+            searchEnabled={false}
+            filterEnabled={false}
+          />
+        )}
+        
+        <div className="flex-1 p-4 md:p-6">
+          <div className="container mx-auto max-w-6xl">
+            {isMobile && (
+              <div className="mb-4">
+                <h1 className="text-2xl font-bold text-white">Progress Analytics</h1>
+              </div>
+            )}
+            
             {/* Stats overview */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
               <StatCard 
                 icon={<CheckCircleOutlineIcon className="text-[#00ff94]" />}
                 title="Cards Mastered"
@@ -167,13 +224,13 @@ function Progress() {
             </div>
             
             {/* Charts */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6 mb-6 md:mb-8">
               <StudyChart />
               <StreakCalendar />
             </div>
             
             {/* Performance by subject */}
-            <div className="mb-8">
+            <div className="mb-6 md:mb-8">
               <PerformanceBySubject />
             </div>
           </div>

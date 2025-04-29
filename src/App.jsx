@@ -14,6 +14,7 @@ import CloseIcon from '@mui/icons-material/Close'
 import FlashcardDeck from './components/FlashcardDeck'
 import LoginButton from './components/LoginButton'
 import ProtectedRoute from './auth/ProtectedRoute'
+import Todo from './components/Todo'
 
 // Pages
 import Dashboard from './pages/Dashboard'
@@ -189,7 +190,12 @@ function Hero() {
         </div>
       )}
       
-      {!showFlashcards && !isLoading && <div className="mb-24"></div>}
+      {/* Todo Section */}
+      {!showFlashcards && !isLoading && (
+        <div className="w-full max-w-lg mx-auto mt-8 mb-16">
+          <Todo />
+        </div>
+      )}
     </div>
   )
 }

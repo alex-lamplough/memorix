@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useMediaQuery } from '@mui/material'
 import { Menu as MenuIcon } from '@mui/icons-material'
@@ -16,13 +16,14 @@ import QuizIcon from '@mui/icons-material/Quiz'
 import Sidebar from '../components/Sidebar'
 import DashboardHeader from '../components/DashboardHeader'
 import FlashcardSet from '../components/FlashcardSet'
+import Todo from '../components/Todo'
 
 // This component was causing a conflict with the imported FlashcardSet
 function FlashcardCard({ title, cards, lastStudied, progress }) {
   return (
     <div className="bg-[#18092a]/60 rounded-xl p-6 border border-gray-800/30 shadow-lg text-white">
       <div className="flex justify-between items-start mb-4">
-        <h3 className="text-xl font-bold truncate">{title}</h3>
+        <h3 className="text-xl font-bold truncate pr-2">{title}</h3>
         <button className="text-white/60 hover:text-white p-1 ml-2">
           <MoreHorizIcon fontSize="small" />
         </button>
@@ -151,6 +152,19 @@ function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const isMobile = useMediaQuery('(max-width:768px)');
   
+  // Lock body scroll when sidebar is open on mobile
+  useEffect(() => {
+    if (isMobile && sidebarOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'auto';
+    }
+    
+    return () => {
+      document.body.style.overflow = 'auto';
+    };
+  }, [isMobile, sidebarOpen]);
+  
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#2E0033] via-[#260041] to-[#1b1b2f] text-white flex flex-col md:flex-row">
       {/* Mobile menu button */}
@@ -171,7 +185,7 @@ function Dashboard() {
       
       {/* Sidebar - hidden on mobile by default */}
       <div className={`
-        ${isMobile ? 'fixed inset-0 z-20 transform transition-transform duration-300 ease-in-out' : ''}
+        ${isMobile ? 'fixed inset-0 z-30 transform transition-transform duration-300 ease-in-out' : ''}
         ${isMobile && !sidebarOpen ? '-translate-x-full' : ''}
         ${isMobile && sidebarOpen ? 'translate-x-0' : ''}
       `}>
@@ -180,13 +194,13 @@ function Dashboard() {
         {/* Overlay for mobile when sidebar is open */}
         {isMobile && sidebarOpen && (
           <div 
-            className="fixed inset-0 bg-black/50 z-10" 
+            className="fixed inset-0 bg-black/50 z-20" 
             onClick={() => setSidebarOpen(false)}
           ></div>
         )}
       </div>
       
-      <div className="flex-1 flex flex-col">
+      <div className={`flex-1 flex flex-col ${isMobile && sidebarOpen ? 'blur-sm' : ''}`}>
         {!isMobile && <DashboardHeader title="My Flashcards" actionButton="Create New" />}
         
         <div className="flex-1 p-4 md:p-6">
@@ -215,6 +229,11 @@ function Dashboard() {
             
             <div className="mt-6 md:mt-8">
               <RecentActivity />
+            </div>
+            
+            <div className="mt-6 md:mt-8">
+              <h2 className="text-xl font-bold mb-4">Study Tasks</h2>
+              <Todo />
             </div>
           </div>
         </div>
