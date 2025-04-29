@@ -57,37 +57,19 @@ If you're experiencing issues with MongoDB connections:
 
 1. Run the MongoDB connection test:
    ```bash
-   # For development database
    npm run test:mongodb
-   
-   # For production database
-   npm run test:mongodb:prod
    ```
 
 2. Check MongoDB environment variables:
-   - Development: `MONGODB_URI` 
-   - Production: `MONGODB_URI_PROD`
-   - If using individual parameters: `MONGODB_USER`, `MONGODB_PASSWORD`, `MONGODB_HOST`, `MONGODB_DATABASE`
+   - `MONGODB_URI` or individual connection parameters
+   - `MONGODB_USER`
+   - `MONGODB_PASSWORD`
+   - `MONGODB_HOST`
+   - `MONGODB_DATABASE`
 
 3. Verify network access:
    - If using MongoDB Atlas, check IP whitelist
-   - If using Railway, verify the service is properly provisioned
    - If using a local MongoDB, check if the service is running
-
-### Common MongoDB Issues
-
-#### Wrong Database Used in Production
-If your app is connecting to the wrong database in production:
-
-1. Ensure `MONGODB_URI_PROD` is properly set in your environment
-2. Verify the database name in the connection string (should be `memorix`)
-3. Check that `NODE_ENV` is set to `production`
-
-#### Connection String Format
-Valid MongoDB connection string formats:
-- MongoDB Atlas: `mongodb+srv://username:password@cluster.mongodb.net/memorix`
-- Railway: `mongodb://mongo:password@mongodb.railway.internal:27017/memorix`
-- Local: `mongodb://localhost:27017/memorixDev`
 
 ## Deployment Issues
 

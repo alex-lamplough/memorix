@@ -36,63 +36,14 @@ export const getMongoConnectionString = () => {
   // Load from .env.local first
   loadEnvLocal();
   
-  // Determine which URI to use based on environment
-  const isProd = process.env.NODE_ENV === 'production';
-  const baseUri = isProd && process.env.MONGODB_URI_PROD
-    ? process.env.MONGODB_URI_PROD  // Use production URI if available
-    : process.env.MONGODB_URI || 'mongodb://localhost:27017';
+  // Get base MongoDB URI from environment or fallback to local
+  const baseUri = process.env.MONGODB_URI || 'mongodb://localhost:27017';
   
-  console.log(`Using ${isProd ? 'production' : 'development'} MongoDB URI`);
-  
-  // For production, ensure we're using the 'memorix' database
-  if (isProd) {
-    // Always ensure production uses 'memorix' database
-    const prodDbName = 'memorix';
+  // For Railway production, the URI already has the correct database
+  if (baseUri.includes('mongodb.railway.internal')) {
+    console.log('Using Railway-provided MongoDB URI');
     
-    // Handle Atlas-style URLs (mongodb+srv://)
-    if (baseUri.includes('mongodb+srv://')) {
-      const parts = baseUri.split('/');
-      const lastPart = parts[parts.length - 1];
-      
-      if (lastPart.includes('?')) {
-        // Has query parameters
-        const dbAndParams = lastPart.split('?');
-        const params = dbAndParams[1];
-        
-        // Replace the database name
-        parts[parts.length - 1] = prodDbName + '?' + params;
-        
-        // Also update appName parameter if it exists
-        let newUri = parts.join('/');
-        if (newUri.includes('appName=')) {
-          newUri = newUri.replace(/appName=memorixDev|appName=[^&]+/, 'appName=memorix');
-        } else {
-          // Add appName if it doesn't exist
-          newUri += (newUri.includes('?') ? '&' : '?') + 'appName=memorix';
-        }
-        
-        console.log(`Production URI now uses database: ${prodDbName} with matching appName`);
-        return newUri;
-      } else {
-        // No query parameters
-        parts[parts.length - 1] = prodDbName;
-        
-        // Add appName parameter
-        const newUri = parts.join('/') + '?appName=memorix';
-        console.log(`Production URI now uses database: ${prodDbName} with matching appName`);
-        return newUri;
-      }
-    }
-    
-    // For other URI formats, use standard logic but with 'memorix' database
-    console.log(`Ensuring production uses database: ${prodDbName}`);
-  }
-  
-  // For Railway/MongoDB Atlas in production, the URI typically includes the database name
-  if (isProd && (baseUri.includes('mongodb.railway.internal') || baseUri.includes('mongodb+srv'))) {
-    console.log('Using cloud-hosted MongoDB URI');
-    
-    // Check if a database name is specified in the URI
+    // Extract the database name from the URI or use a default
     const lastSlashIndex = baseUri.lastIndexOf('/');
     const questionMarkIndex = baseUri.indexOf('?', lastSlashIndex);
     
@@ -105,11 +56,9 @@ export const getMongoConnectionString = () => {
         dbName = baseUri.substring(lastSlashIndex + 1);
       }
       
-      console.log(`Database name in URI: ${dbName}`);
-      
       // If the database name is 'test' (Railway default), replace it with 'memorix'
-      if (dbName === 'test') {
-        console.log('Replacing default database "test" with "memorix"');
+      if (dbName === 'test' && process.env.NODE_ENV === 'production') {
+        console.log('Replacing default Railway database "test" with "memorix"');
         if (questionMarkIndex !== -1) {
           return baseUri.substring(0, lastSlashIndex + 1) + 'memorix' + baseUri.substring(questionMarkIndex);
         } else {
@@ -118,7 +67,7 @@ export const getMongoConnectionString = () => {
       }
     } else {
       // No database specified, append our database
-      console.log('No database specified in URI, appending "memorix"');
+      console.log('No database specified in Railway URI, appending "memorix"');
       return baseUri + (baseUri.endsWith('/') ? '' : '/') + 'memorix';
     }
     
@@ -126,8 +75,8 @@ export const getMongoConnectionString = () => {
   }
   
   // For other URIs, handle database selection
-  const dbName = isProd ? 'memorix' : 'memorixDev';
-  console.log(`Connecting to ${isProd ? 'production' : 'development'} database: ${dbName}`);
+  const dbName = process.env.NODE_ENV === 'production' ? 'memorix' : 'memorixDev';
+  console.log(`Connecting to ${process.env.NODE_ENV || 'development'} database: ${dbName}`);
 
   // Handle standard MongoDB URLs
   if (baseUri.includes('mongodb+srv://') || baseUri.includes('mongodb://')) {
@@ -150,7 +99,7 @@ export const getMongoConnectionString = () => {
   }
   
   // Not a standard MongoDB URI, warn and return as is
-  console.warn('Warning: MongoDB URI does not appear to be a standard MongoDB connection string');
+  console.warn('Warning: MONGODB_URI does not appear to be a standard MongoDB connection string');
   return baseUri;
 };
 
