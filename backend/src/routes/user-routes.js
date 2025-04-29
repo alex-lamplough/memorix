@@ -12,10 +12,16 @@ router.use(getUserFromToken);
 // Get current user profile
 router.get('/me', async (req, res, next) => {
   try {
+    console.log(`==================== USER LOGIN/CREATION START ====================`);
     console.log(`🔍 Looking up user with Auth0 ID: ${req.user.auth0Id}`);
+    console.log(`🔑 Auth Middleware User Object:`, JSON.stringify(req.user));
+    console.log(`🔑 Auth Token Content:`, JSON.stringify(req.auth));
+    
     let user = await User.findOne({ auth0Id: req.user.auth0Id });
     
     if (!user) {
+      console.log(`❗ User not found in database, creating new user record`);
+      
       // Extract user info from Auth0 token
       const userInfo = req.auth;
       const auth0Id = userInfo.sub;
@@ -27,6 +33,10 @@ router.get('/me', async (req, res, next) => {
       // Try to get full profile from Auth0 Management API
       console.log('🔍 Fetching full profile from Auth0 Management API');
       const auth0Profile = await getUserProfile(auth0Id);
+      console.log('📝 Auth0 Profile API Response:', auth0Profile ? 'Success' : 'Failed');
+      if (auth0Profile) {
+        console.log('📝 Auth0 Profile Data:', JSON.stringify(auth0Profile, null, 2));
+      }
       
       let email, name, picture;
       
@@ -55,15 +65,21 @@ router.get('/me', async (req, res, next) => {
         name 
       });
       
-      // Create new user
-      user = await User.create({
-        auth0Id,
-        email,
-        name,
-        picture
-      });
-      
-      console.log(`✅ New user created in database: ${user._id}`);
+      try {
+        // Create new user
+        user = await User.create({
+          auth0Id,
+          email,
+          name,
+          picture
+        });
+        
+        console.log(`✅ New user created in database: ${user._id}`);
+      } catch (createError) {
+        console.error('❌ Failed to create user in database:', createError);
+        console.error('Error details:', JSON.stringify(createError, null, 2));
+        throw createError; // Re-throw to be handled by the error middleware
+      }
       
       // Flag for profile update if using placeholder email
       if (email.includes('@memorix-user.com')) {
@@ -90,9 +106,12 @@ router.get('/me', async (req, res, next) => {
       await user.save();
     }
     
+    console.log(`Response sending user:`, JSON.stringify(user));
+    console.log(`==================== USER LOGIN/CREATION END ====================`);
     res.json(user);
   } catch (error) {
     console.error('❌ Error getting/creating user:', error);
+    console.error('Stack trace:', error.stack);
     next(error);
   }
 });
