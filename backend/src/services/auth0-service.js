@@ -45,6 +45,7 @@ export async function getManagementApiToken() {
 
   try {
     console.log('Requesting Auth0 Management API token...');
+    console.log(`Using Management API Client ID: ${clientId.substring(0, 6)}...`);
     
     const response = await axios.post(
       `https://${domain}/oauth/token`,
