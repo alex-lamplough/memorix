@@ -118,6 +118,14 @@ function Hero() {
     {
       question: "What is the primary product of photosynthesis?",
       answer: "Glucose (sugar) and oxygen as a byproduct."
+    },
+    {
+      question: "Where does photosynthesis take place in plant cells?",
+      answer: "Primarily in the chloroplasts, specialized organelles containing chlorophyll."
+    },
+    {
+      question: "What is the chemical equation for photosynthesis?",
+      answer: "6CO₂ + 6H₂O + Light Energy → C₆H₁₂O₆ + 6O₂"
     }
   ];
   
@@ -192,7 +200,15 @@ function Hero() {
           >
             <CloseIcon fontSize="small" />
           </button>
-          <FlashcardDeck flashcards={demoFlashcards} />
+          <div>
+            <div className="mb-4 text-center">
+              <h3 className="text-lg font-semibold text-white">Track your progress as you learn</h3>
+              <p className="text-white/70 text-sm">
+                Mark cards as "Learned" or "Review Later" to optimize your learning journey
+              </p>
+            </div>
+            <FlashcardDeck flashcards={demoFlashcards} />
+          </div>
         </div>
       )}
       
