@@ -39,9 +39,35 @@ export const getMongoConnectionString = () => {
   // Get base MongoDB URI from environment or fallback to local
   const baseUri = process.env.MONGODB_URI || 'mongodb://localhost:27017';
   
+  // Use specified database name from environment variable if available
+  const envDbName = process.env.MONGODB_DATABASE;
+  if (envDbName) {
+    console.log(`Using database name from MONGODB_DATABASE env variable: ${envDbName}`);
+  }
+  
   // For Railway production, the URI already has the correct database
   if (baseUri.includes('mongodb.railway.internal')) {
     console.log('Using Railway-provided MongoDB URI');
+    
+    // If MONGODB_DATABASE is set, use it
+    if (envDbName) {
+      const lastSlashIndex = baseUri.lastIndexOf('/');
+      const questionMarkIndex = baseUri.indexOf('?', lastSlashIndex);
+      
+      if (lastSlashIndex !== -1) {
+        // URI has a path component
+        if (questionMarkIndex !== -1) {
+          // URI has parameters
+          return baseUri.substring(0, lastSlashIndex + 1) + envDbName + baseUri.substring(questionMarkIndex);
+        } else {
+          // URI has no parameters
+          return baseUri.substring(0, lastSlashIndex + 1) + envDbName;
+        }
+      } else {
+        // No path component, append the database name
+        return baseUri + (baseUri.endsWith('/') ? '' : '/') + envDbName;
+      }
+    }
     
     // Extract the database name from the URI or use a default
     const lastSlashIndex = baseUri.lastIndexOf('/');
@@ -75,7 +101,7 @@ export const getMongoConnectionString = () => {
   }
   
   // For other URIs, handle database selection
-  const dbName = process.env.NODE_ENV === 'production' ? 'memorix' : 'memorixDev';
+  const dbName = envDbName || (process.env.NODE_ENV === 'production' ? 'memorix' : 'memorixDev');
   console.log(`Connecting to ${process.env.NODE_ENV || 'development'} database: ${dbName}`);
 
   // Handle standard MongoDB URLs
