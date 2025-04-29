@@ -57,6 +57,45 @@ export const checkJwt = (req, res, next) => {
   });
 };
 
+/**
+ * Authentication middleware that can be configured to require or make optional
+ * the authentication
+ * @param {Object} options Authentication options
+ * @param {boolean} options.required Whether authentication is required (default: true)
+ * @returns {Function} Express middleware function
+ */
+export const authenticate = (options = {}) => {
+  const { required = true } = options;
+  
+  return (req, res, next) => {
+    // If authentication is not required, skip token check
+    if (!required) {
+      // Still try to check the token if it exists
+      const authHeader = req.headers.authorization || '';
+      if (!authHeader.startsWith('Bearer ')) {
+        console.log('ℹ️ No token provided, but authentication is optional');
+        return next();
+      }
+    }
+    
+    // If we get here, either authentication is required or a token was provided
+    checkJwt(req, res, (err) => {
+      if (err) {
+        // If authentication is optional, proceed even with invalid token
+        if (!required) {
+          console.log('⚠️ Invalid token provided, but authentication is optional');
+          return next();
+        }
+        // Otherwise, handle the error
+        return handleJwtError(err, req, res, next);
+      }
+      
+      // Token is valid, extract user info
+      getUserFromToken(req, res, next);
+    });
+  };
+};
+
 // Fetch complete user profile from Auth0 Management API
 async function fetchUserProfile(userId, accessToken) {
   try {

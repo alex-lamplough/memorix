@@ -35,7 +35,7 @@ export const isDevelopment = () => {
  * @returns {string} The environment name (development, production, etc.)
  */
 export const getEnvironmentName = () => {
-  return getEnvVariable('ENV', 'development');
+  return import.meta.env.VITE_ENV || 'development';
 };
 
 /**

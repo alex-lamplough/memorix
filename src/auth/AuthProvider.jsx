@@ -1,14 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import { Auth0Provider, useAuth0 } from '@auth0/auth0-react';
 import { auth0Config } from './auth0-config';
-import { getEnvVariable } from '../utils/env-utils';
 
 /**
  * User synchronization component that ensures the user exists in our database
  */
 const UserSync = ({ children }) => {
-  const { isAuthenticated, getAccessTokenSilently, user } = useAuth0();
+  const { isAuthenticated, getAccessTokenSilently, user, error } = useAuth0();
   const [syncStatus, setSyncStatus] = useState({ status: 'idle', error: null });
+  
+  // Log Auth0 errors
+  useEffect(() => {
+    if (error) {
+      console.error('Auth0 Error:', error);
+    }
+  }, [error]);
   
   useEffect(() => {
     // Create or sync user with our database when they authenticate
@@ -22,7 +28,7 @@ const UserSync = ({ children }) => {
           const token = await getAccessTokenSilently();
           
           // Call our API to create/update the user
-          const apiUrl = getEnvVariable('API_URL', 'http://localhost:3000/api');
+          const apiUrl = import.meta.env.VITE_API_URL || '/api';
           const response = await fetch(`${apiUrl}/users/me`, {
             method: 'GET',
             headers: {
@@ -73,7 +79,15 @@ const UserSync = ({ children }) => {
 const AuthProvider = ({ children }) => {
   const { domain, clientId, authorizationParams, useRefreshTokens, cacheLocation } = auth0Config;
   
+  // Log Auth0 configuration for debugging
+  console.log('🔐 Auth0Provider Configuration:');
+  console.log('  Domain:', domain);
+  console.log('  Client ID:', clientId.substring(0, 5) + '...');
+  console.log('  Redirect URI:', window.location.origin);
+  console.log('  Auth Params:', JSON.stringify(authorizationParams));
+  
   const onRedirectCallback = (appState) => {
+    console.log('🔄 Auth0 redirect callback triggered', appState);
     // After authentication, redirect to the dashboard page
     window.history.replaceState(
       {},

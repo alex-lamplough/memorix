@@ -15,7 +15,7 @@ Set the following environment variables in your Railway project:
 | `MONGODB_URI` | MongoDB connection string | `mongodb+srv://user:password@cluster.mongodb.net/memorix?retryWrites=true` |
 | `AUTH0_DOMAIN` | Auth0 tenant domain | `dev-spk5b1r7dbr52ilx.eu.auth0.com` |
 | `AUTH0_AUDIENCE` | Auth0 API audience | `https://dev-spk5b1r7dbr52ilx.eu.auth0.com/api/v2/` |
-| `AUTH0_MGMT_CLIENT_ID` | Auth0 Management API client ID | `iQpcTDiJKKK10m2qHAYHMT9GjDvbUZms` |
+| `AUTH0_MGMT_CLIENT_ID` | Auth0 Management API client ID | `6lM265X0FYEUjGqO2ZOjtfymM3mwndb2` |
 | `AUTH0_MGMT_CLIENT_SECRET` | Auth0 Management API client secret | `TYS61SV-W0epKaoZ...` |
 | `CORS_ORIGIN` | Frontend origin URL | `https://memorix-app.up.railway.app` |
 | `OPENAI_API_KEY` | OpenAI API Key (if used) | `sk-...` |
@@ -27,7 +27,7 @@ Set these variables for your frontend deployment:
 | Variable | Description | Example |
 |----------|-------------|---------|
 | `VITE_AUTH0_DOMAIN` | Auth0 tenant domain | `dev-spk5b1r7dbr52ilx.eu.auth0.com` |
-| `VITE_AUTH0_CLIENT_ID` | Auth0 application client ID | `iQpcTDiJKKK10m2qHAYHMT9GjDvbUZms` |
+| `VITE_AUTH0_CLIENT_ID` | Auth0 application client ID | `ZkPZBTQgwebcoyCey5nN9psbCTqnNNq9` |
 | `VITE_AUTH0_AUDIENCE` | Auth0 API audience | `https://dev-spk5b1r7dbr52ilx.eu.auth0.com/api/v2/` |
 | `VITE_API_URL` | Backend API URL | `https://memorix-api.up.railway.app/api` |
 | `VITE_ENV` | Environment name | `production` |

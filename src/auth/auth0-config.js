@@ -3,9 +3,10 @@
 import { getEnvVariable, maskSensitiveValue, isProduction, isDevelopment, getEnvironmentName } from '../utils/env-utils';
 
 // Get Auth0 config from environment variables
-const domain = getEnvVariable('AUTH0_DOMAIN', 'YOUR_AUTH0_DOMAIN');
-const clientId = getEnvVariable('AUTH0_CLIENT_ID', 'YOUR_AUTH0_CLIENT_ID');
-const audience = getEnvVariable('AUTH0_AUDIENCE', '');
+const domain = import.meta.env.VITE_AUTH0_DOMAIN || '';
+const clientId = import.meta.env.VITE_AUTH0_CLIENT_ID || '';
+// Audience is optional and may cause problems if not correctly configured
+const audience = import.meta.env.VITE_AUTH0_AUDIENCE || '';
 
 // Get current environment
 const currentEnv = getEnvironmentName();
@@ -14,18 +15,31 @@ const isProd = isProduction();
 // Log for debugging in development mode only
 if (isDevelopment()) {
   console.log(`🔐 Auth0 Configuration (${currentEnv} environment):`);
-  console.log(`  Domain: ${domain}`);
-  console.log(`  Client ID: ${maskSensitiveValue(clientId)}`);
-  console.log(`  Audience: ${audience ? maskSensitiveValue(audience) : 'Not configured'}`);
+  console.log(`  Domain: ${domain || 'NOT SET - AUTH WILL FAIL'}`);
+  console.log(`  Client ID: ${clientId ? maskSensitiveValue(clientId) : 'NOT SET - AUTH WILL FAIL'}`);
+  console.log(`  Audience: ${audience ? maskSensitiveValue(audience) : 'Not configured (this is optional)'}`);
+}
+
+// Check if required values are missing
+if (!domain || !clientId) {
+  console.error('❌ ERROR: Missing required Auth0 configuration. Authentication will fail!');
+  console.error('Please check your .env.local file and ensure VITE_AUTH0_DOMAIN and VITE_AUTH0_CLIENT_ID are set.');
+}
+
+// Only include audience if it's actually needed and configured
+const authParams = {
+  redirect_uri: window.location.origin,
+};
+
+// Only add audience if it's specifically set
+if (audience) {
+  authParams.audience = audience;
 }
 
 export const auth0Config = {
   domain,
   clientId,
-  authorizationParams: {
-    redirect_uri: window.location.origin,
-    audience: audience || undefined,
-  },
+  authorizationParams: authParams,
   useRefreshTokens: true,
   cacheLocation: "localstorage"
 }; 

@@ -17,6 +17,7 @@ import Sidebar from '../components/Sidebar'
 import DashboardHeader from '../components/DashboardHeader'
 import FlashcardSet from '../components/FlashcardSet'
 import Todo from '../components/Todo'
+import FlashcardCreationModal from '../components/FlashcardCreationModal'
 
 // This component was causing a conflict with the imported FlashcardSet
 function FlashcardCard({ title, cards, lastStudied, progress }) {
@@ -150,6 +151,7 @@ function Dashboard() {
   ]);
   
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const isMobile = useMediaQuery('(max-width:768px)');
   
   // Lock body scroll when sidebar is open on mobile
@@ -164,6 +166,10 @@ function Dashboard() {
       document.body.style.overflow = 'auto';
     };
   }, [isMobile, sidebarOpen]);
+  
+  const handleCreateButtonClick = () => {
+    setIsCreateModalOpen(true);
+  };
   
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#2E0033] via-[#260041] to-[#1b1b2f] text-white flex flex-col md:flex-row">
@@ -197,14 +203,23 @@ function Dashboard() {
       </div>
       
       <div className={`flex-1 flex flex-col ${isMobile && sidebarOpen ? 'blur-sm' : ''}`}>
-        {!isMobile && <DashboardHeader title="My Flashcards" actionButton="Create New" />}
+        {!isMobile && (
+          <DashboardHeader 
+            title="My Flashcards" 
+            actionButton="Create New"
+            onActionButtonClick={handleCreateButtonClick}
+          />
+        )}
         
         <div className="flex-1 p-4 md:p-6">
           <div className="container mx-auto max-w-6xl">
             {isMobile && (
               <div className="flex justify-between items-center mb-4">
                 <h1 className="text-2xl font-bold text-white">My Flashcards</h1>
-                <button className="bg-[#00ff94]/10 text-[#00ff94] px-3 py-1.5 text-sm rounded-lg hover:bg-[#00ff94]/20 transition-colors border border-[#00ff94]/30 flex items-center gap-1">
+                <button 
+                  className="bg-[#00ff94]/10 text-[#00ff94] px-3 py-1.5 text-sm rounded-lg hover:bg-[#00ff94]/20 transition-colors border border-[#00ff94]/30 flex items-center gap-1"
+                  onClick={handleCreateButtonClick}
+                >
                   <AddCircleOutlineIcon fontSize="small" />
                   <span>Create</span>
                 </button>
@@ -234,6 +249,12 @@ function Dashboard() {
           </div>
         </div>
       </div>
+      
+      {/* Flashcard Creation Modal */}
+      <FlashcardCreationModal 
+        open={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+      />
     </div>
   )
 }

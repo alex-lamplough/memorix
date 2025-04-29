@@ -9,6 +9,7 @@ import mongoose from 'mongoose';
 import flashcardRoutes from './routes/flashcard-routes.js';
 import userRoutes from './routes/user-routes.js';
 import aiRoutes from './routes/ai-routes.js';
+import flashcardGeneratorRoutes from './routes/flashcard-generator-routes.js';
 import { errorHandler } from './middleware/error-middleware.js';
 import { connectToMongoDB } from './db/mongodb.js';
 
@@ -20,10 +21,30 @@ const app = express();
 
 // Set up middleware
 app.use(helmet()); // Security headers
+
+// Configure CORS to allow multiple origins
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'http://localhost:3000',
+  process.env.CORS_ORIGIN
+].filter(Boolean); // Remove any undefined or empty values
+
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
+  origin: function(origin, callback) {
+    // Allow requests with no origin (like mobile apps, curl, Postman)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1 || !origin) {
+      callback(null, true);
+    } else {
+      console.log('Blocked by CORS:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true
 }));
+
 app.use(morgan('dev')); // Logging
 app.use(express.json()); // Parse JSON request body
 
@@ -33,6 +54,7 @@ const setupServer = () => {
   app.use('/api/flashcards', flashcardRoutes);
   app.use('/api/users', userRoutes);
   app.use('/api/ai', aiRoutes);
+  app.use('/api/generator', flashcardGeneratorRoutes);
 
   // Health check endpoint
   app.get('/api/health', (req, res) => {
@@ -53,6 +75,7 @@ const setupServer = () => {
   const server = app.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
     console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`🔒 CORS allowed origins:`, allowedOrigins);
   }).on('error', (err) => {
     if (err.code === 'EADDRINUSE') {
       console.log(`⚠️ Port ${PORT} is already in use, trying port ${PORT + 1}...`);
@@ -60,6 +83,7 @@ const setupServer = () => {
       app.listen(PORT + 1, () => {
         console.log(`🚀 Server running on port ${PORT + 1}`);
         console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
+        console.log(`🔒 CORS allowed origins:`, allowedOrigins);
       });
     } else {
       console.error('Server error:', err);

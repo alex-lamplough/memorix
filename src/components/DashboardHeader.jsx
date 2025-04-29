@@ -6,7 +6,7 @@ import FilterListIcon from '@mui/icons-material/FilterList'
 import SearchIcon from '@mui/icons-material/Search'
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline'
 
-function DashboardHeader({ title, actionButton, searchEnabled = false, filterEnabled = false }) {
+function DashboardHeader({ title, actionButton, searchEnabled = false, filterEnabled = false, onActionButtonClick }) {
   const isMobile = useMediaQuery('(max-width:640px)');
   
   return (
@@ -34,7 +34,10 @@ function DashboardHeader({ title, actionButton, searchEnabled = false, filterEna
             )}
             
             {actionButton && (
-              <button className="bg-[#00ff94]/10 text-[#00ff94] px-3 md:px-4 py-2 rounded-lg hover:bg-[#00ff94]/20 transition-colors border border-[#00ff94]/30 flex items-center gap-1 md:gap-2 text-sm md:text-base whitespace-nowrap">
+              <button 
+                className="bg-[#00ff94]/10 text-[#00ff94] px-3 md:px-4 py-2 rounded-lg hover:bg-[#00ff94]/20 transition-colors border border-[#00ff94]/30 flex items-center gap-1 md:gap-2 text-sm md:text-base whitespace-nowrap"
+                onClick={onActionButtonClick}
+              >
                 <AddCircleOutlineIcon fontSize={isMobile ? "small" : "medium"} />
                 <span>{isMobile && actionButton.length > 10 ? 'Create' : actionButton}</span>
               </button>

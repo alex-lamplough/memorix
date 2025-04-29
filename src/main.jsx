@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom'
 import './index.css'
 import App from './App.jsx'
 import AuthProvider from './auth/AuthProvider'
+import AuthTokenProvider from './auth/AuthTokenProvider'
 import { validateEnvironmentOnStartup } from './utils/validate-env'
 import { getEnvironmentName, isProduction } from './utils/env-utils'
 
@@ -18,7 +19,9 @@ createRoot(document.getElementById('root')).render(
   <StrictMode>
     <BrowserRouter>
       <AuthProvider>
-        <App />
+        <AuthTokenProvider>
+          <App />
+        </AuthTokenProvider>
       </AuthProvider>
     </BrowserRouter>
   </StrictMode>,

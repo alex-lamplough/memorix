@@ -16,7 +16,9 @@ export function useAuth() {
   } = useAuth0();
 
   const login = () => {
+    // Use a minimal configuration to prevent issues
     loginWithRedirect({
+      // Only specify the returnTo for the simplest possible configuration
       appState: { returnTo: '/dashboard' }
     });
   };

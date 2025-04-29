@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import { checkJwt, getUserFromToken } from '../middleware/auth-middleware.js';
 import FlashcardSet from '../models/flashcard-set-model.js';
 import User from '../models/user-model.js';
+import openaiService from '../services/openai-service.js';
 
 const router = express.Router();
 
@@ -58,6 +59,33 @@ router.get('/public', async (req, res, next) => {
     });
   } catch (error) {
     next(error);
+  }
+});
+
+// Generate flashcards using OpenAI - protected, only for authenticated users
+router.post('/generate', async (req, res, next) => {
+  try {
+    const { content, count = 5, difficulty = 'intermediate' } = req.body;
+    
+    if (!content) {
+      return res.status(400).json({ error: 'Content is required' });
+    }
+    
+    // Generate flashcards using OpenAI
+    const cards = await openaiService.generateFlashcards(content, count, difficulty);
+    
+    // Generate a title for the flashcard set
+    const title = await openaiService.generateFlashcardSetTitle(content);
+    
+    // Return the generated flashcards and title
+    res.json({
+      cards,
+      title,
+      count: cards.length
+    });
+  } catch (error) {
+    console.error('Error generating flashcards:', error);
+    res.status(500).json({ error: 'Failed to generate flashcards' });
   }
 });
 
@@ -222,45 +250,45 @@ router.post('/:id/study', async (req, res, next) => {
     flashcardSet.studyStats.totalTimeSpent += timeSpent;
     flashcardSet.studyStats.lastStudied = new Date();
     
-    // Update card review history
+    // Update cards with review data if provided
     if (cardReviews && Array.isArray(cardReviews)) {
       cardReviews.forEach(review => {
-        const { cardId, performance, timeSpent: cardTimeSpent } = review;
-        const card = flashcardSet.cards.id(cardId);
-        
+        const card = flashcardSet.cards.id(review.cardId);
         if (card) {
-          if (!card.reviewHistory) {
-            card.reviewHistory = [];
-          }
+          card.lastReviewed = new Date();
+          // Calculate next review date based on performance
+          const daysToAdd = review.performance <= 2 ? 1 : (review.performance <= 4 ? 3 : 7);
+          const nextReviewDate = new Date();
+          nextReviewDate.setDate(nextReviewDate.getDate() + daysToAdd);
           
+          card.nextReviewDate = nextReviewDate;
           card.reviewHistory.push({
             date: new Date(),
-            performance,
-            timeSpent: cardTimeSpent
+            performance: review.performance,
+            timeSpent: review.timeSpent
           });
-          
-          card.lastReviewed = new Date();
-          
-          // Calculate next review date based on spaced repetition algorithm
-          // This is a simple implementation - could be more sophisticated
-          let daysUntilNextReview;
-          
-          if (performance <= 1) {
-            daysUntilNextReview = 1; // Review again tomorrow
-          } else if (performance <= 3) {
-            daysUntilNextReview = 3; // Review in 3 days
-          } else {
-            daysUntilNextReview = 7; // Review in a week
-          }
-          
-          card.nextReviewDate = new Date(Date.now() + daysUntilNextReview * 24 * 60 * 60 * 1000);
         }
       });
+      
+      // Calculate mastery level based on review history
+      const totalCards = flashcardSet.cards.length;
+      let masteredCards = 0;
+      
+      flashcardSet.cards.forEach(card => {
+        const history = card.reviewHistory || [];
+        // Consider a card mastered if it has at least 3 reviews with performance > 3
+        if (history.filter(h => h.performance > 3).length >= 3) {
+          masteredCards++;
+        }
+      });
+      
+      // Update mastery level (0-100%)
+      flashcardSet.studyStats.masteryLevel = Math.round((masteredCards / totalCards) * 100);
     }
     
     await flashcardSet.save();
     
-    res.json(flashcardSet);
+    res.json(flashcardSet.studyStats);
   } catch (error) {
     next(error);
   }
