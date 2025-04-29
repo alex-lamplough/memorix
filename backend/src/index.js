@@ -27,35 +27,22 @@ app.use(cors({
 app.use(morgan('dev')); // Logging
 app.use(express.json()); // Parse JSON request body
 
-// Health check endpoint - moved before database connection to ensure it's available immediately
-app.get('/api/health', (req, res) => {
-  const dbStatus = mongoose.connection.readyState;
-  const dbStatusMap = {
-    0: 'disconnected',
-    1: 'connected',
-    2: 'connecting',
-    3: 'disconnecting',
-    99: 'uninitialized'
-  };
-
-  res.status(200).json({ 
-    status: 'ok', 
-    time: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development',
-    database: {
-      name: mongoose.connection.name || 'not connected yet',
-      status: dbStatusMap[dbStatus] || 'unknown',
-      readyState: dbStatus
-    }
-  });
-});
-
 // Function to set up and start the server
 const setupServer = () => {
   // API routes
   app.use('/api/flashcards', flashcardRoutes);
   app.use('/api/users', userRoutes);
   app.use('/api/ai', aiRoutes);
+
+  // Health check endpoint
+  app.get('/api/health', (req, res) => {
+    res.status(200).json({ 
+      status: 'ok', 
+      time: new Date().toISOString(),
+      environment: process.env.NODE_ENV || 'development',
+      database: mongoose.connection.name
+    });
+  });
 
   // Error handling middleware
   app.use(errorHandler);

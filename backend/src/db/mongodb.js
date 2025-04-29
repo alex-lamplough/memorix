@@ -39,42 +39,39 @@ export const getMongoConnectionString = () => {
   // Get base MongoDB URI from environment or fallback to local
   const baseUri = process.env.MONGODB_URI || 'mongodb://localhost:27017';
   
-  // For Railway production, we need to make sure we're using the correct database
+  // For Railway production, the URI already has the correct database
   if (baseUri.includes('mongodb.railway.internal')) {
     console.log('Using Railway-provided MongoDB URI');
     
-    try {
-      // Parse the URI using URL
-      const uriParts = new URL(baseUri);
-      
-      // Extract the database name or use empty string if none
-      const pathParts = uriParts.pathname.split('/');
-      const currentDb = pathParts.length > 1 ? pathParts[1] : '';
-      
-      // In production, set database to 'memorix'
-      if (process.env.NODE_ENV === 'production') {
-        const targetDb = 'memorix';
-        console.log(`Replacing database "${currentDb || 'none'}" with "${targetDb}" in Railway URI`);
-        
-        // IMPORTANT: preserve the original auth information (username/password)
-        // Just update the path portion to use the correct database name
-        uriParts.pathname = `/${targetDb}`;
-        return uriParts.toString();
+    // Extract the database name from the URI or use a default
+    const lastSlashIndex = baseUri.lastIndexOf('/');
+    const questionMarkIndex = baseUri.indexOf('?', lastSlashIndex);
+    
+    // If there's a database name in the URI
+    if (lastSlashIndex !== -1 && lastSlashIndex < baseUri.length - 1) {
+      let dbName;
+      if (questionMarkIndex !== -1) {
+        dbName = baseUri.substring(lastSlashIndex + 1, questionMarkIndex);
+      } else {
+        dbName = baseUri.substring(lastSlashIndex + 1);
       }
       
-      // For non-production, if no database specified, use memorixDev
-      if (!currentDb) {
-        console.log('No database specified in Railway URI, appending "memorixDev"');
-        uriParts.pathname = '/memorixDev';
-        return uriParts.toString();
+      // If the database name is 'test' (Railway default), replace it with 'memorix'
+      if (dbName === 'test' && process.env.NODE_ENV === 'production') {
+        console.log('Replacing default Railway database "test" with "memorix"');
+        if (questionMarkIndex !== -1) {
+          return baseUri.substring(0, lastSlashIndex + 1) + 'memorix' + baseUri.substring(questionMarkIndex);
+        } else {
+          return baseUri.substring(0, lastSlashIndex + 1) + 'memorix';
+        }
       }
-      
-      return baseUri;
-    } catch (error) {
-      console.error('Error parsing MongoDB URI:', error.message);
-      console.log('Falling back to original URI');
-      return baseUri;
+    } else {
+      // No database specified, append our database
+      console.log('No database specified in Railway URI, appending "memorix"');
+      return baseUri + (baseUri.endsWith('/') ? '' : '/') + 'memorix';
     }
+    
+    return baseUri;
   }
   
   // For other URIs, handle database selection
