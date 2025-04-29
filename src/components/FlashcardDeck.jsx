@@ -1,263 +1,626 @@
-import { useState, useEffect } from 'react'
-import Flashcard from './Flashcard'
+import { useState, useEffect, useRef } from 'react'
+import PropTypes from 'prop-types'
 
 // Icons
+import NavigateNextIcon from '@mui/icons-material/NavigateNext'
+import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore'
+import FlipIcon from '@mui/icons-material/Flip'
+import ShuffleIcon from '@mui/icons-material/Shuffle'
+import RestartAltIcon from '@mui/icons-material/RestartAlt'
+import BookmarkIcon from '@mui/icons-material/Bookmark'
+import BookmarkBorderIcon from '@mui/icons-material/BookmarkBorder'
+import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline'
-import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline'
-import TimerIcon from '@mui/icons-material/Timer'
-import EmojiEventsIcon from '@mui/icons-material/EmojiEvents'
-import ReplayIcon from '@mui/icons-material/Replay'
+import RefreshIcon from '@mui/icons-material/Refresh'
 
-function FlashcardDeck({ flashcards }) {
+function FlashcardDeck({ flashcards, onCardComplete, reviewLaterCards = {}, onReviewLaterToggle, onDeckEvent }) {
+  const [refreshKey, setRefreshKey] = useState(0); // For forcing re-render
+  const originalCardsRef = useRef([]);
   const [currentCardIndex, setCurrentCardIndex] = useState(0)
   const [isFlipped, setIsFlipped] = useState(false)
-  const [learnedCards, setLearnedCards] = useState([])
-  const [reviewingCards, setReviewingCards] = useState([])
-  const [studyMode, setStudyMode] = useState('learning') // 'learning', 'review', 'complete'
+  const [progress, setProgress] = useState(0)
+  const [cards, setCards] = useState([])
+  const [learnedCards, setLearnedCards] = useState({})
+  const [localReviewLaterCards, setLocalReviewLaterCards] = useState({})
+  const [activeFilter, setActiveFilter] = useState('all') // 'all', 'learned', 'review'
+  const [filteredCards, setFilteredCards] = useState([])
+  const [isDeckCompleted, setIsDeckCompleted] = useState(false)
   
-  // Debug the state for troubleshooting
+  // Initialize cards on component mount or when flashcards prop changes
   useEffect(() => {
-    console.log({
-      studyMode,
-      currentCardIndex,
-      reviewingCards,
-      learnedCards
-    })
-  }, [studyMode, currentCardIndex, reviewingCards, learnedCards])
-  
-  // Reset study session or move to review mode when needed
-  useEffect(() => {
-    // Check if we need to change modes
-    if (studyMode === 'learning') {
-      // Calculate cards still to learn (not learned and not in review queue)
-      const remainingToLearn = flashcards.map((_, i) => i)
-        .filter(i => !learnedCards.includes(i) && !reviewingCards.includes(i));
+    if (flashcards && flashcards.length > 0) {
+      console.log("FlashcardDeck: Initializing cards from props:", {
+        flashcardsLength: flashcards.length,
+        firstCardQuestion: flashcards[0]?.question
+      });
       
-      if (remainingToLearn.length === 0 && reviewingCards.length > 0) {
-        // All initial learning is done, but we have review cards
-        console.log("Moving to review mode");
-        setStudyMode('review');
-        setCurrentCardIndex(reviewingCards[0]);
-        setIsFlipped(false);
-      } else if (remainingToLearn.length === 0 && reviewingCards.length === 0) {
-        // All cards learned, none to review
-        console.log("All cards learned - complete!");
-        setStudyMode('complete');
-      }
-    } else if (studyMode === 'review' && reviewingCards.length === 0) {
-      // No more cards to review, study complete
-      console.log("Review complete!");
-      setStudyMode('complete');
+      // Store original cards for reference
+      originalCardsRef.current = [...flashcards];
+      
+      // Initialize the deck with a complete reset
+      setCards([...flashcards]);
+      setFilteredCards([...flashcards]);
+      setCurrentCardIndex(0);
+      setIsFlipped(false);
+      setIsDeckCompleted(false);
+      setActiveFilter('all'); // Reset to 'all' filter when receiving new cards
+      updateProgress(0);
     }
-  }, [learnedCards, reviewingCards, flashcards.length, studyMode]);
+  }, [flashcards]) // We don't need refreshKey anymore since parent will reload us
   
+  // Sync with parent reviewLaterCards
+  useEffect(() => {
+    setLocalReviewLaterCards(reviewLaterCards)
+  }, [reviewLaterCards])
+  
+  // Apply filters when cards or filter state changes
+  useEffect(() => {
+    if (cards.length === 0) return;
+    
+    let filtered = [...cards];
+    
+    switch (activeFilter) {
+      case 'learned':
+        filtered = cards.filter(card => learnedCards[card.id]);
+        break;
+      case 'review':
+        filtered = cards.filter(card => localReviewLaterCards[card.id]);
+        break;
+      default:
+        // 'all' - no filtering needed
+        break;
+    }
+    
+    setFilteredCards(filtered);
+    
+    // Reset current card index if needed
+    if (currentCardIndex >= filtered.length) {
+      setCurrentCardIndex(filtered.length > 0 ? 0 : currentCardIndex);
+    }
+    
+    updateProgress(currentCardIndex);
+  }, [cards, activeFilter, learnedCards, localReviewLaterCards, currentCardIndex]);
+
+  // Check if deck is completed when we reach the last card
+  useEffect(() => {
+    if (filteredCards.length > 0 && currentCardIndex === filteredCards.length - 1 && isFlipped) {
+      if (!isDeckCompleted) {
+        setIsDeckCompleted(true);
+        
+        // Notify parent that deck is completed
+        if (onDeckEvent) {
+          onDeckEvent({ type: 'deck_completed' });
+        }
+      }
+    }
+  }, [currentCardIndex, filteredCards.length, isFlipped, isDeckCompleted, onDeckEvent]);
+
+  // Check if all cards are learned and show completion screen
+  useEffect(() => {
+    // Only check when in 'all' filter mode to avoid confusion
+    if (activeFilter === 'all' && cards.length > 0) {
+      const allLearned = cards.every(card => learnedCards[card.id]);
+      
+      if (allLearned && !isDeckCompleted && cards.length > 0) {
+        setIsDeckCompleted(true);
+        
+        // Notify parent that deck is completed
+        if (onDeckEvent) {
+          onDeckEvent({ type: 'deck_completed' });
+        }
+      }
+    }
+  }, [learnedCards, cards, activeFilter, isDeckCompleted, onDeckEvent]);
+
+  // Update progress calculation
+  const updateProgress = (index) => {
+    const calculatedProgress = filteredCards.length > 0 
+      ? Math.round(((index + 1) / filteredCards.length) * 100) 
+      : 0
+    setProgress(calculatedProgress)
+  }
+  
+  // Handle card flipping
   const handleFlip = () => {
-    setIsFlipped(!isFlipped);
+    setIsFlipped(!isFlipped)
   }
   
+  // Mark card as learned
   const markAsLearned = () => {
-    if (!isFlipped) {
-      // Must flip the card to see the answer first
-      setIsFlipped(true);
-      return;
-    }
+    if (!filteredCards[currentCardIndex]?.id) return;
     
-    if (studyMode === 'learning') {
-      // Add current card to learned cards
-      setLearnedCards(prev => [...prev, currentCardIndex]);
-    } else if (studyMode === 'review') {
-      // Remove from reviewing array and add to learned
-      setReviewingCards(prev => prev.filter(index => index !== currentCardIndex));
-      setLearnedCards(prev => [...prev, currentCardIndex]);
-    }
+    const cardId = filteredCards[currentCardIndex].id;
     
-    // Move to next card
-    moveToNextCard();
-  }
-  
-  const markForReview = () => {
-    if (!isFlipped) {
-      // Must flip the card to see the answer first
-      setIsFlipped(true);
-      return;
-    }
+    // Update local state
+    setLearnedCards(prev => ({
+      ...prev,
+      [cardId]: true
+    }));
     
-    if (studyMode === 'learning') {
-      // In learning mode, add card to review queue if not already there
-      if (!reviewingCards.includes(currentCardIndex)) {
-        setReviewingCards(prev => [...prev, currentCardIndex]);
-      }
-    } else if (studyMode === 'review') {
-      // In review mode, we need to make sure this card stays in the queue
-      // First remove it from its current position
-      const updatedQueue = reviewingCards.filter(index => index !== currentCardIndex);
-      // Then add it to the end of the queue
-      updatedQueue.push(currentCardIndex);
-      setReviewingCards(updatedQueue);
-    }
-    
-    // Move to next card
-    moveToNextCard();
-  }
-  
-  const moveToNextCard = () => {
-    setIsFlipped(false); // Reset to question side
-    
-    if (studyMode === 'learning') {
-      // Find next card that hasn't been marked as learned or for review
-      const availableCards = flashcards.map((_, index) => index)
-        .filter(index => 
-          !learnedCards.includes(index) && 
-          !reviewingCards.includes(index) && 
-          index !== currentCardIndex
-        );
+    // Remove from review later if it was marked for review
+    if (localReviewLaterCards[cardId]) {
+      const updatedReviewLater = { ...localReviewLaterCards };
+      delete updatedReviewLater[cardId];
+      setLocalReviewLaterCards(updatedReviewLater);
       
-      if (availableCards.length > 0) {
-        // Still have cards to learn
-        setCurrentCardIndex(availableCards[0]);
-      } else if (reviewingCards.length > 0) {
-        // Time to review cards
-        setStudyMode('review');
-        setCurrentCardIndex(reviewingCards[0]);
-      } else {
-        // All done!
-        setStudyMode('complete');
+      if (onReviewLaterToggle) {
+        onReviewLaterToggle(cardId, false);
       }
-    } else if (studyMode === 'review') {
-      // We're in review mode
-      if (reviewingCards.length <= 1) {
-        // This was the last card and we've either marked it learned or kept it for review
-        if (reviewingCards.length === 0) {
-          // All cards are now learned
-          setStudyMode('complete');
-        } else {
-          // There's still one card in the review queue and it's the current one
-          // So we just stay on this card (which should now be at the end of the queue)
-          setCurrentCardIndex(reviewingCards[0]);
-        }
-      } else {
-        // Find next card in the review queue
-        // If current card is still in queue, it should be at the end now
-        const nextCard = reviewingCards.find(index => index !== currentCardIndex);
-        if (nextCard !== undefined) {
-          setCurrentCardIndex(nextCard);
-        }
+    }
+    
+    // Call the callback if provided
+    if (onCardComplete) {
+      onCardComplete(cardId, 5); // Use 5 as the highest rating
+    }
+    
+    // Move to next card if available
+    if (currentCardIndex < filteredCards.length - 1) {
+      handleNext();
+    } else if (currentCardIndex === filteredCards.length - 1) {
+      // We've reached the end of the deck
+      setIsDeckCompleted(true);
+      if (onDeckEvent) {
+        onDeckEvent({ type: 'deck_completed' });
       }
     }
   }
   
-  const restartStudy = () => {
+  // Reset learned status for card
+  const resetLearnedStatus = () => {
+    if (!filteredCards[currentCardIndex]?.id) return;
+    
+    const cardId = filteredCards[currentCardIndex].id;
+    
+    if (learnedCards[cardId]) {
+      setLearnedCards(prev => {
+        const updated = { ...prev };
+        delete updated[cardId];
+        return updated;
+      });
+      
+      // Call the callback if provided
+      if (onCardComplete) {
+        onCardComplete(cardId, 0); // Use 0 to indicate reset
+      }
+    }
+  }
+  
+  // Toggle review later status for current card
+  const toggleReviewLater = () => {
+    if (!filteredCards[currentCardIndex]?.id) return;
+    
+    const cardId = filteredCards[currentCardIndex].id;
+    const isCurrentlyMarked = !!localReviewLaterCards[cardId];
+    
+    // Update local state
+    setLocalReviewLaterCards(prev => {
+      const updated = { ...prev };
+      if (updated[cardId]) {
+        delete updated[cardId];
+      } else {
+        updated[cardId] = true;
+      }
+      return updated;
+    });
+    
+    // Notify parent component
+    if (onReviewLaterToggle) {
+      onReviewLaterToggle(cardId, !isCurrentlyMarked);
+    }
+  }
+  
+  // Reset all learned cards
+  const resetAllLearnedCards = () => {
+    const learnedCardIds = Object.keys(learnedCards);
+    
+    if (learnedCardIds.length === 0) return;
+    
+    // Remove learned status for all cards
+    setLearnedCards({});
+    
+    // Notify about reset if callback provided
+    if (onCardComplete) {
+      learnedCardIds.forEach(cardId => {
+        onCardComplete(cardId, 0);
+      });
+    }
+    
+    // Reset the deck
+    handleRestart();
+  }
+  
+  // Navigate to next card
+  const handleNext = () => {
+    if (currentCardIndex < filteredCards.length - 1) {
+      setCurrentCardIndex(prevIndex => {
+        const newIndex = prevIndex + 1
+        updateProgress(newIndex)
+        return newIndex
+      })
+      setIsFlipped(false)
+    }
+  }
+  
+  // Navigate to previous card
+  const handlePrevious = () => {
+    if (currentCardIndex > 0) {
+      setCurrentCardIndex(prevIndex => {
+        const newIndex = prevIndex - 1
+        updateProgress(newIndex)
+        return newIndex
+      })
+      setIsFlipped(false)
+    }
+  }
+  
+  // Reset deck to beginning - ONE SIMPLE FUNCTION
+  const handleRestart = () => {
+    console.log('RESTARTING DECK - Hard reset');
+    
+    // First notify parent that deck is restarted before any state changes
+    if (onDeckEvent) {
+      onDeckEvent({ type: 'deck_restarted' });
+    }
+    
+    // Force immediate state resets in specific order
+    setActiveFilter('all');
+    setIsDeckCompleted(false);
+    setIsFlipped(false);
+    
+    // Reset to original cards in a separate render cycle
+    // This is the most reliable way to handle nested state updates in React
+    setTimeout(() => {
+      const originalCardsCopy = [...originalCardsRef.current];
+      setCards(originalCardsCopy);
+      setFilteredCards(originalCardsCopy);
+      setCurrentCardIndex(0);
+      updateProgress(0);
+      
+      console.log('RESTARTING DECK - Reset complete', {
+        cardsLength: originalCardsCopy.length,
+        isDeckCompleted: false,
+        currentCardIndex: 0
+      });
+    }, 0);
+  }
+  
+  // Change active filter
+  const handleFilterChange = (filter) => {
+    if (filter === activeFilter) return; // No change needed
+    
+    setActiveFilter(filter);
     setCurrentCardIndex(0);
     setIsFlipped(false);
-    setLearnedCards([]);
-    setReviewingCards([]);
-    setStudyMode('learning');
+    setIsDeckCompleted(false);
+    
+    // Notify parent that deck is essentially restarted with a filter
+    if (onDeckEvent) {
+      onDeckEvent({ type: 'deck_restarted' });
+    }
   }
   
-  // Render success view if all cards are learned
-  if (studyMode === 'complete') {
+  // If no cards are provided, display a message
+  if (!cards || cards.length === 0) {
     return (
-      <div className="w-full max-w-lg mx-auto bg-[#18092a]/80 border border-[#00ff94]/30 rounded-xl p-8 shadow-lg text-center">
-        <div className="mb-4 text-[#00ff94] flex justify-center">
-          <EmojiEventsIcon style={{ fontSize: '4rem' }} />
-        </div>
-        <h2 className="text-2xl font-bold text-white mb-2">Excellent work!</h2>
-        <p className="text-white/80 mb-6">
-          You've successfully learned all {flashcards.length} flashcards.
-        </p>
-        <button 
-          onClick={restartStudy}
-          className="bg-[#00ff94]/10 text-[#00ff94] px-6 py-3 rounded-lg border border-[#00ff94]/30 hover:bg-[#00ff94]/20 transition-colors flex items-center mx-auto"
-        >
-          <ReplayIcon className="mr-2" /> Study Again
-        </button>
+      <div className="bg-[#18092a]/60 rounded-xl p-4 text-center">
+        <p className="text-white/80">No flashcards available in this set.</p>
       </div>
     )
   }
   
-  return (
-    <div className="w-full max-w-lg mx-auto">
-      {/* Mode indicator */}
-      <div className="flex justify-center mb-4">
-        <div className={`px-3 py-1 rounded-full text-sm flex items-center gap-1 ${
-          studyMode === 'review'
-          ? 'bg-[#ffeb3b]/10 text-[#ffeb3b]'
-          : 'bg-[#00ff94]/10 text-[#00ff94]'
-        }`}>
-          {studyMode === 'review' ? (
-            <><TimerIcon fontSize="small" /> Review Mode</>
-          ) : (
-            <><CheckCircleOutlineIcon fontSize="small" /> Learning Mode</>
-          )}
+  // Show message if filtered set is empty
+  if (filteredCards.length === 0) {
+    return (
+      <div className="bg-[#18092a]/60 rounded-xl p-4 text-center">
+        <p className="text-white/80">No cards match the current filter.</p>
+        <div className="mt-2 flex justify-center">
+          <button
+            onClick={() => handleFilterChange('all')}
+            className="bg-[#00ff94]/10 text-[#00ff94] px-3 py-1 text-sm rounded-lg hover:bg-[#00ff94]/20 transition-colors border border-[#00ff94]/30"
+          >
+            View All Cards
+          </button>
         </div>
       </div>
-      
-      <Flashcard
-        question={flashcards[currentCardIndex].question}
-        answer={flashcards[currentCardIndex].answer}
-        isFlipped={isFlipped}
-        onFlip={handleFlip}
-      />
-      
-      {/* Progress indicators */}
-      <div className="flex justify-between items-center mt-4 mb-4">
-        <div className="flex items-center gap-2">
-          <span className="text-[#00ff94] flex items-center gap-1">
-            <CheckCircleOutlineIcon fontSize="small" /> {learnedCards.length}
-          </span>
-          {reviewingCards.length > 0 && (
-            <span className="text-[#ffeb3b] flex items-center gap-1">
-              <TimerIcon fontSize="small" /> {reviewingCards.length}
-            </span>
-          )}
+    )
+  }
+  
+  const currentCard = filteredCards[currentCardIndex]
+  const currentCardId = currentCard?.id;
+  const isCurrentCardLearned = !!learnedCards[currentCardId];
+  const isMarkedForReview = !!localReviewLaterCards[currentCardId];
+  
+  // Calculate counts for filters
+  const learnedCount = Object.keys(learnedCards).length;
+  const reviewCount = Object.keys(localReviewLaterCards).length;
+  const completionPercentage = Math.round((learnedCount / cards.length) * 100);
+  
+  // Show deck completion message if applicable
+  if (isDeckCompleted) {
+    return (
+      <div className="flex flex-col">
+        {/* Filters and controls in same row */}
+        <div className="mb-3 flex justify-between items-center">
+          <div className="bg-[#18092a]/60 rounded-lg flex overflow-hidden text-xs">
+            <button
+              onClick={() => handleFilterChange('all')}
+              className={`px-2 py-1 ${
+                activeFilter === 'all' 
+                  ? 'bg-[#00ff94]/10 text-[#00ff94]' 
+                  : 'text-white/70 hover:bg-gray-800/30'
+              }`}
+            >
+              All ({cards.length})
+            </button>
+            <button
+              onClick={() => handleFilterChange('learned')}
+              className={`px-2 py-1 ${
+                activeFilter === 'learned' 
+                  ? 'bg-[#00ff94]/10 text-[#00ff94]' 
+                  : 'text-white/70 hover:bg-gray-800/30'
+              }`}
+            >
+              Learned ({learnedCount})
+            </button>
+            <button
+              onClick={() => handleFilterChange('review')}
+              className={`px-2 py-1 ${
+                activeFilter === 'review' 
+                  ? 'bg-[#00ff94]/10 text-[#00ff94]' 
+                  : 'text-white/70 hover:bg-gray-800/30'
+              }`}
+            >
+              For Review ({reviewCount})
+            </button>
+          </div>
         </div>
-        <div className="text-white text-sm">
-          {currentCardIndex + 1} / {flashcards.length}
+        
+        {/* Progress bar showing full completion */}
+        <div className="w-full mb-3">
+          <div className="w-full h-1 bg-gray-800 rounded-full overflow-hidden">
+            <div 
+              className="h-full bg-[#00ff94] transition-all duration-300 ease-out"
+              style={{ width: '100%' }}
+            ></div>
+          </div>
+          <div className="flex justify-between mt-0.5 text-xs text-white/60">
+            <span>Completed</span>
+            <span>{completionPercentage}% Learned</span>
+          </div>
+        </div>
+        
+        {/* Completion message */}
+        <div className="w-full aspect-[4/2.5] mb-3 cursor-pointer relative">
+          <div className="absolute w-full h-full bg-gradient-to-br from-[#260041] to-[#18092a] rounded-xl p-4 flex flex-col justify-center items-center shadow-lg border border-gray-800/30">
+            <div className="text-center">
+              <h2 className="text-xl font-bold text-[#00ff94] mb-4">Deck Completed!</h2>
+              <p className="text-white/80 mb-4">You've gone through all the flashcards in this set.</p>
+              <button
+                onClick={handleRestart}
+                className="bg-[#00ff94]/10 text-[#00ff94] px-4 py-2 rounded-lg hover:bg-[#00ff94]/20 transition-colors border border-[#00ff94]/30 inline-flex items-center"
+              >
+                <RestartAltIcon fontSize="small" className="mr-1" /> Restart Deck
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  
+  return (
+    <div className="flex flex-col">
+      {/* Filters and controls in same row */}
+      <div className="mb-3 flex justify-between items-center">
+        <div className="bg-[#18092a]/60 rounded-lg flex overflow-hidden text-xs">
+          <button
+            onClick={() => handleFilterChange('all')}
+            className={`px-2 py-1 ${
+              activeFilter === 'all' 
+                ? 'bg-[#00ff94]/10 text-[#00ff94]' 
+                : 'text-white/70 hover:bg-gray-800/30'
+            }`}
+          >
+            All ({cards.length})
+          </button>
+          <button
+            onClick={() => handleFilterChange('learned')}
+            className={`px-2 py-1 ${
+              activeFilter === 'learned' 
+                ? 'bg-[#00ff94]/10 text-[#00ff94]' 
+                : 'text-white/70 hover:bg-gray-800/30'
+            }`}
+          >
+            Learned ({learnedCount})
+          </button>
+          <button
+            onClick={() => handleFilterChange('review')}
+            className={`px-2 py-1 ${
+              activeFilter === 'review' 
+                ? 'bg-[#00ff94]/10 text-[#00ff94]' 
+                : 'text-white/70 hover:bg-gray-800/30'
+            }`}
+          >
+            For Review ({reviewCount})
+          </button>
+        </div>
+        
+        <div className="flex gap-1">
+          <button
+            onClick={handleRestart}
+            className="bg-[#18092a]/60 text-white px-2 py-1 text-xs rounded-lg hover:bg-[#18092a] transition-colors"
+            title="Restart deck"
+          >
+            <RestartAltIcon fontSize="small" />
+          </button>
+          <button
+            onClick={resetAllLearnedCards}
+            className="bg-[#18092a]/60 text-white px-2 py-1 text-xs rounded-lg hover:bg-[#18092a] transition-colors"
+            title="Reset all learned cards"
+            disabled={learnedCount === 0}
+          >
+            <RefreshIcon fontSize="small" />
+          </button>
         </div>
       </div>
       
       {/* Progress bar */}
-      <div className="w-full h-1.5 bg-white/10 rounded-full mb-4 overflow-hidden">
-        <div 
-          className="h-full bg-[#00ff94]" 
-          style={{ 
-            width: `${(learnedCards.length / flashcards.length) * 100}%` 
-          }}
-        ></div>
+      <div className="w-full mb-3">
+        <div className="w-full h-1 bg-gray-800 rounded-full overflow-hidden">
+          <div 
+            className="h-full bg-[#00ff94] transition-all duration-300 ease-out"
+            style={{ width: `${progress}%` }}
+          ></div>
+        </div>
+        <div className="flex justify-between mt-0.5 text-xs text-white/60">
+          <span>Card {currentCardIndex + 1} of {filteredCards.length}</span>
+          <span>{completionPercentage}% Learned</span>
+        </div>
       </div>
       
-      {/* Action buttons */}
-      <div className="flex gap-3">
-        {!isFlipped && (
-          <button 
-            onClick={handleFlip}
-            className="flex-1 bg-[#18092a]/60 text-white px-4 py-3 rounded-lg border border-gray-800/30 hover:bg-[#18092a] transition-colors"
-          >
-            Reveal Answer
-          </button>
-        )}
+      {/* Card display with reduced height */}
+      <div className="w-full aspect-[4/2.5] mb-3 cursor-pointer relative">
+        {/* Front of card - Shown when not flipped */}
+        <div 
+          className={`absolute w-full h-full bg-gradient-to-br from-[#260041] to-[#18092a] rounded-xl p-4 flex flex-col justify-center items-center shadow-lg border border-gray-800/30 transition-opacity duration-500 ${
+            isFlipped ? 'opacity-0 pointer-events-none' : 'opacity-100'
+          }`}
+          onClick={handleFlip}
+        >
+          <div className="text-center max-w-full overflow-auto">
+            <div className="text-white text-lg md:text-xl">{currentCard.question}</div>
+          </div>
+          <div className="absolute bottom-1 right-2 text-white/40 text-xs flex items-center">
+            <FlipIcon fontSize="small" className="mr-0.5" />
+            <span>Tap to flip</span>
+          </div>
+          
+          {/* Status indicators */}
+          <div className="absolute top-1 right-1 flex">
+            {isMarkedForReview && (
+              <BookmarkIcon className="text-[#00ff94] mr-1" fontSize="small" />
+            )}
+            {isCurrentCardLearned && (
+              <CheckCircleIcon className="text-[#00ff94]" fontSize="small" />
+            )}
+          </div>
+        </div>
         
-        {isFlipped && (
-          <>
-            <button 
-              onClick={markForReview}
-              className="flex-1 bg-[#ffeb3b]/10 text-[#ffeb3b] px-4 py-3 rounded-lg border border-[#ffeb3b]/30 hover:bg-[#ffeb3b]/20 transition-colors flex items-center justify-center"
+        {/* Back of card - Shown when flipped */}
+        <div 
+          className={`absolute w-full h-full bg-gradient-to-br from-[#260041] to-[#18092a] rounded-xl p-4 flex flex-col justify-center items-center shadow-lg border border-gray-800/30 transition-opacity duration-500 ${
+            isFlipped ? 'opacity-100' : 'opacity-0 pointer-events-none'
+          }`}
+          onClick={handleFlip}
+        >
+          <div className="text-center max-w-full overflow-auto">
+            <div className="text-[#00ff94] text-lg md:text-xl">{currentCard.answer}</div>
+          </div>
+          <div className="absolute bottom-1 right-2 text-white/40 text-xs flex items-center">
+            <FlipIcon fontSize="small" className="mr-0.5" />
+            <span>Tap to flip</span>
+          </div>
+          
+          {/* Status indicators */}
+          <div className="absolute top-1 right-1 flex">
+            {isMarkedForReview && (
+              <BookmarkIcon className="text-[#00ff94] mr-1" fontSize="small" />
+            )}
+            {isCurrentCardLearned && (
+              <CheckCircleIcon className="text-[#00ff94]" fontSize="small" />
+            )}
+          </div>
+        </div>
+      </div>
+      
+      {/* Controls */}
+      <div className="flex justify-between items-center mb-3">
+        {/* Navigation */}
+        <div className="flex space-x-1">
+          <button
+            onClick={handlePrevious}
+            disabled={currentCardIndex === 0}
+            className={`rounded-full p-1 ${
+              currentCardIndex === 0 
+                ? 'bg-gray-800/50 text-white/40 cursor-not-allowed' 
+                : 'bg-gray-800 text-white hover:bg-gray-700'
+            }`}
+          >
+            <NavigateBeforeIcon fontSize="small" />
+          </button>
+          
+          <button
+            onClick={handleFlip}
+            className="bg-[#00ff94]/10 text-[#00ff94] rounded-full p-1 hover:bg-[#00ff94]/20 transition-colors"
+          >
+            <FlipIcon fontSize="small" />
+          </button>
+          
+          <button
+            onClick={handleNext}
+            disabled={currentCardIndex === filteredCards.length - 1}
+            className={`rounded-full p-1 ${
+              currentCardIndex === filteredCards.length - 1 
+                ? 'bg-gray-800/50 text-white/40 cursor-not-allowed' 
+                : 'bg-gray-800 text-white hover:bg-gray-700'
+            }`}
+          >
+            <NavigateNextIcon fontSize="small" />
+          </button>
+        </div>
+        
+        {/* Card action buttons */}
+        <div className="flex space-x-2">
+          <button
+            onClick={toggleReviewLater}
+            className={`flex items-center px-2 py-1 text-xs rounded-lg transition-colors ${
+              isMarkedForReview
+                ? 'bg-[#00ff94]/20 text-[#00ff94]'
+                : 'bg-[#18092a]/60 text-white/80 hover:bg-[#18092a]'
+            }`}
+          >
+            {isMarkedForReview ? 
+              <BookmarkIcon className="mr-1" fontSize="small" /> : 
+              <BookmarkBorderIcon className="mr-1" fontSize="small" />
+            }
+            {isMarkedForReview ? 'Unmark Review' : 'Mark for Review'}
+          </button>
+          
+          {isCurrentCardLearned ? (
+            <button
+              onClick={resetLearnedStatus}
+              className="flex items-center bg-[#00ff94]/20 text-[#00ff94] px-2 py-1 text-xs rounded-lg hover:bg-[#00ff94]/30 transition-colors"
             >
-              <TimerIcon fontSize="small" className="mr-2" /> 
-              {studyMode === 'review' ? 'Still Learning' : 'Review Later'}
+              <RefreshIcon className="mr-1" fontSize="small" />
+              Reset Learned
             </button>
-            <button 
+          ) : (
+            <button
               onClick={markAsLearned}
-              className="flex-1 bg-[#00ff94]/10 text-[#00ff94] px-4 py-3 rounded-lg border border-[#00ff94]/30 hover:bg-[#00ff94]/20 transition-colors flex items-center justify-center"
+              className="flex items-center bg-[#18092a]/60 text-white/80 px-2 py-1 text-xs rounded-lg hover:bg-[#18092a] transition-colors"
             >
-              <CheckCircleOutlineIcon fontSize="small" className="mr-2" /> 
-              Learned
+              <CheckCircleOutlineIcon className="mr-1" fontSize="small" />
+              Learned It
             </button>
-          </>
-        )}
+          )}
+        </div>
       </div>
     </div>
   )
+}
+
+FlashcardDeck.propTypes = {
+  flashcards: PropTypes.arrayOf(
+    PropTypes.shape({
+      question: PropTypes.string.isRequired,
+      answer: PropTypes.string.isRequired,
+      id: PropTypes.string
+    })
+  ).isRequired,
+  onCardComplete: PropTypes.func,
+  reviewLaterCards: PropTypes.object,
+  onReviewLaterToggle: PropTypes.func,
+  onDeckEvent: PropTypes.func
 }
 
 export default FlashcardDeck 

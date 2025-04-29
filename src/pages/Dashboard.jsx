@@ -11,6 +11,8 @@ import StarIcon from '@mui/icons-material/Star'
 import AccessTimeIcon from '@mui/icons-material/AccessTime'
 import MoreHorizIcon from '@mui/icons-material/MoreHoriz'
 import QuizIcon from '@mui/icons-material/Quiz'
+import ShareIcon from '@mui/icons-material/Share'
+import DeleteIcon from '@mui/icons-material/Delete'
 
 // Components
 import Sidebar from '../components/Sidebar'
@@ -18,6 +20,7 @@ import DashboardHeader from '../components/DashboardHeader'
 import FlashcardSet from '../components/FlashcardSet'
 import Todo from '../components/Todo'
 import FlashcardCreationModal from '../components/FlashcardCreationModal'
+import ShareModal from '../components/ShareModal'
 
 // Services
 import { flashcardService } from '../services/api'
@@ -25,6 +28,8 @@ import { flashcardService } from '../services/api'
 // This component was causing a conflict with the imported FlashcardSet
 function FlashcardCard({ title, cards, lastStudied, progress, id }) {
   const navigate = useNavigate();
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   
   const handleStudyClick = () => {
     navigate(`/study/${id}`);
@@ -34,14 +39,88 @@ function FlashcardCard({ title, cards, lastStudied, progress, id }) {
     navigate(`/edit/${id}`);
   }
   
+  const handleShareClick = () => {
+    setIsShareModalOpen(true);
+  }
+  
+  const handleDeleteClick = () => {
+    setShowDeleteConfirm(true);
+  }
+  
+  const confirmDelete = async () => {
+    try {
+      // Call your API to delete the flashcard set
+      await flashcardService.deleteFlashcardSet(id);
+      // Refresh the page or update the state to remove the deleted set
+      window.location.reload();
+    } catch (error) {
+      console.error('Error deleting flashcard set:', error);
+      alert('Failed to delete flashcard set. Please try again.');
+    } finally {
+      setShowDeleteConfirm(false);
+    }
+  }
+  
+  const cancelDelete = () => {
+    setShowDeleteConfirm(false);
+  }
+  
   return (
     <div className="bg-[#18092a]/60 rounded-xl p-6 border border-gray-800/30 shadow-lg text-white">
       <div className="flex justify-between items-start mb-4">
         <h3 className="text-xl font-bold truncate pr-2">{title}</h3>
-        <button className="text-white/60 hover:text-white p-1 ml-2">
-          <MoreHorizIcon fontSize="small" />
-        </button>
+        <div className="flex space-x-1">
+          <button 
+            className="text-white/60 hover:text-white p-1 rounded-full hover:bg-white/10"
+            onClick={handleShareClick}
+            title="Share"
+          >
+            <ShareIcon fontSize="small" />
+          </button>
+          <button 
+            className="text-white/60 hover:text-red-400 p-1 rounded-full hover:bg-white/10"
+            onClick={handleDeleteClick}
+            title="Delete"
+          >
+            <DeleteIcon fontSize="small" />
+          </button>
+        </div>
       </div>
+      
+      {/* Delete confirmation */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-[#18092a] p-6 rounded-xl max-w-md w-full mx-4">
+            <h3 className="text-xl font-bold mb-3">Delete Flashcard Set</h3>
+            <p className="text-white/70 mb-6">Are you sure you want to delete "{title}"? This action cannot be undone.</p>
+            <div className="flex justify-end gap-3">
+              <button 
+                onClick={cancelDelete} 
+                className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={confirmDelete} 
+                className="px-4 py-2 bg-red-500/20 text-red-400 hover:bg-red-500/30 rounded-lg"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Share modal */}
+      <ShareModal
+        open={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        itemToShare={{
+          id,
+          type: "flashcards",
+          title
+        }}
+      />
       
       <div className="mb-4">
         <span className="text-white/70 text-sm">

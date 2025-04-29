@@ -30,6 +30,8 @@ import Quizzes from './pages/Quizzes'
 import Settings from './pages/Settings'
 import SharedItem from './pages/SharedItem'
 import ShareFeature from './pages/ShareFeature'
+import StudyDeck from './pages/StudyDeck'
+import EditDeck from './pages/EditDeck'
 import Header from './Header'
 // import Collections from './pages/Collections'
 
@@ -438,6 +440,8 @@ function App() {
       <Route path="/favorites" element={<ProtectedRoute element={<Favorites />} />} />
       <Route path="/quizzes" element={<ProtectedRoute element={<Quizzes />} />} />
       <Route path="/settings" element={<ProtectedRoute element={<Settings />} />} />
+      <Route path="/study/:id" element={<ProtectedRoute element={<StudyDeck />} />} />
+      <Route path="/edit/:id" element={<ProtectedRoute element={<EditDeck />} />} />
       <Route path="/share/:type/:id" element={<SharedItem />} />
       <Route path="/share" element={<ShareFeature />} />
       <Route path="/" element={

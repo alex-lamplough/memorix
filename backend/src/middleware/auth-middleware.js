@@ -134,17 +134,20 @@ export const getUserFromToken = (req, res, next) => {
     return next();
   }
   
-  // Auth0 user IDs are in the format 'auth0|123456789'
-  // We want to extract just the ID part
-  const userId = sub.includes('|') ? sub.split('|')[1] : sub;
+  // IMPORTANT: Don't extract just the ID part - we need the full Auth0 ID
+  // for looking up the user in our database
   
-  // Add user info to the request object
+  // Add user info to the request object - set auth0Id properly
   req.user = {
-    id: userId,
+    // Temporary ID - this will be replaced with MongoDB ObjectId by user-lookup middleware
+    id: null,
     auth0Id: sub,
     // Include other user info as needed
   };
 
-  console.log('✅ User info extracted from token:', JSON.stringify(req.user));
+  console.log('✅ Auth0 ID extracted from token:', sub);
+  
+  // NOTE: At this point, req.user.id is null. It should be set by a subsequent middleware
+  // that looks up the MongoDB user by auth0Id and sets the correct MongoDB _id
   next();
 }; 

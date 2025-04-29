@@ -1,6 +1,7 @@
 import express from 'express';
 import mongoose from 'mongoose';
 import { checkJwt, getUserFromToken } from '../middleware/auth-middleware.js';
+import { lookupMongoUser } from '../middleware/user-middleware.js';
 import FlashcardSet from '../models/flashcard-set-model.js';
 import User from '../models/user-model.js';
 import openaiService from '../services/openai-service.js';
@@ -10,13 +11,73 @@ const router = express.Router();
 // Apply auth middleware to all routes
 router.use(checkJwt);
 router.use(getUserFromToken);
+// Add the MongoDB user lookup middleware to get proper user._id
+router.use(lookupMongoUser);
 
 // Get all flashcard sets for the authenticated user
 router.get('/', async (req, res, next) => {
   try {
+    // Debug logging
+    console.log('==== FLASHCARD GET REQUEST ====');
+    console.log('Database name:', mongoose.connection.name);
+    console.log('User from request:', {
+      id: req.user.id,
+      auth0Id: req.user.auth0Id
+    });
+    
+    // Add more detailed checking
+    if (!req.user || !req.user.id) {
+      console.error('No valid user in request');
+      return res.status(401).json({ error: 'User not authenticated' });
+    }
+    
+    console.log('Finding flashcards with userId:', req.user.id);
+    
     const flashcardSets = await FlashcardSet.find({ userId: req.user.id })
       .select('-cards.reviewHistory -cards.hint')
       .sort({ updatedAt: -1 });
+    
+    console.log(`Found ${flashcardSets.length} flashcard sets`);
+    
+    // If no sets are found, double-check with a looser query
+    if (flashcardSets.length === 0) {
+      console.log('No flashcards found for this user, checking all sets in the database');
+      const allSets = await FlashcardSet.find({}).select('_id title userId');
+      console.log('All sets in database:', JSON.stringify(allSets.map(set => ({
+        id: set._id,
+        title: set.title,
+        userId: set.userId
+      }))));
+      
+      // Try to find by Auth0 ID if MongoDB ID approach failed
+      console.log('Attempting to find user in database by Auth0 ID');
+      const dbUser = await User.findOne({ auth0Id: req.user.auth0Id });
+      if (dbUser) {
+        console.log(`Found user in database with ID ${dbUser._id}`);
+        console.log('Checking if any flashcard sets have this userId');
+        
+        // Look for flashcards with the found user ID
+        const setsByDbUser = await FlashcardSet.find({ userId: dbUser._id })
+          .select('-cards.reviewHistory -cards.hint')
+          .sort({ updatedAt: -1 });
+          
+        console.log(`Found ${setsByDbUser.length} flashcard sets for database user`);
+        
+        if (setsByDbUser.length > 0) {
+          // If we found flashcards with the database user ID, use them
+          const formattedSets = setsByDbUser.map(set => ({
+            ...set.toObject(),
+            cardCount: set.cards.length,
+            progress: set.studyStats.masteryLevel || 0,
+            lastStudied: set.studyStats.lastStudied || null,
+            cards: undefined
+          }));
+          
+          console.log('Returning sets found by database user ID lookup');
+          return res.json(formattedSets);
+        }
+      }
+    }
     
     // Transform the response to include card count and formatted study stats
     const formattedSets = flashcardSets.map(set => {
@@ -33,6 +94,7 @@ router.get('/', async (req, res, next) => {
     
     res.json(formattedSets);
   } catch (error) {
+    console.error('Error in flashcard GET route:', error);
     next(error);
   }
 });
@@ -134,13 +196,26 @@ router.get('/:id', async (req, res, next) => {
       return res.status(404).json({ error: 'Flashcard set not found' });
     }
     
+    // Log for debugging
+    console.log('Get flashcard permission check:', {
+      setUserId: flashcardSet.userId.toString(),
+      reqUserId: req.user.id,
+      reqUserAuth0Id: req.user.auth0Id,
+      isPublic: flashcardSet.isPublic
+    });
+    
     // Check if user has permission to view this set
-    if (!flashcardSet.isPublic && flashcardSet.userId.toString() !== req.user.id) {
+    // Allow access if set is public or user is the owner
+    const isOwner = flashcardSet.userId.toString() === req.user.id || 
+                   (req.user.mongoUser && flashcardSet.userId.equals(req.user.mongoUser._id));
+    
+    if (!flashcardSet.isPublic && !isOwner) {
       return res.status(403).json({ error: 'You do not have permission to view this flashcard set' });
     }
     
     res.json(flashcardSet);
   } catch (error) {
+    console.error('Error getting flashcard set:', error);
     next(error);
   }
 });
@@ -150,24 +225,26 @@ router.post('/', async (req, res, next) => {
   try {
     const { title, description, category, tags, isPublic, cards } = req.body;
     
-    // Find or create user
+    // Check if user ID is properly set by the lookupMongoUser middleware
+    if (!req.user || !req.user.id) {
+      console.error('User ID not properly set');
+      return res.status(401).json({ error: 'User not authenticated or identified' });
+    }
+    
+    console.log(`Creating flashcard set for user ID: ${req.user.id} (Auth0 ID: ${req.user.auth0Id})`);
+    
+    // Find user by Auth0 ID
     let user = await User.findOne({ auth0Id: req.user.auth0Id });
     
     if (!user) {
       // Extract user info from Auth0 token
       const userInfo = req.auth;
       
-      // Create new user
-      user = await User.create({
-        auth0Id: req.user.auth0Id,
-        email: userInfo.email || 'unknown@email.com',
-        name: userInfo.name || 'Anonymous User',
-        nickname: userInfo.nickname,
-        picture: userInfo.picture
-      });
+      console.error('❌ User not found in database when creating flashcard set');
+      return res.status(404).json({ error: 'User not found. Please try logging in again.' });
     }
     
-    // Create new flashcard set
+    // Create new flashcard set with the correct MongoDB user ID
     const flashcardSet = await FlashcardSet.create({
       title,
       description,
@@ -175,11 +252,14 @@ router.post('/', async (req, res, next) => {
       tags,
       isPublic,
       cards,
-      userId: user._id
+      userId: user._id // Use the MongoDB _id, not Auth0 ID
     });
+    
+    console.log(`Flashcard set created with ID: ${flashcardSet._id}`);
     
     res.status(201).json(flashcardSet);
   } catch (error) {
+    console.error('Error creating flashcard set:', error);
     next(error);
   }
 });
@@ -200,8 +280,19 @@ router.put('/:id', async (req, res, next) => {
       return res.status(404).json({ error: 'Flashcard set not found' });
     }
     
+    // Log for debugging
+    console.log('Update flashcard permission check:', {
+      setUserId: flashcardSet.userId.toString(),
+      reqUserId: req.user.id,
+      reqUserAuth0Id: req.user.auth0Id
+    });
+    
     // Check if user has permission to update this set
-    if (flashcardSet.userId.toString() !== req.user.id) {
+    // Support both MongoDB ObjectId and Auth0 ID for permission check
+    const isOwner = flashcardSet.userId.toString() === req.user.id || 
+                   (req.user.mongoUser && flashcardSet.userId.equals(req.user.mongoUser._id));
+    
+    if (!isOwner) {
       return res.status(403).json({ error: 'You do not have permission to update this flashcard set' });
     }
     
@@ -222,6 +313,7 @@ router.put('/:id', async (req, res, next) => {
     
     res.json(updatedFlashcardSet);
   } catch (error) {
+    console.error('Error updating flashcard set:', error);
     next(error);
   }
 });
@@ -241,8 +333,19 @@ router.delete('/:id', async (req, res, next) => {
       return res.status(404).json({ error: 'Flashcard set not found' });
     }
     
+    // Log for debugging
+    console.log('Delete flashcard permission check:', {
+      setUserId: flashcardSet.userId.toString(),
+      reqUserId: req.user.id,
+      reqUserAuth0Id: req.user.auth0Id
+    });
+    
     // Check if user has permission to delete this set
-    if (flashcardSet.userId.toString() !== req.user.id) {
+    // Support both MongoDB ObjectId and Auth0 ID for permission check
+    const isOwner = flashcardSet.userId.toString() === req.user.id || 
+                   (req.user.mongoUser && flashcardSet.userId.equals(req.user.mongoUser._id));
+    
+    if (!isOwner) {
       return res.status(403).json({ error: 'You do not have permission to delete this flashcard set' });
     }
     
@@ -250,6 +353,7 @@ router.delete('/:id', async (req, res, next) => {
     
     res.status(204).end();
   } catch (error) {
+    console.error('Error deleting flashcard set:', error);
     next(error);
   }
 });
@@ -270,8 +374,19 @@ router.post('/:id/study', async (req, res, next) => {
       return res.status(404).json({ error: 'Flashcard set not found' });
     }
     
+    // Log for debugging
+    console.log('Study session permission check:', {
+      setUserId: flashcardSet.userId.toString(),
+      reqUserId: req.user.id,
+      reqUserAuth0Id: req.user.auth0Id
+    });
+    
     // Check if user has permission
-    if (flashcardSet.userId.toString() !== req.user.id) {
+    // Support both MongoDB ObjectId and Auth0 ID for permission check
+    const isOwner = flashcardSet.userId.toString() === req.user.id || 
+                   (req.user.mongoUser && flashcardSet.userId.equals(req.user.mongoUser._id));
+    
+    if (!isOwner) {
       return res.status(403).json({ error: 'You do not have permission to record study for this flashcard set' });
     }
     

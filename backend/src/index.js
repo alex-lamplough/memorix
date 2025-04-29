@@ -10,6 +10,7 @@ import flashcardRoutes from './routes/flashcard-routes.js';
 import userRoutes from './routes/user-routes.js';
 import aiRoutes from './routes/ai-routes.js';
 import flashcardGeneratorRoutes from './routes/flashcard-generator-routes.js';
+import todoRoutes from './routes/todo-routes.js';
 import { errorHandler } from './middleware/error-middleware.js';
 import { connectToMongoDB } from './db/mongodb.js';
 
@@ -55,6 +56,7 @@ const setupServer = () => {
   app.use('/api/users', userRoutes);
   app.use('/api/ai', aiRoutes);
   app.use('/api/generator', flashcardGeneratorRoutes);
+  app.use('/api/todos', todoRoutes);
 
   // Health check endpoint
   app.get('/api/health', (req, res) => {
