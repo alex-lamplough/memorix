@@ -12,6 +12,10 @@ import aiRoutes from './routes/ai-routes.js';
 import { errorHandler } from './middleware/error-middleware.js';
 import { connectToMongoDB } from './db/mongodb.js';
 
+// Import models to ensure they're registered with mongoose before routes are initialized
+import './models/user-model.js';
+import './models/flashcard-model.js';
+
 // Load environment variables
 dotenv.config();
 

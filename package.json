@@ -10,12 +10,14 @@
     "preview": "vite preview",
     "setup": "node scripts/create-env.js",
     "setup:mongodb:prod": "node scripts/setup-mongodb-prod.js",
+    "setup:auth0": "node scripts/setup-auth0.js",
     "validate-env": "node -e \"import('./src/utils/validate-env.js').then(mod => mod.validateEnvironment())\"",
     "start": "npm run build && vite preview",
     "test:auth0": "node backend/src/scripts/test-auth0-credentials.js",
     "test:auth0:prod": "NODE_ENV=production node backend/src/scripts/test-auth0-credentials.js",
     "test:mongodb": "node backend/src/scripts/test-mongodb-connection.js",
-    "test:mongodb:prod": "NODE_ENV=production node backend/src/scripts/test-mongodb-connection.js"
+    "test:mongodb:prod": "NODE_ENV=production node backend/src/scripts/test-mongodb-connection.js",
+    "debug:auth0-user": "node backend/src/scripts/debug-auth0-user-creation.js"
   },
   "dependencies": {
     "@auth0/auth0-react": "^2.3.0",
