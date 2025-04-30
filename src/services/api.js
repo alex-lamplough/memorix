@@ -27,12 +27,38 @@ api.interceptors.request.use(
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
+      
+      // Log the request for debugging
+      console.log(`API Request: ${config.method.toUpperCase()} ${config.url}`, {
+        headers: config.headers,
+        data: config.data
+      });
     } catch (error) {
       console.error('Error getting auth token for request:', error);
     }
     return config;
   },
   (error) => Promise.reject(error)
+);
+
+// Add response interceptor to log all responses
+api.interceptors.response.use(
+  (response) => {
+    console.log(`API Response: ${response.status} ${response.config.method.toUpperCase()} ${response.config.url}`, {
+      data: response.data
+    });
+    return response;
+  },
+  (error) => {
+    if (error.response) {
+      console.error(`API Error: ${error.response.status} ${error.config?.method?.toUpperCase()} ${error.config?.url}`, {
+        data: error.response.data
+      });
+    } else {
+      console.error('API request failed:', error.message);
+    }
+    return Promise.reject(error);
+  }
 );
 
 // Flashcard Services
@@ -129,6 +155,75 @@ export const flashcardService = {
       return response.data;
     } catch (error) {
       console.error('Error fetching public flashcard sets:', error);
+      throw error;
+    }
+  }
+};
+
+// Quiz Services
+export const quizService = {
+  // Get all quizzes for the current user
+  getAllQuizzes: async () => {
+    try {
+      const response = await api.get('/quizzes');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching quizzes:', error);
+      throw error;
+    }
+  },
+  
+  // Get a specific quiz by ID
+  getQuiz: async (id) => {
+    try {
+      const response = await api.get(`/quizzes/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching quiz ${id}:`, error);
+      throw error;
+    }
+  },
+  
+  // Create a new quiz
+  createQuiz: async (quiz) => {
+    try {
+      const response = await api.post('/quizzes', quiz);
+      return response.data;
+    } catch (error) {
+      console.error('Error creating quiz:', error);
+      throw error;
+    }
+  },
+  
+  // Update an existing quiz
+  updateQuiz: async (id, quiz) => {
+    try {
+      const response = await api.put(`/quizzes/${id}`, quiz);
+      return response.data;
+    } catch (error) {
+      console.error(`Error updating quiz ${id}:`, error);
+      throw error;
+    }
+  },
+  
+  // Delete a quiz
+  deleteQuiz: async (id) => {
+    try {
+      const response = await api.delete(`/quizzes/${id}`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error deleting quiz ${id}:`, error);
+      throw error;
+    }
+  },
+  
+  // Get public quizzes
+  getPublicQuizzes: async (params = {}) => {
+    try {
+      const response = await api.get('/quizzes/public', { params });
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching public quizzes:', error);
       throw error;
     }
   }

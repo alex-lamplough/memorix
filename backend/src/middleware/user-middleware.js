@@ -14,6 +14,7 @@ export const lookupMongoUser = async (req, res, next) => {
     }
     
     console.log(`🔍 Looking up MongoDB user with Auth0 ID: ${req.user.auth0Id}`);
+    console.log('Request user object before lookup:', JSON.stringify(req.user));
     
     // Find the user in MongoDB by Auth0 ID
     const user = await User.findOne({ auth0Id: req.user.auth0Id });
@@ -24,10 +25,13 @@ export const lookupMongoUser = async (req, res, next) => {
     }
     
     // Set the MongoDB ObjectId as req.user.id
+    const previousId = req.user.id;
     req.user.id = user._id;
     req.user.mongoUser = user;
     
     console.log(`✅ Found MongoDB user: ${user._id} (matching Auth0 ID: ${req.user.auth0Id})`);
+    console.log(`ID before lookup: ${previousId}, ID after lookup: ${req.user.id}`);
+    console.log(`ID types - MongoDB _id: ${typeof user._id}, req.user.id: ${typeof req.user.id}`);
     
     next();
   } catch (error) {
