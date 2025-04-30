@@ -214,7 +214,25 @@ const FlashcardCreationModal = ({ open, onClose }) => {
             minHeight: '500px',
             display: 'flex',
             flexDirection: 'column',
+            scrollbarWidth: 'thin',
+            scrollbarColor: 'rgba(255, 255, 255, 0.2) transparent',
           }
+        }}
+        sx={{
+          '& ::-webkit-scrollbar': {
+            width: '6px',
+            height: '6px',
+          },
+          '& ::-webkit-scrollbar-track': {
+            background: 'transparent',
+          },
+          '& ::-webkit-scrollbar-thumb': {
+            backgroundColor: 'rgba(255, 255, 255, 0.2)',
+            borderRadius: '3px',
+          },
+          '& ::-webkit-scrollbar-thumb:hover': {
+            backgroundColor: 'rgba(255, 255, 255, 0.3)',
+          },
         }}
       >
         <DialogTitle 
@@ -451,13 +469,6 @@ const FlashcardCreationModal = ({ open, onClose }) => {
                     overflowY: 'visible', 
                     flexGrow: 1,
                     pr: 1,
-                    '&::-webkit-scrollbar': {
-                      width: '6px',
-                    },
-                    '&::-webkit-scrollbar-thumb': {
-                      backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                      borderRadius: '3px',
-                    },
                   }}>
                     <Grid container spacing={2}>
                       {cards.map((card, index) => (
@@ -772,13 +783,6 @@ const FlashcardCreationModal = ({ open, onClose }) => {
                       flexGrow: 1,
                       mt: 1,
                       pr: 1,
-                      '&::-webkit-scrollbar': {
-                        width: '6px',
-                      },
-                      '&::-webkit-scrollbar-thumb': {
-                        backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                        borderRadius: '3px',
-                      },
                     }}>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                         <Typography variant="subtitle1" sx={{ color: '#00ff94', display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -798,7 +802,7 @@ const FlashcardCreationModal = ({ open, onClose }) => {
                             }
                           }}
                         >
-                          Use These Cards
+                          Edit These Cards
                         </Button>
                       </Box>
                       

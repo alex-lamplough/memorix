@@ -144,10 +144,7 @@ function Progress() {
       {/* Mobile menu button */}
       {isMobile && (
         <div className="bg-[#18092a]/80 p-3 flex items-center justify-between sticky top-0 z-10">
-          <div className="flex items-center gap-2">
-            <span className="text-xl font-black tracking-widest text-[#00ff94]">M/</span>
-            <span className="text-white font-bold">Memorix</span>
-          </div>
+          <div className="flex-1"></div>
           <button 
             onClick={() => setSidebarOpen(!sidebarOpen)}
             className="p-2 text-white rounded-lg bg-[#18092a] hover:bg-[#18092a]/80"

@@ -21,6 +21,7 @@ import FlashcardDeck from './components/FlashcardDeck'
 import LoginButton from './components/LoginButton'
 import ProtectedRoute from './auth/ProtectedRoute'
 import Todo from './components/Todo'
+import FeatureDetailModal from './components/FeatureDetailModal'
 
 // Pages
 import Dashboard from './pages/Dashboard'
@@ -77,145 +78,29 @@ function AnimatedHeading() {
         <span className={`transition-all duration-500 mx-1 ${isChanging ? 'opacity-0 -translate-y-2' : 'opacity-100 translate-y-0'}`}>
           {currentPhrase}
         </span>
-        <span>with AI</span>
+        <span>with Memorix</span>
       </h1>
     </div>
   )
 }
 
 function Hero() {
-  const [showFlashcards, setShowFlashcards] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const [inputValue, setInputValue] = useState("Explain the key concepts of photosynthesis in simple terms.")
-  
-  const handleInputChange = (e) => {
-    setInputValue(e.target.value)
-  }
-  
-  const handleArrowClick = () => {
-    if (inputValue.trim() === '') return
-    
-    setIsLoading(true)
-    
-    // Simulate AI processing time
-    setTimeout(() => {
-      setIsLoading(false)
-      setShowFlashcards(true)
-    }, 1500)
-  }
-  
-  const handleCloseFlashcards = () => {
-    setShowFlashcards(false)
-  }
-  
-  const demoFlashcards = [
-    {
-      question: "What is photosynthesis?",
-      answer: "Photosynthesis is the process by which plants convert light energy into chemical energy to fuel their activities."
-    },
-    {
-      question: "What are the main components needed for photosynthesis?",
-      answer: "Sunlight, water, carbon dioxide, and chlorophyll."
-    },
-    {
-      question: "What is the primary product of photosynthesis?",
-      answer: "Glucose (sugar) and oxygen as a byproduct."
-    },
-    {
-      question: "Where does photosynthesis take place in plant cells?",
-      answer: "Primarily in the chloroplasts, specialized organelles containing chlorophyll."
-    },
-    {
-      question: "What is the chemical equation for photosynthesis?",
-      answer: "6CO₂ + 6H₂O + Light Energy → C₆H₁₂O₆ + 6O₂"
-    }
-  ];
-  
   return (
     <div className="container mx-auto px-4 flex flex-col items-center text-white">
       {/* Top spacer */}
       <div className="h-[15vh]"></div>
       
-      {/* Title section with fixed height */}
-      <div className="h-[140px] flex flex-col items-center justify-center">
+      {/* Title section with fixed height - reducing the height */}
+      <div className="h-[120px] flex flex-col items-center justify-center">
         <AnimatedHeading />
         
-        <p className="text-base text-white/80 mt-2 max-w-xl">
+        <p className="text-base text-white/80 mt-0 max-w-xl">
           Notes to flashcards in seconds, with your personal AI tutor
         </p>
       </div>
       
-      {/* Fixed spacer between title and input */}
-      <div className="h-[80px]"></div>
-      
-      {/* "Try it out!" label */}
-      <div className="mb-3 bg-[#00ff94]/10 px-4 py-1 rounded-full border border-[#00ff94]/30 text-[#00ff94] text-sm font-semibold animate-pulse">
-        Try it out!
-      </div>
-      
-      {/* Input box with fixed width */}
-      <div className="w-full max-w-lg mx-auto px-4">
-        <div className="relative">
-          <input
-            type="text"
-            value={inputValue}
-            onChange={handleInputChange}
-            placeholder="Enter any concept you want to learn..."
-            className="w-full bg-[#18092a]/60 text-white rounded-xl px-5 py-3.5 border border-gray-800/30 focus:outline-none focus:border-[#00ff94]/50 focus:ring-1 focus:ring-[#00ff94]/30 text-sm shadow-lg"
-            disabled={isLoading}
-          />
-          <button 
-            className={`absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-full border transition-colors ${
-              isLoading 
-                ? 'bg-gray-700/50 text-gray-500 border-gray-700 cursor-not-allowed' 
-                : 'bg-[#00ff94]/10 text-[#00ff94] border-[#00ff94]/30 hover:bg-[#00ff94]/20'
-            }`}
-            onClick={handleArrowClick}
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <svg className="animate-spin h-5 w-5 text-[#00ff94]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-            ) : (
-              <ArrowForwardIcon fontSize="small" />
-            )}
-          </button>
-        </div>
-      </div>
-      
-      {/* Loading message */}
-      {isLoading && (
-        <div className="w-full max-w-lg mx-auto mt-6 text-center">
-          <p className="text-[#00ff94] animate-pulse">Generating flashcards...</p>
-        </div>
-      )}
-      
-      {/* Flashcards Section */}
-      {showFlashcards && !isLoading && (
-        <div className="relative w-full max-w-lg mt-8 mb-16">
-          <button 
-            onClick={handleCloseFlashcards}
-            className="absolute -top-2 -right-2 z-10 bg-[#18092a] text-white p-1 rounded-full border border-[#00ff94]/30 hover:bg-[#00ff94]/20 transition-colors"
-            aria-label="Close flashcards"
-          >
-            <CloseIcon fontSize="small" />
-          </button>
-          <div>
-            <div className="mb-4 text-center">
-              <h3 className="text-lg font-semibold text-white">Track your progress as you learn</h3>
-              <p className="text-white/70 text-sm">
-                Mark cards as "Learned" or "Review Later" to optimize your learning journey
-              </p>
-            </div>
-            <FlashcardDeck flashcards={demoFlashcards} />
-          </div>
-        </div>
-      )}
-      
-      {/* Empty space when no flashcards shown */}
-      {!showFlashcards && !isLoading && <div className="mb-24"></div>}
+      {/* Reduced spacer for seamless transition */}
+      <div className="h-[120px]"></div>
     </div>
   )
 }
@@ -272,22 +157,303 @@ const features = [
 ]
 
 function Features() {
+  const [selectedFeature, setSelectedFeature] = useState(null);
+  
+  const openFeatureModal = (featureTitle) => {
+    setSelectedFeature(featureTitle);
+  };
+  
+  const closeFeatureModal = () => {
+    setSelectedFeature(null);
+  };
+  
   return (
-    <div className="py-8">
-      <h2 className="text-3xl font-bold text-center mb-10">Feature Packed Learning</h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-        {features.map((feature) => (
-          <div 
-            key={feature.title}
-            className="bg-[#15052a]/60 rounded-2xl shadow-xl p-7 text-white flex flex-col min-h-[220px] border border-gray-800/50 hover:border-[#00ff94]/30 hover:shadow-[0_0_15px_rgba(0,255,148,0.15)] transition-all"
-          >
-            <div className={`${feature.color} w-12 h-12 rounded-full flex items-center justify-center mb-5 border border-gray-800/30`}>
-              {feature.icon}
+    <div className="py-16">
+      <h2 className="text-3xl font-bold text-center mb-16">Features</h2>
+      
+      <div className="space-y-20">
+        {/* First row */}
+        <div className="flex flex-col lg:flex-row">
+          <div className="w-full lg:w-1/2 px-4 mb-10 lg:mb-0">
+            <div 
+              className="bg-[#15052a]/60 rounded-2xl shadow-xl p-8 text-white border border-gray-800/50 hover:border-[#00ff94]/30 hover:shadow-[0_0_15px_rgba(0,255,148,0.15)] transition-all h-full flex flex-col"
+            >
+              <div className={`${features[0].color} w-16 h-16 rounded-full flex items-center justify-center mb-6 border border-gray-800/30`}>
+                {features[0].icon}
+              </div>
+              <h3 className="text-2xl font-bold mb-4">{features[0].title}</h3>
+              <p className="text-white/70 mb-6 flex-grow">{features[0].desc}</p>
+              <button 
+                className="text-[#00ff94] py-2 px-5 rounded-lg font-semibold hover:bg-[#00ff94]/10 transition-colors w-fit mt-auto"
+                onClick={() => openFeatureModal(features[0].title)}
+              >
+                Learn more
+              </button>
             </div>
-            <h3 className="text-xl font-bold mb-3">{feature.title}</h3>
-            <p className="text-white/70 mb-5 text-sm">{feature.desc}</p>
-            <button className="mt-auto text-[#00ff94] py-2 px-4 rounded-lg font-semibold hover:bg-[#00ff94]/10 transition-colors w-fit">
-              Learn more
+          </div>
+          <div className="lg:mt-24 w-full lg:w-1/2 px-4">
+            <div 
+              className="bg-[#15052a]/60 rounded-2xl shadow-xl p-8 text-white border border-gray-800/50 hover:border-[#00ff94]/30 hover:shadow-[0_0_15px_rgba(0,255,148,0.15)] transition-all h-full flex flex-col"
+            >
+              <div className={`${features[1].color} w-16 h-16 rounded-full flex items-center justify-center mb-6 border border-gray-800/30`}>
+                {features[1].icon}
+              </div>
+              <h3 className="text-2xl font-bold mb-4">{features[1].title}</h3>
+              <p className="text-white/70 mb-6 flex-grow">{features[1].desc}</p>
+              <button 
+                className="text-[#00ff94] py-2 px-5 rounded-lg font-semibold hover:bg-[#00ff94]/10 transition-colors w-fit mt-auto"
+                onClick={() => openFeatureModal(features[1].title)}
+              >
+                Learn more
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        {/* Second row */}
+        <div className="flex flex-col lg:flex-row">
+          <div className="w-full lg:w-1/2 px-4 mb-10 lg:mb-0 lg:mt-24">
+            <div 
+              className="bg-[#15052a]/60 rounded-2xl shadow-xl p-8 text-white border border-gray-800/50 hover:border-[#00ff94]/30 hover:shadow-[0_0_15px_rgba(0,255,148,0.15)] transition-all h-full flex flex-col"
+            >
+              <div className={`${features[2].color} w-16 h-16 rounded-full flex items-center justify-center mb-6 border border-gray-800/30`}>
+                {features[2].icon}
+              </div>
+              <h3 className="text-2xl font-bold mb-4">{features[2].title}</h3>
+              <p className="text-white/70 mb-6 flex-grow">{features[2].desc}</p>
+              <button 
+                className="text-[#00ff94] py-2 px-5 rounded-lg font-semibold hover:bg-[#00ff94]/10 transition-colors w-fit mt-auto"
+                onClick={() => openFeatureModal(features[2].title)}
+              >
+                Learn more
+              </button>
+            </div>
+          </div>
+          <div className="w-full lg:w-1/2 px-4">
+            <div 
+              className="bg-[#15052a]/60 rounded-2xl shadow-xl p-8 text-white border border-gray-800/50 hover:border-[#00ff94]/30 hover:shadow-[0_0_15px_rgba(0,255,148,0.15)] transition-all h-full flex flex-col"
+            >
+              <div className={`${features[3].color} w-16 h-16 rounded-full flex items-center justify-center mb-6 border border-gray-800/30`}>
+                {features[3].icon}
+              </div>
+              <h3 className="text-2xl font-bold mb-4">{features[3].title}</h3>
+              <p className="text-white/70 mb-6 flex-grow">{features[3].desc}</p>
+              <button 
+                className="text-[#00ff94] py-2 px-5 rounded-lg font-semibold hover:bg-[#00ff94]/10 transition-colors w-fit mt-auto"
+                onClick={() => openFeatureModal(features[3].title)}
+              >
+                Learn more
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        {/* Third row */}
+        <div className="flex flex-col lg:flex-row">
+          <div className="w-full lg:w-1/2 px-4 mb-10 lg:mb-0">
+            <div 
+              className="bg-[#15052a]/60 rounded-2xl shadow-xl p-8 text-white border border-gray-800/50 hover:border-[#00ff94]/30 hover:shadow-[0_0_15px_rgba(0,255,148,0.15)] transition-all h-full flex flex-col"
+            >
+              <div className={`${features[4].color} w-16 h-16 rounded-full flex items-center justify-center mb-6 border border-gray-800/30`}>
+                {features[4].icon}
+              </div>
+              <h3 className="text-2xl font-bold mb-4">{features[4].title}</h3>
+              <p className="text-white/70 mb-6 flex-grow">{features[4].desc}</p>
+              <button 
+                className="text-[#00ff94] py-2 px-5 rounded-lg font-semibold hover:bg-[#00ff94]/10 transition-colors w-fit mt-auto"
+                onClick={() => openFeatureModal(features[4].title)}
+              >
+                Learn more
+              </button>
+            </div>
+          </div>
+          <div className="lg:mt-24 w-full lg:w-1/2 px-4">
+            <div 
+              className="bg-[#15052a]/60 rounded-2xl shadow-xl p-8 text-white border border-gray-800/50 hover:border-[#00ff94]/30 hover:shadow-[0_0_15px_rgba(0,255,148,0.15)] transition-all h-full flex flex-col"
+            >
+              <div className={`${features[5].color} w-16 h-16 rounded-full flex items-center justify-center mb-6 border border-gray-800/30`}>
+                {features[5].icon}
+              </div>
+              <h3 className="text-2xl font-bold mb-4">{features[5].title}</h3>
+              <p className="text-white/70 mb-6 flex-grow">{features[5].desc}</p>
+              <button 
+                className="text-[#00ff94] py-2 px-5 rounded-lg font-semibold hover:bg-[#00ff94]/10 transition-colors w-fit mt-auto"
+                onClick={() => openFeatureModal(features[5].title)}
+              >
+                Learn more
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        {/* Fourth row */}
+        <div className="flex flex-col lg:flex-row">
+          <div className="w-full lg:w-1/2 px-4 mb-10 lg:mb-0 lg:mt-24">
+            <div 
+              className="bg-[#15052a]/60 rounded-2xl shadow-xl p-8 text-white border border-gray-800/50 hover:border-[#00ff94]/30 hover:shadow-[0_0_15px_rgba(0,255,148,0.15)] transition-all h-full flex flex-col"
+            >
+              <div className={`${features[6].color} w-16 h-16 rounded-full flex items-center justify-center mb-6 border border-gray-800/30`}>
+                {features[6].icon}
+              </div>
+              <h3 className="text-2xl font-bold mb-4">{features[6].title}</h3>
+              <p className="text-white/70 mb-6 flex-grow">{features[6].desc}</p>
+              <button 
+                className="text-[#00ff94] py-2 px-5 rounded-lg font-semibold hover:bg-[#00ff94]/10 transition-colors w-fit mt-auto"
+                onClick={() => openFeatureModal(features[6].title)}
+              >
+                Learn more
+              </button>
+            </div>
+          </div>
+          <div className="w-full lg:w-1/2 px-4">
+            <div 
+              className="bg-[#15052a]/60 rounded-2xl shadow-xl p-8 text-white border border-gray-800/50 hover:border-[#00ff94]/30 hover:shadow-[0_0_15px_rgba(0,255,148,0.15)] transition-all h-full flex flex-col"
+            >
+              <div className={`${features[7].color} w-16 h-16 rounded-full flex items-center justify-center mb-6 border border-gray-800/30`}>
+                {features[7].icon}
+              </div>
+              <h3 className="text-2xl font-bold mb-4">{features[7].title}</h3>
+              <p className="text-white/70 mb-6 flex-grow">{features[7].desc}</p>
+              <button 
+                className="text-[#00ff94] py-2 px-5 rounded-lg font-semibold hover:bg-[#00ff94]/10 transition-colors w-fit mt-auto"
+                onClick={() => openFeatureModal(features[7].title)}
+              >
+                Learn more
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      {/* Feature Detail Modal */}
+      {selectedFeature && (
+        <FeatureDetailModal 
+          feature={selectedFeature} 
+          onClose={closeFeatureModal} 
+        />
+      )}
+    </div>
+  )
+}
+
+const pricingPlans = [
+  {
+    name: 'Free',
+    price: '0',
+    description: 'Perfect for casual learners',
+    features: [
+      'Up to 50 flashcards per day',
+      'Basic analytics',
+      'Standard templates',
+      'Community support',
+      'Web access'
+    ],
+    cta: 'Get Started',
+    popular: false,
+    bgColor: 'bg-[#15052a]/60',
+    ctaColor: 'bg-[#00ff94]/10 text-[#00ff94] border border-[#00ff94]/30 hover:bg-[#00ff94]/20'
+  },
+  {
+    name: 'Pro',
+    price: '9.99',
+    period: 'per month',
+    description: 'For serious students and educators',
+    features: [
+      'Unlimited flashcards',
+      'Advanced analytics & insights',
+      'All templates & customization',
+      'Priority email support',
+      'Web & mobile access',
+      'Offline mode'
+    ],
+    cta: 'Start Free Trial',
+    popular: true,
+    bgColor: 'bg-gradient-to-b from-[#18092a] to-[#260041]',
+    ctaColor: 'bg-[#00ff94] text-black hover:bg-[#00ff94]/90'
+  },
+  {
+    name: 'Teams',
+    price: '29.99',
+    period: 'per month',
+    description: 'For teachers and study groups',
+    features: [
+      'Everything in Pro plan',
+      'Up to 5 team members',
+      'Collaborative decks',
+      'Shared analytics',
+      'Admin controls',
+      'Dedicated support'
+    ],
+    cta: 'Contact Sales',
+    popular: false,
+    bgColor: 'bg-[#15052a]/60',
+    ctaColor: 'bg-[#00ff94]/10 text-[#00ff94] border border-[#00ff94]/30 hover:bg-[#00ff94]/20'
+  }
+];
+
+function PricingSection() {
+  // Get currency symbol based on user's locale
+  const [currencySymbol, setCurrencySymbol] = useState('£');
+  
+  useEffect(() => {
+    try {
+      // Get currency symbol based on user's locale
+      const userLocale = navigator.language || 'en-GB';
+      const formatter = new Intl.NumberFormat(userLocale, {
+        style: 'currency',
+        currency: userLocale.includes('US') ? 'USD' : 'GBP',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      });
+      
+      // Extract just the currency symbol
+      const symbol = formatter.format(0).replace(/\d/g, '').trim();
+      setCurrencySymbol(symbol);
+    } catch (error) {
+      console.error('Error setting currency symbol:', error);
+      // Default to £ if there's an error
+      setCurrencySymbol('£');
+    }
+  }, []);
+
+  return (
+    <div className="py-16">
+      <h2 className="text-3xl font-bold text-center mb-4">Pricing</h2>
+      <p className="text-white/70 text-center mb-10 max-w-xl mx-auto">
+        Choose the plan that fits your needs. All plans include core features and regular updates.
+      </p>
+      
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+        {pricingPlans.map((plan) => (
+          <div 
+            key={plan.name} 
+            className={`${plan.bgColor} rounded-2xl p-8 border ${plan.popular ? 'border-[#00ff94]/30 shadow-[0_0_20px_rgba(0,255,148,0.15)]' : 'border-gray-800/50'} relative flex flex-col h-full`}
+          >
+            {plan.popular && (
+              <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-[#00ff94] text-black text-xs font-bold py-1 px-4 rounded-full">
+                Most Popular
+              </div>
+            )}
+            <h3 className="text-xl font-bold mb-1 mt-2">{plan.name}</h3>
+            <div className="flex items-end mb-4">
+              <span className="text-3xl font-bold">{plan.price === '0' ? 'Free' : `${currencySymbol}${plan.price}`}</span>
+              {plan.period && <span className="text-white/60 ml-1 mb-1">{plan.period}</span>}
+            </div>
+            <p className="text-white/70 text-sm mb-6">{plan.description}</p>
+            
+            <ul className="space-y-3 mb-8 flex-grow">
+              {plan.features.map((feature, index) => (
+                <li key={index} className="flex items-start text-sm">
+                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#00ff94] mt-1.5 mr-2"></span>
+                  <span className="text-white/80">{feature}</span>
+                </li>
+              ))}
+            </ul>
+            
+            <button 
+              className={`${plan.ctaColor} w-full py-3 rounded-xl font-semibold transition-colors mt-auto`}
+            >
+              {plan.cta}
             </button>
           </div>
         ))}
@@ -451,6 +617,7 @@ function App() {
             <Hero />
             <div className="container mx-auto px-4 pb-16">
               <Features />
+              <PricingSection />
               <Testimonials />
               <FAQSection />
             </div>
