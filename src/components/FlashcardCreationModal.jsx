@@ -208,7 +208,7 @@ const FlashcardCreationModal = ({ open, onClose }) => {
             backgroundColor: '#18092a',
             color: 'white',
             borderRadius: '12px',
-            overflow: 'hidden',
+            overflow: 'auto',
             maxHeight: '95vh',
             height: 'auto',
             minHeight: '500px',
@@ -237,7 +237,7 @@ const FlashcardCreationModal = ({ open, onClose }) => {
           )}
         </DialogTitle>
         
-        <DialogContent sx={{ padding: '20px 24px', height: 'auto', overflow: 'hidden' }}>
+        <DialogContent sx={{ padding: '20px 24px', height: 'auto', overflow: 'visible' }}>
           <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
             {/* Header info */}
             <Grid container spacing={3} sx={{ mb: 4 }}>
@@ -416,12 +416,11 @@ const FlashcardCreationModal = ({ open, onClose }) => {
               </Tabs>
             </Box>
             
-            {/* Tab content - using fixed height and overflow auto only on the content section */}
+            {/* Tab content - fixed height removed to enable scrolling */}
             <Box sx={{ 
               flexGrow: 1, 
-              overflow: 'hidden', 
-              height: '60vh', 
-              maxHeight: '500px'
+              overflow: 'visible', 
+              paddingBottom: '16px'
             }}>
               {activeTab === 0 ? (
                 // Manual creation tab
@@ -449,7 +448,7 @@ const FlashcardCreationModal = ({ open, onClose }) => {
                   </Box>
                   
                   <Box sx={{ 
-                    overflowY: 'auto', 
+                    overflowY: 'visible', 
                     flexGrow: 1,
                     pr: 1,
                     '&::-webkit-scrollbar': {
@@ -769,7 +768,7 @@ const FlashcardCreationModal = ({ open, onClose }) => {
                   {/* Generated cards section */}
                   {aiGeneratedCards.length > 0 && (
                     <Box sx={{ 
-                      overflowY: 'auto', 
+                      overflowY: 'visible', 
                       flexGrow: 1,
                       mt: 1,
                       pr: 1,
