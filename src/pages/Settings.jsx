@@ -369,11 +369,10 @@ function Settings() {
     <div className="min-h-screen bg-gradient-to-b from-[#2E0033] via-[#260041] to-[#1b1b2f] text-white flex flex-col md:flex-row">
       {/* Mobile menu button */}
       {isMobile && (
-        <div className="bg-[#18092a]/80 p-3 flex items-center justify-between sticky top-0 z-10">
-          <div className="flex-1"></div>
+        <div className="p-4 flex items-center justify-end sticky top-0 z-30">
           <button 
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-2 text-white rounded-lg bg-[#18092a] hover:bg-[#18092a]/80"
+            className="p-2 text-white rounded-lg hover:bg-white/10"
           >
             <MenuIcon />
           </button>
@@ -383,17 +382,18 @@ function Settings() {
       {/* Overlay for mobile when sidebar is open */}
       {isMobile && sidebarOpen && (
         <div 
-          className="fixed inset-0 bg-black/50 z-30" 
+          className="fixed inset-0 bg-black/50 z-20" 
           onClick={() => setSidebarOpen(false)}
         ></div>
       )}
       
-      {/* Sidebar - hidden on mobile by default */}
-      <div className={`z-40 ${isMobile ? 'fixed inset-0 transform transition-transform duration-300 ease-in-out' : ''} ${isMobile && !sidebarOpen ? '-translate-x-full' : ''} ${isMobile && sidebarOpen ? 'translate-x-0' : ''}`}>
+      {/* Sidebar - fixed position on desktop, overlay on mobile */}
+      <div className={`fixed top-0 left-0 bottom-0 w-64 transform transition-transform duration-300 ease-in-out z-40 ${isMobile && !sidebarOpen ? '-translate-x-full' : ''} ${isMobile && sidebarOpen ? 'translate-x-0' : ''}`}>
         <Sidebar activePage="settings" />
       </div>
       
-      <div className={`flex-1 flex flex-col ${isMobile && sidebarOpen ? 'blur-sm' : ''}`}>
+      {/* Main content - adjusted margin to account for fixed sidebar */}
+      <div className={`flex-1 flex flex-col ${isMobile ? '' : 'md:ml-64'} ${isMobile && sidebarOpen ? 'blur-sm' : ''}`}>
         {!isMobile && <DashboardHeader title="Settings" searchEnabled={false} filterEnabled={false} />}
         
         <div className="flex-1 p-4 md:p-6">

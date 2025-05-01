@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { todoService } from '../services/todo-service'
 
 // Icons
@@ -28,10 +28,16 @@ function Todo() {
   const [editingTodo, setEditingTodo] = useState(null);
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [newTodoPriority, setNewTodoPriority] = useState('medium');
+  const isMountedRef = useRef(true);
+  const fetchTimeoutRef = useRef(null);
   
   // Fetch todos from API
   useEffect(() => {
+    isMountedRef.current = true;
+    
     const fetchTodos = async () => {
+      if (!isMountedRef.current) return;
+      
       try {
         setIsLoading(true);
         setError(null);
@@ -52,17 +58,38 @@ function Todo() {
         }
         
         const response = await todoService.getAllTodos(queryParams);
-        console.log('API response:', response);
-        setTodos(response.todos);
+        
+        if (isMountedRef.current) {
+          console.log('API response:', response);
+          setTodos(response.todos);
+        }
       } catch (err) {
         console.error('Error fetching todos:', err);
-        setError('Failed to load your todo items');
+        if (isMountedRef.current) {
+          setError('Failed to load your todo items');
+        }
       } finally {
-        setIsLoading(false);
+        if (isMountedRef.current) {
+          setIsLoading(false);
+        }
       }
     };
     
-    fetchTodos();
+    // Debounce the fetch to prevent multiple simultaneous calls
+    if (fetchTimeoutRef.current) {
+      clearTimeout(fetchTimeoutRef.current);
+    }
+    
+    fetchTimeoutRef.current = setTimeout(() => {
+      fetchTodos();
+    }, 50);
+    
+    return () => {
+      isMountedRef.current = false;
+      if (fetchTimeoutRef.current) {
+        clearTimeout(fetchTimeoutRef.current);
+      }
+    };
   }, [filter, sortOrder]);
   
   const handleAddTodo = async () => {

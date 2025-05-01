@@ -131,12 +131,52 @@ function handleAuthenticationFailure() {
   }, 2000);
 }
 
+// Keep track of ongoing requests so they can be cancelled when navigating away
+const cancelTokens = new Map();
+
+// Helper to create a request with a cancel token
+const createCancellableRequest = (endpoint) => {
+  // Cancel any ongoing request to this endpoint
+  if (cancelTokens.has(endpoint)) {
+    cancelTokens.get(endpoint).abort();
+  }
+  
+  // Create a new AbortController
+  const controller = new AbortController();
+  cancelTokens.set(endpoint, controller);
+  
+  return {
+    controller,
+    signal: controller.signal,
+    cleanup: () => {
+      cancelTokens.delete(endpoint);
+    }
+  };
+};
+
+// Cancel all ongoing requests (useful when navigating away)
+export const cancelAllRequests = () => {
+  console.log(`Cancelling ${cancelTokens.size} pending flashcard API requests`);
+  
+  cancelTokens.forEach((controller, endpoint) => {
+    console.log(`Cancelling request to: ${endpoint}`);
+    controller.abort('Navigation cancelled the request');
+  });
+  
+  cancelTokens.clear();
+};
+
 // Flashcard Services
 export const flashcardService = {
+  // Add cancelAllRequests to the service
+  cancelAllRequests,
+  
   // Get all flashcard sets for the current user
   getAllFlashcardSets: async () => {
+    const { controller, signal, cleanup } = createCancellableRequest('flashcards');
     try {
-      const response = await api.get('/flashcards');
+      const response = await api.get('/flashcards', { signal });
+      cleanup();
       
       // Process the response to include cardCount
       const flashcardSets = response.data.map(set => ({
@@ -147,51 +187,69 @@ export const flashcardService = {
       
       return flashcardSets;
     } catch (error) {
-      console.error('Error fetching flashcard sets:', error);
+      if (axios.isCancel(error)) {
+        console.log('Request cancelled:', error.message);
+      }
       throw error;
     }
   },
   
   // Get a specific flashcard set by ID
   getFlashcardSet: async (id) => {
+    const { controller, signal, cleanup } = createCancellableRequest(`flashcards/${id}`);
     try {
-      const response = await api.get(`/flashcards/${id}`);
+      const response = await api.get(`/flashcards/${id}`, { signal });
+      cleanup();
       return response.data;
     } catch (error) {
-      console.error(`Error fetching flashcard set ${id}:`, error);
+      if (axios.isCancel(error)) {
+        console.log('Request cancelled:', error.message);
+      }
       throw error;
     }
   },
   
   // Create a new flashcard set
   createFlashcardSet: async (flashcardSet) => {
+    const { controller, signal, cleanup } = createCancellableRequest('flashcards-create');
     try {
-      const response = await api.post('/flashcards', flashcardSet);
+      const response = await api.post('/flashcards', flashcardSet, { signal });
+      cleanup();
       return response.data;
     } catch (error) {
-      console.error('Error creating flashcard set:', error);
+      if (axios.isCancel(error)) {
+        console.log('Request cancelled:', error.message);
+      }
       throw error;
     }
   },
   
   // Update an existing flashcard set
   updateFlashcardSet: async (id, flashcardSet) => {
+    const { controller, signal, cleanup } = createCancellableRequest(`flashcards-update-${id}`);
     try {
-      const response = await api.put(`/flashcards/${id}`, flashcardSet);
+      const response = await api.put(`/flashcards/${id}`, flashcardSet, { signal });
+      cleanup();
       return response.data;
     } catch (error) {
-      console.error(`Error updating flashcard set ${id}:`, error);
+      if (axios.isCancel(error)) {
+        console.log('Request cancelled:', error.message);
+      }
       throw error;
     }
   },
   
   // Delete a flashcard set
   deleteFlashcardSet: async (id) => {
+    const { controller, signal, cleanup } = createCancellableRequest(`flashcards-delete-${id}`);
     try {
-      const response = await api.delete(`/flashcards/${id}`);
+      const response = await api.delete(`/flashcards/${id}`, { signal });
+      cleanup();
       return response.data;
     } catch (error) {
-      console.error(`Error deleting flashcard set ${id}:`, error);
+      if (axios.isCancel(error)) {
+        console.log('Request cancelled:', error.message);
+      }
       throw error;
     }
   },

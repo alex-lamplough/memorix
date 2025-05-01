@@ -1,4 +1,4 @@
-import { Routes, Route, Link } from 'react-router-dom'
+import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 
 // Feature icons
@@ -39,6 +39,12 @@ import Header from './Header'
 
 // Assets
 import logoWhite from './assets/MemorixLogoWhite.png'
+
+// Services
+import { flashcardService } from './services/api'
+import { quizService } from './services/quiz-service'
+import { todoService } from './services/todo-service'
+import { createNavigationHandler } from './services/utils'
 
 function AnimatedHeading() {
   const phrases = [
@@ -600,6 +606,66 @@ function Footer() {
 }
 
 function App() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  
+  // Cancel all pending API requests when navigating between routes
+  useEffect(() => {
+    // Create a function that cancels all active requests
+    const cancelAllActiveRequests = () => {
+      // Import these functions from the respective services
+      const { cancelAllRequests: cancelAllFlashcardRequests } = flashcardService;
+      const { cancelAllRequests: cancelAllQuizRequests } = quizService;
+      const { cancelAllRequests: cancelAllTodoRequests } = todoService;
+      
+      // Only cancel requests if these functions exist
+      if (typeof cancelAllFlashcardRequests === 'function') {
+        cancelAllFlashcardRequests();
+      }
+      
+      if (typeof cancelAllQuizRequests === 'function') {
+        cancelAllQuizRequests();
+      }
+      
+      if (typeof cancelAllTodoRequests === 'function') {
+        cancelAllTodoRequests();
+      }
+      
+      console.log('Cancelled all pending requests due to navigation');
+    };
+    
+    // Cancel requests when the location changes
+    cancelAllActiveRequests();
+    
+    // Also cancel requests when unmounting the app
+    return cancelAllActiveRequests;
+  }, [location.pathname]);
+  
+  // Wrap the navigate function to cancel requests before navigation
+  useEffect(() => {
+    const originalPush = navigate;
+    
+    // Replace the navigate function with one that cancels requests first
+    window.navigateWithCancellation = createNavigationHandler(originalPush, () => {
+      if (flashcardService && typeof flashcardService.cancelAllRequests === 'function') {
+        flashcardService.cancelAllRequests();
+      }
+      
+      if (quizService && typeof quizService.cancelAllRequests === 'function') {
+        quizService.cancelAllRequests();
+      }
+      
+      if (todoService && typeof todoService.cancelAllRequests === 'function') {
+        todoService.cancelAllRequests();
+      }
+    });
+    
+    return () => {
+      // Clean up
+      window.navigateWithCancellation = undefined;
+    };
+  }, [navigate]);
+  
   return (
     <Routes>
       <Route path="/dashboard" element={<ProtectedRoute element={<Dashboard />} />} />

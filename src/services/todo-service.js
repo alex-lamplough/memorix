@@ -1,9 +1,33 @@
 import api from './api';
 
+// Track active todos API requests
+let activeRequests = [];
+
+// Cancel all pending requests
+const cancelAllRequests = () => {
+  const count = activeRequests.length;
+  console.log(`Cancelling ${count} pending todo API requests`);
+  
+  activeRequests.forEach(controller => {
+    controller.abort();
+    console.log('Cancelling request to: todos');
+  });
+  
+  // Clear the array
+  activeRequests = [];
+};
+
 export const todoService = {
+  // Add cancelAllRequests to the service
+  cancelAllRequests,
+  
   // Get all todos for the current user
   getAllTodos: async (filters = {}) => {
     try {
+      // Create an AbortController to handle request cancellation
+      const controller = new AbortController();
+      activeRequests.push(controller);
+      
       // Convert filters object to query params
       const queryParams = new URLSearchParams();
       
@@ -15,11 +39,21 @@ export const todoService = {
       
       const query = queryParams.toString() ? `?${queryParams.toString()}` : '';
       console.log('Todo service - fetching with query:', query);
-      const response = await api.get(`/todos${query}`);
+      
+      const response = await api.get(`/todos${query}`, {
+        signal: controller.signal
+      });
+      
+      // Remove this controller from active requests
+      activeRequests = activeRequests.filter(req => req !== controller);
+      
       console.log('Todo service - response data:', response.data);
       return response.data;
     } catch (error) {
-      console.error('Error fetching todos:', error);
+      // Don't log cancellation errors as they're expected
+      if (error.name !== 'CanceledError' && error.name !== 'AbortError') {
+        console.error('Error fetching todos:', error);
+      }
       throw error;
     }
   },

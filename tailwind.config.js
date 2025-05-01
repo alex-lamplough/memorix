@@ -4,6 +4,18 @@ export default {
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
+  safelist: [
+    'translate-x-0',
+    '-translate-x-full',
+    'transform',
+    'transition-transform',
+    'duration-300',
+    'ease-in-out',
+    'z-20',
+    'z-30',
+    'z-40',
+    'pointer-events-none'
+  ],
   theme: {
     extend: {
       colors: {
