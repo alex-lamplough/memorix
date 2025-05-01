@@ -19,6 +19,11 @@ export const setAuthTokenGetter = (tokenGetter) => {
   getAccessToken = tokenGetter;
 };
 
+// Track if we're handling a token refresh to prevent infinite loops
+let isRefreshing = false;
+let refreshPromise = null;
+let isRedirectingToLogin = false;
+
 // Add auth token to requests if available
 api.interceptors.request.use(
   async (config) => {
@@ -41,7 +46,7 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Add response interceptor to log all responses
+// Add response interceptor to log all responses and handle auth errors
 api.interceptors.response.use(
   (response) => {
     console.log(`API Response: ${response.status} ${response.config.method.toUpperCase()} ${response.config.url}`, {
@@ -49,17 +54,82 @@ api.interceptors.response.use(
     });
     return response;
   },
-  (error) => {
+  async (error) => {
     if (error.response) {
       console.error(`API Error: ${error.response.status} ${error.config?.method?.toUpperCase()} ${error.config?.url}`, {
         data: error.response.data
       });
+      
+      // Handle 401 Unauthorized errors (expired token)
+      if (error.response.status === 401 && !isRedirectingToLogin) {
+        console.warn('Unauthorized request - token may be expired');
+        
+        // If we're not already handling a token refresh
+        if (!isRefreshing) {
+          isRefreshing = true;
+          
+          try {
+            // Try to get a fresh token
+            console.log('Attempting to refresh token...');
+            const newToken = await getAccessToken();
+            
+            if (newToken) {
+              console.log('Token refreshed successfully, retrying request');
+              
+              // Retry the original request with the new token
+              const config = error.config;
+              config.headers.Authorization = `Bearer ${newToken}`;
+              
+              isRefreshing = false;
+              return axios(config);
+            } else {
+              console.error('Failed to refresh token, redirecting to login');
+              handleAuthenticationFailure();
+            }
+          } catch (refreshError) {
+            console.error('Error refreshing token:', refreshError);
+            handleAuthenticationFailure();
+          } finally {
+            isRefreshing = false;
+          }
+        }
+      }
     } else {
       console.error('API request failed:', error.message);
     }
     return Promise.reject(error);
   }
 );
+
+// Handle authentication failure by redirecting to login
+function handleAuthenticationFailure() {
+  if (isRedirectingToLogin) return;
+  
+  isRedirectingToLogin = true;
+  
+  // Display message to user
+  const message = document.createElement('div');
+  message.style.position = 'fixed';
+  message.style.top = '20px';
+  message.style.left = '50%';
+  message.style.transform = 'translateX(-50%)';
+  message.style.backgroundColor = '#ff7262';
+  message.style.color = 'white';
+  message.style.padding = '12px 20px';
+  message.style.borderRadius = '8px';
+  message.style.zIndex = '9999';
+  message.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+  message.textContent = 'Your session has expired. Redirecting to login...';
+  
+  document.body.appendChild(message);
+  
+  // Redirect to login after a short delay to allow message to be seen
+  setTimeout(() => {
+    console.log('Redirecting to login page due to auth error');
+    window.location.href = '/';
+    isRedirectingToLogin = false;
+  }, 2000);
+}
 
 // Flashcard Services
 export const flashcardService = {
@@ -155,6 +225,83 @@ export const flashcardService = {
       return response.data;
     } catch (error) {
       console.error('Error fetching public flashcard sets:', error);
+      throw error;
+    }
+  },
+  
+  // Get shared flashcard set
+  getSharedFlashcardSet: async (id) => {
+    try {
+      const response = await api.get(`/flashcards/${id}/shared`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching shared flashcard set ${id}:`, error);
+      throw error;
+    }
+  },
+  
+  // Update the progress for a flashcard set
+  updateProgress: async (id, progress) => {
+    try {
+      const response = await api.post(`/flashcards/${id}/progress`, { progress });
+      return response.data;
+    } catch (error) {
+      console.error(`Error updating progress for flashcard set ${id}:`, error);
+      throw error;
+    }
+  },
+  
+  // Mark a flashcard set as favorite/unfavorite
+  toggleFavorite: async (id, isFavorite) => {
+    try {
+      const response = await api.post(`/flashcards/${id}/favorite`, { isFavorite });
+      return response.data;
+    } catch (error) {
+      console.error(`Error toggling favorite status for flashcard set ${id}:`, error);
+      throw error;
+    }
+  },
+  
+  // Get all favorite flashcard sets
+  getFavorites: async () => {
+    try {
+      const response = await api.get('/flashcards/favorites');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching favorite flashcard sets:', error);
+      throw error;
+    }
+  },
+  
+  // Search flashcard sets by query
+  searchFlashcards: async (query) => {
+    try {
+      const response = await api.get(`/flashcards/search?q=${encodeURIComponent(query)}`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error searching flashcards: ${error.message}`);
+      throw error;
+    }
+  },
+  
+  // Create and share a flashcard set
+  shareFlashcardSet: async (id, shareOptions) => {
+    try {
+      const response = await api.post(`/flashcards/${id}/share`, shareOptions);
+      return response.data;
+    } catch (error) {
+      console.error(`Error sharing flashcard set ${id}:`, error);
+      throw error;
+    }
+  },
+  
+  // Get all shared flashcard sets
+  getSharedFlashcardSets: async () => {
+    try {
+      const response = await api.get('/flashcards/shared');
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching shared flashcard sets:', error);
       throw error;
     }
   }
