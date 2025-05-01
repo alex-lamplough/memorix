@@ -297,13 +297,13 @@ const FlashcardCreationModal = ({ open, onClose }) => {
                     },
                     '& .MuiInputLabel-root': {
                       color: 'rgba(255, 255, 255, 0.9)',
-                      backgroundColor: 'rgba(40, 20, 60, 0.9)',
+                      backgroundColor: 'rgba(46, 0, 51, 0.9)',
                       padding: '0 8px',
                       zIndex: 20,
                     },
                     '& .MuiInputLabel-shrink': {
                       transform: 'translate(14px, -8px) scale(0.75)',
-                      backgroundColor: 'rgba(40, 20, 60, 0.9)',
+                      backgroundColor: 'rgba(46, 0, 51, 0.9)',
                       padding: '0 8px',
                     },
                   }}
@@ -339,13 +339,13 @@ const FlashcardCreationModal = ({ open, onClose }) => {
                     },
                     '& .MuiInputLabel-root': {
                       color: 'rgba(255, 255, 255, 0.9)',
-                      backgroundColor: 'rgba(40, 20, 60, 0.9)',
+                      backgroundColor: 'rgba(46, 0, 51, 0.9)',
                       padding: '0 8px',
                       zIndex: 20,
                     },
                     '& .MuiInputLabel-shrink': {
                       transform: 'translate(14px, -8px) scale(0.75)',
-                      backgroundColor: 'rgba(40, 20, 60, 0.9)',
+                      backgroundColor: 'rgba(46, 0, 51, 0.9)',
                       padding: '0 8px',
                     },
                   }}
@@ -381,13 +381,13 @@ const FlashcardCreationModal = ({ open, onClose }) => {
                     },
                     '& .MuiInputLabel-root': {
                       color: 'rgba(255, 255, 255, 0.9)',
-                      backgroundColor: 'rgba(40, 20, 60, 0.9)',
+                      backgroundColor: 'rgba(46, 0, 51, 0.9)',
                       padding: '0 8px',
                       zIndex: 20,
                     },
                     '& .MuiInputLabel-shrink': {
                       transform: 'translate(14px, -8px) scale(0.75)',
-                      backgroundColor: 'rgba(40, 20, 60, 0.9)',
+                      backgroundColor: 'rgba(46, 0, 51, 0.9)',
                       padding: '0 8px',
                     },
                   }}
@@ -545,13 +545,13 @@ const FlashcardCreationModal = ({ open, onClose }) => {
                                     },
                                     '& .MuiInputLabel-root': {
                                       color: 'rgba(255, 255, 255, 0.9)',
-                                      backgroundColor: 'rgba(40, 20, 60, 0.9)',
+                                      backgroundColor: 'rgba(46, 0, 51, 0.9)',
                                       padding: '0 8px',
                                       zIndex: 20,
                                     },
                                     '& .MuiInputLabel-shrink': {
                                       transform: 'translate(14px, -8px) scale(0.75)',
-                                      backgroundColor: 'rgba(40, 20, 60, 0.9)',
+                                      backgroundColor: 'rgba(46, 0, 51, 0.9)',
                                       padding: '0 8px',
                                     },
                                   }}
@@ -588,13 +588,13 @@ const FlashcardCreationModal = ({ open, onClose }) => {
                                     },
                                     '& .MuiInputLabel-root': {
                                       color: 'rgba(255, 255, 255, 0.9)',
-                                      backgroundColor: 'rgba(40, 20, 60, 0.9)',
+                                      backgroundColor: 'rgba(46, 0, 51, 0.9)',
                                       padding: '0 8px',
                                       zIndex: 20,
                                     },
                                     '& .MuiInputLabel-shrink': {
                                       transform: 'translate(14px, -8px) scale(0.75)',
-                                      backgroundColor: 'rgba(40, 20, 60, 0.9)',
+                                      backgroundColor: 'rgba(46, 0, 51, 0.9)',
                                       padding: '0 8px',
                                     },
                                   }}
@@ -643,7 +643,7 @@ const FlashcardCreationModal = ({ open, onClose }) => {
                         },
                         '& .MuiInputLabel-root': {
                           color: 'rgba(255, 255, 255, 0.9)',
-                          backgroundColor: '#18092a',
+                          backgroundColor: 'rgba(46, 0, 51, 0.9)',
                           padding: '0 8px',
                           zIndex: 20,
                         },
@@ -662,7 +662,7 @@ const FlashcardCreationModal = ({ open, onClose }) => {
                       <FormControl variant="outlined" sx={{ minWidth: 120 }}>
                         <InputLabel sx={{ 
                           color: 'rgba(255, 255, 255, 0.9)',
-                          backgroundColor: 'rgba(40, 20, 60, 0.9)',
+                          backgroundColor: 'rgba(46, 0, 51, 0.9)',
                           padding: '0 8px'
                         }}>Card Count</InputLabel>
                         <Select
@@ -672,7 +672,7 @@ const FlashcardCreationModal = ({ open, onClose }) => {
                           MenuProps={{
                             PaperProps: {
                               sx: {
-                                backgroundColor: 'rgba(40, 20, 60, 0.95)',
+                                backgroundColor: 'rgba(46, 0, 51, 0.95)',
                                 borderRadius: '8px',
                                 border: '1px solid rgba(255, 255, 255, 0.1)',
                                 boxShadow: '0 4px 20px rgba(0, 0, 0, 0.5)',
@@ -718,7 +718,7 @@ const FlashcardCreationModal = ({ open, onClose }) => {
                       <FormControl variant="outlined" sx={{ minWidth: 120 }}>
                         <InputLabel sx={{ 
                           color: 'rgba(255, 255, 255, 0.9)',
-                          backgroundColor: 'rgba(40, 20, 60, 0.9)',
+                          backgroundColor: 'rgba(46, 0, 51, 0.9)',
                           padding: '0 8px'
                         }}>Difficulty</InputLabel>
                         <Select
@@ -728,7 +728,7 @@ const FlashcardCreationModal = ({ open, onClose }) => {
                           MenuProps={{
                             PaperProps: {
                               sx: {
-                                backgroundColor: 'rgba(40, 20, 60, 0.95)',
+                                backgroundColor: 'rgba(46, 0, 51, 0.95)',
                                 borderRadius: '8px',
                                 border: '1px solid rgba(255, 255, 255, 0.1)',
                                 boxShadow: '0 4px 20px rgba(0, 0, 0, 0.5)',
@@ -899,13 +899,13 @@ const FlashcardCreationModal = ({ open, onClose }) => {
                                       },
                                       '& .MuiInputLabel-root': {
                                         color: 'rgba(255, 255, 255, 0.9)',
-                                        backgroundColor: 'rgba(40, 20, 60, 0.9)',
+                                        backgroundColor: 'rgba(46, 0, 51, 0.9)',
                                         padding: '0 8px',
                                         zIndex: 20,
                                       },
                                       '& .MuiInputLabel-shrink': {
                                         transform: 'translate(14px, -8px) scale(0.75)',
-                                        backgroundColor: 'rgba(40, 20, 60, 0.9)',
+                                        backgroundColor: 'rgba(46, 0, 51, 0.9)',
                                         padding: '0 8px',
                                       },
                                     }}
@@ -942,13 +942,13 @@ const FlashcardCreationModal = ({ open, onClose }) => {
                                       },
                                       '& .MuiInputLabel-root': {
                                         color: 'rgba(255, 255, 255, 0.9)',
-                                        backgroundColor: 'rgba(40, 20, 60, 0.9)',
+                                        backgroundColor: 'rgba(46, 0, 51, 0.9)',
                                         padding: '0 8px',
                                         zIndex: 20,
                                       },
                                       '& .MuiInputLabel-shrink': {
                                         transform: 'translate(14px, -8px) scale(0.75)',
-                                        backgroundColor: 'rgba(40, 20, 60, 0.9)',
+                                        backgroundColor: 'rgba(46, 0, 51, 0.9)',
                                         padding: '0 8px',
                                       },
                                     }}

@@ -198,18 +198,47 @@ export const quizService = {
   
   // Get all favorite quizzes
   getFavorites: async () => {
+    console.log('Requesting quiz favorites...');
     const { controller, signal, cleanup } = createCancellableRequest('quizzes-favorites');
     try {
-      const response = await api.get('/quizzes/favorites', { signal });
-      cleanup();
-      return response.data;
+      console.log('Making request to: /quizzes/favorites');
+      
+      try {
+        // First try the standard path
+        const response = await api.get('/quizzes/favorites', { signal });
+        console.log('Quiz favorites response:', response.data);
+        cleanup();
+        return response.data;
+      } catch (initialError) {
+        // If we get a 404, try with an alternative path format
+        if (initialError.response && initialError.response.status === 404) {
+          console.log('First attempt failed with 404, trying alternative path...');
+          // Some backends might expect /api/quizzes/favorites format
+          const altResponse = await api.get('/api/quizzes/favorites', { signal });
+          console.log('Alternative path quiz favorites response:', altResponse.data);
+          return altResponse.data;
+        }
+        
+        // If it wasn't a 404, rethrow the original error
+        throw initialError;
+      }
     } catch (error) {
       if (axios.isCancel(error)) {
         console.log('Request cancelled:', error.message);
       } else {
         console.error('Error fetching favorite quizzes:', error);
+        if (error.response) {
+          console.error('Error response data:', error.response.data);
+          console.error('Error response status:', error.response.status);
+        }
       }
-      throw error;
+      
+      // When all else fails, return an empty array rather than throwing
+      // This prevents the UI from getting stuck in loading state
+      console.log('Returning empty array for quiz favorites due to error');
+      return [];
+    } finally {
+      cleanup();
     }
   },
   

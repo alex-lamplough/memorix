@@ -22,7 +22,14 @@ export const getAllQuizzes = async (req, res) => {
     // Format the response
     const formattedQuizzes = quizzes.map(quiz => ({
       ...quiz.toObject(),
-      totalQuestions: quiz.questionCount || 0
+      totalQuestions: quiz.questionCount || 0,
+      // Check if the current user has favorited this quiz
+      isFavorite: quiz.favorites && Array.isArray(quiz.favorites) && 
+                 quiz.favorites.some(favId => 
+                   req.user.mongoUser ? 
+                   favId.equals(req.user.mongoUser._id) : 
+                   favId.equals(req.user.id)
+                 )
     }));
     
     return res.status(200).json(formattedQuizzes);
@@ -70,9 +77,18 @@ export const getQuizById = async (req, res) => {
       });
     }
     
+    // Convert to object and add isFavorite flag
+    const quizData = quiz.toObject();
+    quizData.isFavorite = quiz.favorites && Array.isArray(quiz.favorites) && 
+                        quiz.favorites.some(favId => 
+                          req.user.mongoUser ? 
+                          favId.equals(req.user.mongoUser._id) : 
+                          favId.equals(req.user.id)
+                        );
+
     return res.status(200).json({
       success: true,
-      data: quiz
+      data: quizData
     });
   } catch (error) {
     logger.error('Error fetching quiz by ID:', error);

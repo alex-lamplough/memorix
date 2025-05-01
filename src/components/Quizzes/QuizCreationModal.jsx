@@ -336,13 +336,13 @@ const QuizCreationModal = ({ open, onClose, onQuizCreated }) => {
                       },
                       '& .MuiInputLabel-root': {
                         color: 'rgba(255, 255, 255, 0.9)',
-                        backgroundColor: 'rgba(40, 20, 60, 0.9)',
+                        backgroundColor: 'rgba(46, 0, 51, 0.9)',
                         padding: '0 8px',
                         zIndex: 20,
                       },
                       '& .MuiInputLabel-shrink': {
                         transform: 'translate(14px, -8px) scale(0.75)',
-                        backgroundColor: 'rgba(40, 20, 60, 0.9)',
+                        backgroundColor: 'rgba(46, 0, 51, 0.9)',
                         padding: '0 8px',
                       },
                     }}
@@ -375,13 +375,13 @@ const QuizCreationModal = ({ open, onClose, onQuizCreated }) => {
                       },
                       '& .MuiInputLabel-root': {
                         color: 'rgba(255, 255, 255, 0.9)',
-                        backgroundColor: 'rgba(40, 20, 60, 0.9)',
+                        backgroundColor: 'rgba(46, 0, 51, 0.9)',
                         padding: '0 8px',
                         zIndex: 20,
                       },
                       '& .MuiInputLabel-shrink': {
                         transform: 'translate(14px, -8px) scale(0.75)',
-                        backgroundColor: 'rgba(40, 20, 60, 0.9)',
+                        backgroundColor: 'rgba(46, 0, 51, 0.9)',
                         padding: '0 8px',
                       },
                     }}
@@ -391,7 +391,7 @@ const QuizCreationModal = ({ open, onClose, onQuizCreated }) => {
                   <FormControl fullWidth variant="outlined">
                     <InputLabel sx={{ 
                       color: 'rgba(255, 255, 255, 0.9)',
-                      backgroundColor: 'rgba(40, 20, 60, 0.9)',
+                      backgroundColor: 'rgba(46, 0, 51, 0.9)',
                       padding: '0 8px'
                     }}>Difficulty</InputLabel>
                     <Select
@@ -401,7 +401,7 @@ const QuizCreationModal = ({ open, onClose, onQuizCreated }) => {
                       MenuProps={{
                         PaperProps: {
                           sx: {
-                            backgroundColor: 'rgba(40, 20, 60, 0.95)',
+                            backgroundColor: 'rgba(46, 0, 51, 0.95)',
                             borderRadius: '8px',
                             border: '1px solid rgba(255, 255, 255, 0.1)',
                             boxShadow: '0 4px 20px rgba(0, 0, 0, 0.5)',
@@ -473,13 +473,13 @@ const QuizCreationModal = ({ open, onClose, onQuizCreated }) => {
                       },
                       '& .MuiInputLabel-root': {
                         color: 'rgba(255, 255, 255, 0.9)',
-                        backgroundColor: 'rgba(40, 20, 60, 0.9)',
+                        backgroundColor: 'rgba(46, 0, 51, 0.9)',
                         padding: '0 8px',
                         zIndex: 20,
                       },
                       '& .MuiInputLabel-shrink': {
                         transform: 'translate(14px, -8px) scale(0.75)',
-                        backgroundColor: 'rgba(40, 20, 60, 0.9)',
+                        backgroundColor: 'rgba(46, 0, 51, 0.9)',
                         padding: '0 8px',
                       },
                     }}
@@ -624,13 +624,13 @@ const QuizCreationModal = ({ open, onClose, onQuizCreated }) => {
                                 },
                                 '& .MuiInputLabel-root': {
                                   color: 'rgba(255, 255, 255, 0.9)',
-                                  backgroundColor: 'rgba(40, 20, 60, 0.9)',
+                                  backgroundColor: 'rgba(46, 0, 51, 0.9)',
                                   padding: '0 8px',
                                   zIndex: 20,
                                 },
                                 '& .MuiInputLabel-shrink': {
                                   transform: 'translate(14px, -8px) scale(0.75)',
-                                  backgroundColor: 'rgba(40, 20, 60, 0.9)',
+                                  backgroundColor: 'rgba(46, 0, 51, 0.9)',
                                   padding: '0 8px',
                                 },
                               }}
@@ -640,7 +640,7 @@ const QuizCreationModal = ({ open, onClose, onQuizCreated }) => {
                             <FormControl fullWidth variant="outlined" size="small">
                               <InputLabel sx={{ 
                                 color: 'rgba(255, 255, 255, 0.9)',
-                                backgroundColor: 'rgba(40, 20, 60, 0.9)',
+                                backgroundColor: 'rgba(46, 0, 51, 0.9)',
                                 padding: '0 8px'
                               }}>Type</InputLabel>
                               <Select
@@ -650,7 +650,7 @@ const QuizCreationModal = ({ open, onClose, onQuizCreated }) => {
                                 MenuProps={{
                                   PaperProps: {
                                     sx: {
-                                      backgroundColor: 'rgba(40, 20, 60, 0.95)',
+                                      backgroundColor: 'rgba(46, 0, 51, 0.95)',
                                       borderRadius: '8px',
                                       border: '1px solid rgba(255, 255, 255, 0.1)',
                                       boxShadow: '0 4px 20px rgba(0, 0, 0, 0.5)',
@@ -807,7 +807,7 @@ const QuizCreationModal = ({ open, onClose, onQuizCreated }) => {
                       },
                       '& .MuiInputLabel-root': {
                         color: 'rgba(255, 255, 255, 0.9)',
-                        backgroundColor: 'rgba(40, 20, 60, 0.9)',
+                        backgroundColor: 'rgba(46, 0, 51, 0.9)',
                         padding: '0 8px',
                         zIndex: 20,
                       },
@@ -821,7 +821,7 @@ const QuizCreationModal = ({ open, onClose, onQuizCreated }) => {
                     <FormControl variant="outlined" sx={{ minWidth: 120 }}>
                       <InputLabel sx={{ 
                         color: 'rgba(255, 255, 255, 0.9)',
-                        backgroundColor: 'rgba(40, 20, 60, 0.9)',
+                        backgroundColor: 'rgba(46, 0, 51, 0.9)',
                         padding: '0 8px'
                       }}>Question Count</InputLabel>
                       <Select
@@ -831,7 +831,7 @@ const QuizCreationModal = ({ open, onClose, onQuizCreated }) => {
                         MenuProps={{
                           PaperProps: {
                             sx: {
-                              backgroundColor: 'rgba(40, 20, 60, 0.95)',
+                              backgroundColor: 'rgba(46, 0, 51, 0.95)',
                               borderRadius: '8px',
                               border: '1px solid rgba(255, 255, 255, 0.1)',
                               boxShadow: '0 4px 20px rgba(0, 0, 0, 0.5)',

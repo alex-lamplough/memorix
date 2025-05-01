@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useMediaQuery } from '@mui/material'
 import { Menu as MenuIcon } from '@mui/icons-material'
+import { useAuth0 } from '@auth0/auth0-react'
 
 // Custom hooks
 import useNavigationWithCancellation from '../hooks/useNavigationWithCancellation'
@@ -17,16 +18,39 @@ import DeleteIcon from '@mui/icons-material/Delete'
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline'
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline'
 import AccessTimeIcon from '@mui/icons-material/AccessTime'
+import StarIcon from '@mui/icons-material/Star'
+import StarBorderIcon from '@mui/icons-material/StarBorder'
 
 // Services
 import { flashcardService } from '../services/api'
 import { handleRequestError } from '../services/utils'
 
-function FlashcardCard({ title, cards, lastStudied, progress, id, onDelete }) {
+function FlashcardCard({ title, cards, lastStudied, progress, id, onDelete, isFavorite = false, onToggleFavorite }) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [favorite, setFavorite] = useState(isFavorite);
   const navigate = useNavigationWithCancellation();
+  
+  // Handle favorite toggle
+  const handleToggleFavorite = async () => {
+    try {
+      const newFavoriteStatus = !favorite;
+      setFavorite(newFavoriteStatus);
+      
+      // Call the API to update the favorite status
+      await flashcardService.toggleFavorite(id, newFavoriteStatus);
+      
+      // If there's a parent callback, invoke it
+      if (onToggleFavorite) {
+        onToggleFavorite(id, newFavoriteStatus);
+      }
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+      // Revert the UI state on error
+      setFavorite(favorite);
+    }
+  };
   
   const handleStudyClick = () => {
     navigate(`/study/${id}`);
@@ -67,6 +91,16 @@ function FlashcardCard({ title, cards, lastStudied, progress, id, onDelete }) {
       <div className="flex justify-between items-start mb-4">
         <h3 className="text-xl font-bold truncate pr-2">{title}</h3>
         <div className="flex space-x-1">
+          <button 
+            onClick={handleToggleFavorite}
+            className="text-white/60 hover:text-white p-1 rounded-full hover:bg-white/10"
+            title={favorite ? "Remove from favorites" : "Add to favorites"}
+          >
+            {favorite ? 
+              <StarIcon className="text-[#FFD700]" fontSize="small" /> : 
+              <StarBorderIcon className="text-white/60 hover:text-white" fontSize="small" />
+            }
+          </button>
           <button 
             className="text-white/60 hover:text-white p-1 rounded-full hover:bg-white/10"
             onClick={handleShareClick}
@@ -172,6 +206,7 @@ function Flashcards() {
   const controllerRef = useRef(null);
   const fetchTimeoutRef = useRef(null);
   const filterMenuRef = useRef(null);
+  const { user } = useAuth0();
   
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -232,7 +267,8 @@ function Flashcards() {
         lastStudied: set.lastStudied ? new Date(set.lastStudied) : null,
         lastStudiedFormatted: formatLastStudied(set.lastStudied),
         progress: set.progress || 0,
-        createdAt: new Date(set.createdAt || Date.now())
+        createdAt: new Date(set.createdAt || Date.now()),
+        favorite: set.isFavorite || false // Use isFavorite property from API response
       }));
       
       if (isMountedRef.current) {
@@ -414,6 +450,23 @@ function Flashcards() {
     setFlashcardSets(updatedSets);
     applyFiltersAndSort(updatedSets);
   }
+  
+  // Handle flashcard favorite toggle
+  const handleToggleFavorite = (id, isFavorite) => {
+    // Update state to reflect the new favorite status
+    setFlashcardSets(prevSets => 
+      prevSets.map(set => 
+        set.id === id ? { ...set, favorite: isFavorite } : set
+      )
+    );
+    
+    // Also update filtered sets
+    setFilteredSets(prevSets => 
+      prevSets.map(set => 
+        set.id === id ? { ...set, favorite: isFavorite } : set
+      )
+    );
+  };
   
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#2E0033] via-[#260041] to-[#1b1b2f] text-white flex flex-col md:flex-row">
@@ -604,6 +657,8 @@ function Flashcards() {
                     lastStudied={set.lastStudiedFormatted}
                     progress={set.progress}
                     onDelete={handleFlashcardDeleted}
+                    isFavorite={set.favorite}
+                    onToggleFavorite={handleToggleFavorite}
                   />
                 ))}
               </div>

@@ -328,23 +328,61 @@ export const flashcardService = {
   
   // Get all favorite flashcard sets
   getFavorites: async () => {
+    console.log('Requesting flashcard favorites...');
     const { controller, signal, cleanup } = createCancellableRequest('flashcards-favorites');
     try {
-      const response = await api.get('/flashcards/favorites', { signal });
-      cleanup();
+      console.log('Making request to: /flashcards/favorites');
       
-      // Process the response to include cardCount
-      const flashcardSets = response.data.map(set => ({
-        ...set,
-        cardCount: set.cardCount || (set.cards ? set.cards.length : 0)
-      }));
-      
-      return flashcardSets;
+      try {
+        // First try the standard path
+        const response = await api.get('/flashcards/favorites', { signal });
+        console.log('Flashcard favorites response:', response.data);
+        cleanup();
+        
+        // Process the response to include cardCount
+        const flashcardSets = response.data.map(set => ({
+          ...set,
+          cardCount: set.cardCount || (set.cards ? set.cards.length : 0)
+        }));
+        
+        return flashcardSets;
+      } catch (initialError) {
+        // If we get a 404, try with an alternative path format
+        if (initialError.response && initialError.response.status === 404) {
+          console.log('First attempt failed with 404, trying alternative path...');
+          // Some backends might expect /api/flashcards/favorites format
+          const altResponse = await api.get('/api/flashcards/favorites', { signal });
+          console.log('Alternative path flashcard favorites response:', altResponse.data);
+          
+          // Process the response to include cardCount
+          const flashcardSets = altResponse.data.map(set => ({
+            ...set,
+            cardCount: set.cardCount || (set.cards ? set.cards.length : 0)
+          }));
+          
+          return flashcardSets;
+        }
+        
+        // If it wasn't a 404, rethrow the original error
+        throw initialError;
+      }
     } catch (error) {
       if (axios.isCancel(error)) {
         console.log('Request cancelled:', error.message);
+      } else {
+        console.error('Error fetching flashcard favorites:', error);
+        if (error.response) {
+          console.error('Error response data:', error.response.data);
+          console.error('Error response status:', error.response.status);
+        }
       }
-      throw error;
+      
+      // When all else fails, return an empty array rather than throwing
+      // This prevents the UI from getting stuck in loading state
+      console.log('Returning empty array for flashcard favorites due to error');
+      return [];
+    } finally {
+      cleanup();
     }
   },
   
@@ -521,4 +559,4 @@ export const quizService = {
   }
 };
 
-export default api; 
+export default api;

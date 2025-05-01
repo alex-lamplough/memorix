@@ -5,6 +5,7 @@ import { lookupMongoUser } from '../middleware/user-middleware.js';
 import FlashcardSet from '../models/flashcard-set-model.js';
 import User from '../models/user-model.js';
 import openaiService from '../services/openai-service.js';
+import { authenticate } from '../middleware/auth-middleware.js';
 
 const router = express.Router();
 
@@ -13,6 +14,68 @@ router.use(checkJwt);
 router.use(getUserFromToken);
 // Add the MongoDB user lookup middleware to get proper user._id
 router.use(lookupMongoUser);
+
+// Get all favorites for current user
+router.get('/favorites', authenticate(), lookupMongoUser, async (req, res, next) => {
+  try {
+    // Fix: Get user ID safely
+    let userId;
+    if (req.user.mongoUser && req.user.mongoUser._id) {
+      userId = req.user.mongoUser._id;
+      console.log('Using MongoDB user ID from mongoUser:', userId);
+    } else if (req.user.id && mongoose.Types.ObjectId.isValid(req.user.id)) {
+      userId = new mongoose.Types.ObjectId(req.user.id);
+      console.log('Using converted ObjectId from req.user.id:', userId);
+    } else {
+      // If no valid MongoDB ID found, look up the user by Auth0 ID
+      console.log('No valid MongoDB ID available, searching by Auth0 ID:', req.user.auth0Id);
+      
+      if (!req.user.auth0Id) {
+        return res.status(401).json({ error: 'User not authenticated properly' });
+      }
+      
+      const user = await User.findOne({ auth0Id: req.user.auth0Id });
+      if (!user) {
+        console.log('No user found with Auth0 ID:', req.user.auth0Id);
+        // Return empty array instead of error to not break the UI
+        return res.json([]);
+      }
+      
+      userId = user._id;
+      console.log('Found user by Auth0 ID, using MongoDB ID:', userId);
+    }
+    
+    console.log('Get favorites - Final User ID for query:', userId);
+    
+    // Find all flashcard sets where the user's ID is in the favorites array
+    const favoriteFlashcardSets = await FlashcardSet.find({
+      favorites: userId
+    }).populate('userId', 'name picture');
+    
+    console.log(`Found ${favoriteFlashcardSets.length} favorite flashcard sets`);
+    
+    // Format response
+    const formattedSets = favoriteFlashcardSets.map(set => ({
+      id: set._id,
+      title: set.title,
+      description: set.description,
+      category: set.category,
+      tags: set.tags,
+      cardCount: set.cards.length,
+      createdBy: set.userId,
+      isPublic: set.isPublic,
+      createdAt: set.createdAt,
+      updatedAt: set.updatedAt,
+      isFavorite: true
+    }));
+    
+    res.json(formattedSets);
+  } catch (error) {
+    console.error('Error getting favorite flashcard sets:', error);
+    // Return empty array instead of error to prevent UI from breaking
+    res.json([]);
+  }
+});
 
 // Get all flashcard sets for the authenticated user
 router.get('/', async (req, res, next) => {
@@ -70,6 +133,9 @@ router.get('/', async (req, res, next) => {
             cardCount: set.cards.length,
             progress: set.studyStats.masteryLevel || 0,
             lastStudied: set.studyStats.lastStudied || null,
+            // Check if the current user has favorited this set
+            isFavorite: set.favorites && Array.isArray(set.favorites) && 
+                        set.favorites.some(favId => favId.equals(dbUser._id)),
             cards: undefined
           }));
           
@@ -87,6 +153,9 @@ router.get('/', async (req, res, next) => {
         cardCount: set.cards.length,
         progress: set.studyStats.masteryLevel || 0,
         lastStudied: set.studyStats.lastStudied || null,
+        // Check if the current user has favorited this set
+        isFavorite: set.favorites && Array.isArray(set.favorites) && 
+                    set.favorites.some(favId => favId.equals(req.user.id)),
         // Don't send full card content to reduce payload size
         cards: undefined
       };
@@ -213,7 +282,16 @@ router.get('/:id', async (req, res, next) => {
       return res.status(403).json({ error: 'You do not have permission to view this flashcard set' });
     }
     
-    res.json(flashcardSet);
+    // Add isFavorite flag before sending response
+    const responseObj = flashcardSet.toObject();
+    responseObj.isFavorite = flashcardSet.favorites && Array.isArray(flashcardSet.favorites) && 
+                             flashcardSet.favorites.some(favId => 
+                               req.user.mongoUser ? 
+                               favId.equals(req.user.mongoUser._id) : 
+                               favId.equals(req.user.id)
+                             );
+
+    res.json(responseObj);
   } catch (error) {
     console.error('Error getting flashcard set:', error);
     next(error);
@@ -435,6 +513,75 @@ router.post('/:id/study', async (req, res, next) => {
     
     res.json(flashcardSet.studyStats);
   } catch (error) {
+    next(error);
+  }
+});
+
+// Toggle favorite status for a flashcard set
+router.patch('/:id/favorite', authenticate(), lookupMongoUser, async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { isFavorite } = req.body;
+    
+    // Fix: Get user ID safely
+    let userId;
+    if (req.user.mongoUser && req.user.mongoUser._id) {
+      userId = req.user.mongoUser._id;
+    } else if (req.user.id) {
+      // Try to convert string ID to ObjectId if needed
+      try {
+        userId = new mongoose.Types.ObjectId(req.user.id);
+      } catch (e) {
+        console.error('Error converting user ID to ObjectId:', e);
+        userId = req.user.id; // Use as is if conversion fails
+      }
+    } else {
+      return res.status(401).json({ error: 'User not authenticated properly' });
+    }
+    
+    console.log('Toggle favorite - User ID:', userId);
+    
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: 'Invalid ID format' });
+    }
+    
+    const flashcardSet = await FlashcardSet.findById(id);
+    if (!flashcardSet) {
+      return res.status(404).json({ error: 'Flashcard set not found' });
+    }
+    
+    // Check if flashcard set is public or belongs to user
+    const isOwner = flashcardSet.userId.toString() === req.user.id || 
+                   (req.user.mongoUser && flashcardSet.userId.equals(req.user.mongoUser._id));
+    
+    if (!flashcardSet.isPublic && !isOwner) {
+      return res.status(403).json({ 
+        error: 'You do not have permission to favorite this private flashcard set' 
+      });
+    }
+    
+    // Update the favorites array
+    if (isFavorite) {
+      // Add to favorites if not already in array
+      if (!flashcardSet.favorites.some(favId => favId.equals(userId))) {
+        flashcardSet.favorites.push(userId);
+      }
+    } else {
+      // Remove from favorites
+      flashcardSet.favorites = flashcardSet.favorites.filter(
+        favUserId => !favUserId.equals(userId)
+      );
+    }
+    
+    await flashcardSet.save();
+    
+    res.json({ 
+      success: true,
+      isFavorite: isFavorite,
+      favorites: flashcardSet.favorites.length
+    });
+  } catch (error) {
+    console.error('Error toggling favorite status:', error);
     next(error);
   }
 });

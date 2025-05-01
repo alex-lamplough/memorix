@@ -62,6 +62,13 @@ const quizSchema = new mongoose.Schema({
     default: '5 min'
   },
   questions: [questionSchema],
+  favorites: {
+    type: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    }],
+    default: []
+  },
   studyStats: {
     totalAttempts: {
       type: Number,

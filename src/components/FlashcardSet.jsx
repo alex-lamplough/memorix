@@ -60,8 +60,9 @@ function FlashcardSet({ title, cards, lastStudied, progress, id = 1, isFavorite 
             onClick={handleToggleFavorite}
             className={`text-${favorite ? '[#FFD700]' : 'white/60'} hover:text-${favorite ? '[#FFD700]' : 'white'} p-1`}
             aria-label={favorite ? "Remove from favorites" : "Add to favorites"}
+            title={favorite ? "Remove from favorites" : "Add to favorites"}
           >
-            {favorite ? <StarIcon fontSize="small" /> : <StarBorderIcon fontSize="small" />}
+            {favorite ? <StarIcon className="text-[#FFD700]" fontSize="small" /> : <StarBorderIcon className="text-white/60 hover:text-white" fontSize="small" />}
           </button>
           <div className="relative">
             <button 

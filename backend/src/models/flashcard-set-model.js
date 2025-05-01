@@ -47,6 +47,13 @@ const flashcardSetSchema = new mongoose.Schema({
     default: false
   },
   cards: [flashcardSchema],
+  favorites: {
+    type: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    }],
+    default: []
+  },
   studyStats: {
     totalStudySessions: {
       type: Number,
