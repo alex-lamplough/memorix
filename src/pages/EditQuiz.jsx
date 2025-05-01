@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { quizService } from '../services/quiz-service'
+import { handleRequestError } from '../services/utils'
 
 // MUI components
 import { 
@@ -31,23 +32,61 @@ function EditQuiz() {
   const [showSnackbar, setShowSnackbar] = useState(false)
   const [snackbarMessage, setSnackbarMessage] = useState('')
   const [snackbarSeverity, setSnackbarSeverity] = useState('success')
+  const isMountedRef = useRef(true)
+  const retryCount = useRef(0)
   
+  // Set up isMountedRef for cleanup
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
   // Fetch the quiz
   useEffect(() => {
     const fetchQuiz = async () => {
+      if (!isMountedRef.current) return;
+      
       try {
         setIsLoading(true)
         setError(null)
         
         console.log(`Fetching quiz with ID: ${id}`)
-        const response = await quizService.getQuiz(id)
+        const data = await quizService.getQuiz(id)
         
-        setQuiz(response.data)
+        if (isMountedRef.current) {
+          setQuiz(data)
+          // Reset retry count on successful fetch
+          retryCount.current = 0;
+        }
       } catch (err) {
         console.error('Error fetching quiz:', err)
-        setError(err.message || 'Failed to load quiz')
+        
+        // Check if it's a cancellation error - pass true to indicate this is a critical request
+        if (!handleRequestError(err, 'Quiz fetch', true)) {
+          if (isMountedRef.current) {
+            // If error is due to cancellation and we haven't retried too many times, retry fetch
+            if ((err.name === 'CanceledError' || err.message === 'canceled') && retryCount.current < 3) {
+              console.log(`Retrying quiz fetch (attempt ${retryCount.current + 1})...`);
+              retryCount.current += 1;
+              
+              // Wait a moment then retry
+              setTimeout(() => {
+                if (isMountedRef.current) {
+                  fetchQuiz();
+                }
+              }, 500);
+              return;
+            }
+            
+            setError(err.message || 'Failed to load quiz')
+          }
+        }
       } finally {
-        setIsLoading(false)
+        if (isMountedRef.current) {
+          setIsLoading(false)
+        }
       }
     }
     

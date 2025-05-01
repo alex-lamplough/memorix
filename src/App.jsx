@@ -47,6 +47,38 @@ import { quizService } from './services/quiz-service'
 import { todoService } from './services/todo-service'
 import { createNavigationHandler } from './services/utils'
 
+// ComingSoon component for features that are under development
+function ComingSoon() {
+  const navigate = useNavigate();
+  
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-[#2E0033] via-[#260041] to-[#1b1b2f] flex items-center justify-center">
+      <div className="bg-[#18092a]/60 rounded-xl p-8 border border-gray-800/30 shadow-lg text-center max-w-md mx-4">
+        <div className="flex justify-center mb-6">
+          <div className="w-20 h-20 bg-[#00ff94]/10 rounded-full flex items-center justify-center border border-[#00ff94]/30">
+            <AnalyticsIcon style={{ fontSize: 40 }} className="text-[#00ff94]" />
+          </div>
+        </div>
+        <h2 className="text-2xl font-bold text-white mb-4">Progress Analytics</h2>
+        <div className="border-t border-b border-gray-800/30 py-4 my-4">
+          <p className="text-white/70 mb-2">
+            We're working hard to bring you detailed analytics and insights about your learning progress.
+          </p>
+          <p className="text-white/70">
+            This feature will be available soon!
+          </p>
+        </div>
+        <button 
+          onClick={() => navigate('/dashboard')}
+          className="bg-[#00ff94]/10 text-[#00ff94] px-6 py-3 rounded-lg hover:bg-[#00ff94]/20 transition-colors border border-[#00ff94]/30 mt-2"
+        >
+          Return to Dashboard
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function AnimatedHeading() {
   const phrases = [
     "Any Subject",
@@ -671,7 +703,7 @@ function App() {
     <Routes>
       <Route path="/dashboard" element={<ProtectedRoute element={<Dashboard />} />} />
       <Route path="/flashcards" element={<ProtectedRoute element={<Flashcards />} />} />
-      <Route path="/progress" element={<ProtectedRoute element={<Progress />} />} />
+      <Route path="/progress" element={<ProtectedRoute element={<ComingSoon />} />} />
       <Route path="/favorites" element={<ProtectedRoute element={<Favorites />} />} />
       <Route path="/quizzes" element={<ProtectedRoute element={<Quizzes />} />} />
       <Route path="/settings" element={<ProtectedRoute element={<Settings />} />} />

@@ -205,7 +205,7 @@ const FlashcardCreationModal = ({ open, onClose }) => {
         fullWidth
         PaperProps={{
           style: {
-            backgroundColor: '#18092a',
+            background: 'linear-gradient(to bottom, #2E0033, #260041, #1b1b2f)',
             color: 'white',
             borderRadius: '12px',
             overflow: 'auto',
@@ -235,7 +235,7 @@ const FlashcardCreationModal = ({ open, onClose }) => {
           },
         }}
       >
-        <DialogTitle 
+        <Box 
           sx={{ 
             display: 'flex', 
             justifyContent: 'space-between', 
@@ -244,22 +244,29 @@ const FlashcardCreationModal = ({ open, onClose }) => {
             borderBottom: '1px solid rgba(255, 255, 255, 0.08)'
           }}
         >
-          <Typography variant="h6" sx={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1 }}>
-            <FlashOnIcon sx={{ color: '#00ff94' }} />
+          <Box component="h2" sx={{ 
+            margin: 0, 
+            fontSize: '1.25rem', 
+            fontWeight: 600, 
+            display: 'flex', 
+            alignItems: 'center'
+          }}>
+            <FlashOnIcon sx={{ color: '#00ff94', mr: 1 }} />
             Create Flashcard Set
-          </Typography>
+          </Box>
+          
           {!isLoading && (
             <IconButton onClick={onClose} size="small" sx={{ color: 'white' }}>
               <CloseIcon />
             </IconButton>
           )}
-        </DialogTitle>
+        </Box>
         
         <DialogContent sx={{ padding: '20px 24px', height: 'auto', overflow: 'visible' }}>
           <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
             {/* Header info */}
-            <Grid container spacing={3} sx={{ mb: 4 }}>
-              <Grid item xs={12} md={6}>
+            <Box display="grid" gridTemplateColumns="repeat(12, 1fr)" gap={3} sx={{ mb: 4 }}>
+              <Box gridColumn={{ xs: 'span 12', md: 'span 6' }}>
                 <TextField
                   fullWidth
                   label="Title"
@@ -273,7 +280,7 @@ const FlashcardCreationModal = ({ open, onClose }) => {
                     mt: 0.5,
                     '& .MuiInputBase-root': {
                       color: 'white',
-                      backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                      backgroundColor: 'rgba(0, 0, 0, 0.2)',
                       paddingLeft: '12px',
                     },
                     '& .MuiOutlinedInput-root': {
@@ -290,17 +297,19 @@ const FlashcardCreationModal = ({ open, onClose }) => {
                     },
                     '& .MuiInputLabel-root': {
                       color: 'rgba(255, 255, 255, 0.9)',
-                      backgroundColor: '#18092a',
+                      backgroundColor: 'rgba(40, 20, 60, 0.9)',
                       padding: '0 8px',
                       zIndex: 20,
                     },
                     '& .MuiInputLabel-shrink': {
                       transform: 'translate(14px, -8px) scale(0.75)',
+                      backgroundColor: 'rgba(40, 20, 60, 0.9)',
+                      padding: '0 8px',
                     },
                   }}
                 />
-              </Grid>
-              <Grid item xs={12} md={6}>
+              </Box>
+              <Box gridColumn={{ xs: 'span 12', md: 'span 6' }}>
                 <TextField
                   fullWidth
                   label="Category"
@@ -313,7 +322,7 @@ const FlashcardCreationModal = ({ open, onClose }) => {
                     mt: 0.5,
                     '& .MuiInputBase-root': {
                       color: 'white',
-                      backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                      backgroundColor: 'rgba(0, 0, 0, 0.2)',
                       paddingLeft: '12px',
                     },
                     '& .MuiOutlinedInput-root': {
@@ -330,17 +339,19 @@ const FlashcardCreationModal = ({ open, onClose }) => {
                     },
                     '& .MuiInputLabel-root': {
                       color: 'rgba(255, 255, 255, 0.9)',
-                      backgroundColor: '#18092a',
+                      backgroundColor: 'rgba(40, 20, 60, 0.9)',
                       padding: '0 8px',
                       zIndex: 20,
                     },
                     '& .MuiInputLabel-shrink': {
                       transform: 'translate(14px, -8px) scale(0.75)',
+                      backgroundColor: 'rgba(40, 20, 60, 0.9)',
+                      padding: '0 8px',
                     },
                   }}
                 />
-              </Grid>
-              <Grid item xs={12}>
+              </Box>
+              <Box gridColumn="span 12">
                 <TextField
                   fullWidth
                   label="Description"
@@ -353,7 +364,7 @@ const FlashcardCreationModal = ({ open, onClose }) => {
                     mt: 0.5,
                     '& .MuiInputBase-root': {
                       color: 'white',
-                      backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                      backgroundColor: 'rgba(0, 0, 0, 0.2)',
                       paddingLeft: '12px',
                     },
                     '& .MuiOutlinedInput-root': {
@@ -370,17 +381,19 @@ const FlashcardCreationModal = ({ open, onClose }) => {
                     },
                     '& .MuiInputLabel-root': {
                       color: 'rgba(255, 255, 255, 0.9)',
-                      backgroundColor: '#18092a',
+                      backgroundColor: 'rgba(40, 20, 60, 0.9)',
                       padding: '0 8px',
                       zIndex: 20,
                     },
                     '& .MuiInputLabel-shrink': {
                       transform: 'translate(14px, -8px) scale(0.75)',
+                      backgroundColor: 'rgba(40, 20, 60, 0.9)',
+                      padding: '0 8px',
                     },
                   }}
                 />
-              </Grid>
-              <Grid item xs={12}>
+              </Box>
+              <Box gridColumn="span 12">
                 <FormControlLabel
                   control={
                     <Switch 
@@ -399,8 +412,8 @@ const FlashcardCreationModal = ({ open, onClose }) => {
                   label="Make deck public"
                   sx={{ color: 'rgba(255, 255, 255, 0.8)' }}
                 />
-              </Grid>
-            </Grid>
+              </Box>
+            </Box>
             
             {/* Tabs */}
             <Box sx={{ mb: 2 }}>
@@ -474,39 +487,35 @@ const FlashcardCreationModal = ({ open, onClose }) => {
                       {cards.map((card, index) => (
                         <Grid item xs={12} key={index}>
                           <Paper 
+                            key={index}
                             elevation={2}
                             sx={{ 
                               p: 3, 
-                              backgroundColor: 'rgba(40, 20, 60, 0.6)',
+                              backgroundColor: 'rgba(40, 20, 60, 0.5)',
                               border: '1px solid rgba(255, 255, 255, 0.15)',
                               borderRadius: '8px',
-                              transition: 'all 0.2s ease',
-                              minHeight: '180px',
                               mb: 3,
+                              transition: 'all 0.2s ease',
                               '&:hover': {
                                 borderColor: 'rgba(0, 255, 148, 0.3)',
                               }
                             }}
                           >
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                              <Typography variant="subtitle2" sx={{ color: '#00ff94', fontWeight: 'bold' }}>Card {index + 1}</Typography>
-                              <IconButton 
-                                onClick={() => removeCard(index)}
+                              <Typography variant="subtitle1" sx={{ fontWeight: 'medium' }}>
+                                Card {index + 1}
+                              </Typography>
+                              <IconButton
                                 size="small"
-                                sx={{ 
-                                  color: 'rgba(255, 255, 255, 0.5)',
-                                  '&:hover': {
-                                    color: '#ff6b6b',
-                                    backgroundColor: 'rgba(255, 107, 107, 0.1)',
-                                  }
-                                }}
+                                onClick={() => removeCard(index)}
+                                sx={{ color: 'rgba(255, 255, 255, 0.7)' }}
                               >
                                 <DeleteIcon fontSize="small" />
                               </IconButton>
                             </Box>
                             
-                            <Grid container spacing={3} direction="column">
-                              <Grid item xs={12}>
+                            <Box display="grid" gridTemplateColumns="repeat(12, 1fr)" gap={2}>
+                              <Box gridColumn="span 12">
                                 <TextField
                                   fullWidth
                                   label="Question"
@@ -516,11 +525,10 @@ const FlashcardCreationModal = ({ open, onClose }) => {
                                   size="small"
                                   required
                                   sx={{
-                                    mb: 1,
-                                    mt: 0.5,
+                                    mb: 2,
                                     '& .MuiInputBase-root': {
                                       color: 'white',
-                                      backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                                      backgroundColor: 'rgba(0, 0, 0, 0.2)',
                                       paddingLeft: '12px',
                                     },
                                     '& .MuiOutlinedInput-root': {
@@ -537,17 +545,19 @@ const FlashcardCreationModal = ({ open, onClose }) => {
                                     },
                                     '& .MuiInputLabel-root': {
                                       color: 'rgba(255, 255, 255, 0.9)',
-                                      backgroundColor: 'rgba(40, 20, 60, 0.95)',
+                                      backgroundColor: 'rgba(40, 20, 60, 0.9)',
                                       padding: '0 8px',
                                       zIndex: 20,
                                     },
                                     '& .MuiInputLabel-shrink': {
                                       transform: 'translate(14px, -8px) scale(0.75)',
+                                      backgroundColor: 'rgba(40, 20, 60, 0.9)',
+                                      padding: '0 8px',
                                     },
                                   }}
                                 />
-                              </Grid>
-                              <Grid item xs={12}>
+                              </Box>
+                              <Box gridColumn="span 12">
                                 <TextField
                                   fullWidth
                                   label="Answer"
@@ -555,15 +565,13 @@ const FlashcardCreationModal = ({ open, onClose }) => {
                                   onChange={(e) => handleCardChange(index, 'back', e.target.value)}
                                   variant="outlined"
                                   size="small"
+                                  required
                                   multiline
                                   rows={2}
-                                  required
                                   sx={{
-                                    mb: 1,
-                                    mt: 0.5,
                                     '& .MuiInputBase-root': {
                                       color: 'white',
-                                      backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                                      backgroundColor: 'rgba(0, 0, 0, 0.2)',
                                       paddingLeft: '12px',
                                     },
                                     '& .MuiOutlinedInput-root': {
@@ -580,17 +588,19 @@ const FlashcardCreationModal = ({ open, onClose }) => {
                                     },
                                     '& .MuiInputLabel-root': {
                                       color: 'rgba(255, 255, 255, 0.9)',
-                                      backgroundColor: 'rgba(40, 20, 60, 0.95)',
+                                      backgroundColor: 'rgba(40, 20, 60, 0.9)',
                                       padding: '0 8px',
                                       zIndex: 20,
                                     },
                                     '& .MuiInputLabel-shrink': {
                                       transform: 'translate(14px, -8px) scale(0.75)',
+                                      backgroundColor: 'rgba(40, 20, 60, 0.9)',
+                                      padding: '0 8px',
                                     },
                                   }}
                                 />
-                              </Grid>
-                            </Grid>
+                              </Box>
+                            </Box>
                           </Paper>
                         </Grid>
                       ))}
@@ -649,65 +659,40 @@ const FlashcardCreationModal = ({ open, onClose }) => {
                       <Typography variant="body2" sx={{ mb: 1, color: 'rgba(255, 255, 255, 0.7)' }}>
                         Number of Cards: {cardCount}
                       </Typography>
-                      <Slider
-                        value={cardCount}
-                        onChange={(_, value) => setCardCount(value)}
-                        min={3}
-                        max={20}
-                        step={1}
-                        valueLabelDisplay="auto"
-                        sx={{
-                          color: '#00ff94',
-                          '& .MuiSlider-thumb': {
-                            '&:hover, &.Mui-focusVisible': {
-                              boxShadow: '0 0 0 8px rgba(0, 255, 148, 0.16)',
-                            },
-                          },
-                          '& .MuiSlider-rail': {
-                            backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                          },
-                        }}
-                      />
-                    </Grid>
-                    <Grid item xs={12} sm={6}>
-                      <FormControl fullWidth size="small" sx={{ mt: 0.5, mb: 1 }}>
-                        <InputLabel 
-                          id="difficulty-select-label"
-                          sx={{ 
-                            color: 'rgba(255, 255, 255, 0.9)',
-                            backgroundColor: '#18092a',
-                            padding: '0 8px',
-                            transform: 'translate(14px, -6px) scale(0.75)',
-                            marginTop: 0,
-                            zIndex: 10,
-                          }}
-                        >
-                          Difficulty Level
-                        </InputLabel>
+                      <FormControl variant="outlined" sx={{ minWidth: 120 }}>
+                        <InputLabel sx={{ 
+                          color: 'rgba(255, 255, 255, 0.9)',
+                          backgroundColor: 'rgba(40, 20, 60, 0.9)',
+                          padding: '0 8px'
+                        }}>Card Count</InputLabel>
                         <Select
-                          labelId="difficulty-select-label"
-                          value={difficulty}
-                          onChange={(e) => setDifficulty(e.target.value)}
-                          label="Difficulty Level"
+                          value={cardCount}
+                          onChange={(e) => setCardCount(e.target.value)}
+                          label="Card Count"
                           MenuProps={{
                             PaperProps: {
                               sx: {
-                                bgcolor: '#28143c',
-                                color: 'white',
-                                '& .MuiMenuItem-root:hover': {
-                                  bgcolor: 'rgba(0, 255, 148, 0.1)',
-                                },
-                                '& .MuiMenuItem-root.Mui-selected': {
-                                  bgcolor: 'rgba(0, 255, 148, 0.2)',
+                                backgroundColor: 'rgba(40, 20, 60, 0.95)',
+                                borderRadius: '8px',
+                                border: '1px solid rgba(255, 255, 255, 0.1)',
+                                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.5)',
+                                '& .MuiMenuItem-root': {
+                                  color: 'white',
                                   '&:hover': {
-                                    bgcolor: 'rgba(0, 255, 148, 0.3)',
+                                    backgroundColor: 'rgba(0, 255, 148, 0.1)',
+                                  },
+                                  '&.Mui-selected': {
+                                    backgroundColor: 'rgba(0, 255, 148, 0.2)',
+                                    '&:hover': {
+                                      backgroundColor: 'rgba(0, 255, 148, 0.3)',
+                                    }
                                   }
                                 }
                               }
                             }
                           }}
                           sx={{
-                            backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                            backgroundColor: 'rgba(0, 0, 0, 0.2)',
                             color: 'white',
                             '& .MuiOutlinedInput-notchedOutline': {
                               borderColor: 'rgba(255, 255, 255, 0.2)',
@@ -718,14 +703,61 @@ const FlashcardCreationModal = ({ open, onClose }) => {
                             '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
                               borderColor: '#00ff94',
                             },
-                            pt: 0.5,
-                            pl: 1.5,
-                            '& .MuiSelect-select': {
-                              padding: '8px 14px',
+                            '& .MuiSvgIcon-root': { // Style the dropdown icon
+                              color: 'rgba(255, 255, 255, 0.7)'
+                            }
+                          }}
+                        >
+                          {[5, 10, 15, 20].map((count) => (
+                            <MenuItem key={count} value={count} sx={{ color: 'white' }}>{count} Cards</MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    </Grid>
+                    <Grid item xs={12} sm={6}>
+                      <FormControl variant="outlined" sx={{ minWidth: 120 }}>
+                        <InputLabel sx={{ 
+                          color: 'rgba(255, 255, 255, 0.9)',
+                          backgroundColor: 'rgba(40, 20, 60, 0.9)',
+                          padding: '0 8px'
+                        }}>Difficulty</InputLabel>
+                        <Select
+                          value={difficulty}
+                          onChange={(e) => setDifficulty(e.target.value)}
+                          label="Difficulty"
+                          MenuProps={{
+                            PaperProps: {
+                              sx: {
+                                backgroundColor: 'rgba(40, 20, 60, 0.95)',
+                                borderRadius: '8px',
+                                border: '1px solid rgba(255, 255, 255, 0.1)',
+                                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.5)',
+                                '& .MuiMenuItem-root': {
+                                  color: 'white',
+                                  '&:hover': {
+                                    backgroundColor: 'rgba(0, 255, 148, 0.1)',
+                                  },
+                                  '&.Mui-selected': {
+                                    backgroundColor: 'rgba(0, 255, 148, 0.2)',
+                                    '&:hover': {
+                                      backgroundColor: 'rgba(0, 255, 148, 0.3)',
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }}
+                          sx={{
+                            backgroundColor: 'rgba(0, 0, 0, 0.2)',
+                            color: 'white',
+                            '& .MuiOutlinedInput-notchedOutline': {
+                              borderColor: 'rgba(255, 255, 255, 0.2)',
                             },
-                            '& legend': { 
-                              visibility: 'visible',
-                              width: '0 !important'
+                            '&:hover .MuiOutlinedInput-notchedOutline': {
+                              borderColor: 'rgba(255, 255, 255, 0.3)',
+                            },
+                            '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                              borderColor: '#00ff94',
                             },
                             '& .MuiSvgIcon-root': { // Style the dropdown icon
                               color: 'rgba(255, 255, 255, 0.7)'
@@ -813,52 +845,116 @@ const FlashcardCreationModal = ({ open, onClose }) => {
                               elevation={2}
                               sx={{ 
                                 p: 3, 
-                                backgroundColor: 'rgba(40, 20, 60, 0.6)',
+                                backgroundColor: 'rgba(40, 20, 60, 0.5)',
                                 border: '1px solid rgba(255, 255, 255, 0.15)',
                                 borderRadius: '8px',
-                                transition: 'all 0.2s ease',
-                                minHeight: '180px',
                                 mb: 3,
-                                display: 'flex',
-                                flexDirection: 'column'
+                                transition: 'all 0.2s ease',
+                                '&:hover': {
+                                  borderColor: 'rgba(0, 255, 148, 0.3)',
+                                }
                               }}
                             >
-                              <Typography 
-                                variant="subtitle2" 
-                                sx={{ 
-                                  color: '#00ff94', 
-                                  mb: 1.5, 
-                                  fontWeight: 'bold', 
-                                  fontSize: '1rem',
-                                  display: 'block'
-                                }}
-                              >
-                                Card {index + 1}
-                              </Typography>
-                              <Typography 
-                                variant="body1" 
-                                sx={{ 
-                                  fontWeight: 'bold', 
-                                  mb: 2, 
-                                  color: 'white',
-                                  display: 'block',
-                                  width: '100%'
-                                }}
-                              >
-                                {card.front || card.question}
-                              </Typography>
-                              <Divider sx={{ borderColor: 'rgba(255, 255, 255, 0.3)', my: 2, width: '100%' }} />
-                              <Typography 
-                                variant="body1" 
-                                sx={{ 
-                                  color: 'white',
-                                  display: 'block',
-                                  width: '100%',
-                                  whiteSpace: 'pre-wrap'
-                                }}
-                              >
-                                {card.back || card.answer}
-                              </Typography>
+                              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                                <Typography variant="subtitle1" sx={{ fontWeight: 'medium' }}>
+                                  Card {index + 1}
+                                </Typography>
+                                <IconButton
+                                  size="small"
+                                  onClick={() => removeCard(index)}
+                                  sx={{ color: 'rgba(255, 255, 255, 0.7)' }}
+                                >
+                                  <DeleteIcon fontSize="small" />
+                                </IconButton>
+                              </Box>
+                              
+                              <Box display="grid" gridTemplateColumns="repeat(12, 1fr)" gap={2}>
+                                <Box gridColumn="span 12">
+                                  <TextField
+                                    fullWidth
+                                    label="Question"
+                                    value={card.front}
+                                    onChange={(e) => handleCardChange(index, 'front', e.target.value)}
+                                    variant="outlined"
+                                    size="small"
+                                    required
+                                    sx={{
+                                      mb: 2,
+                                      '& .MuiInputBase-root': {
+                                        color: 'white',
+                                        backgroundColor: 'rgba(0, 0, 0, 0.2)',
+                                        paddingLeft: '12px',
+                                      },
+                                      '& .MuiOutlinedInput-root': {
+                                        '& fieldset': {
+                                          borderColor: 'rgba(255, 255, 255, 0.2)',
+                                          paddingLeft: '10px',
+                                        },
+                                        '&:hover fieldset': {
+                                          borderColor: 'rgba(255, 255, 255, 0.3)',
+                                        },
+                                        '&.Mui-focused fieldset': {
+                                          borderColor: '#00ff94',
+                                        },
+                                      },
+                                      '& .MuiInputLabel-root': {
+                                        color: 'rgba(255, 255, 255, 0.9)',
+                                        backgroundColor: 'rgba(40, 20, 60, 0.9)',
+                                        padding: '0 8px',
+                                        zIndex: 20,
+                                      },
+                                      '& .MuiInputLabel-shrink': {
+                                        transform: 'translate(14px, -8px) scale(0.75)',
+                                        backgroundColor: 'rgba(40, 20, 60, 0.9)',
+                                        padding: '0 8px',
+                                      },
+                                    }}
+                                  />
+                                </Box>
+                                <Box gridColumn="span 12">
+                                  <TextField
+                                    fullWidth
+                                    label="Answer"
+                                    value={card.back}
+                                    onChange={(e) => handleCardChange(index, 'back', e.target.value)}
+                                    variant="outlined"
+                                    size="small"
+                                    required
+                                    multiline
+                                    rows={2}
+                                    sx={{
+                                      '& .MuiInputBase-root': {
+                                        color: 'white',
+                                        backgroundColor: 'rgba(0, 0, 0, 0.2)',
+                                        paddingLeft: '12px',
+                                      },
+                                      '& .MuiOutlinedInput-root': {
+                                        '& fieldset': {
+                                          borderColor: 'rgba(255, 255, 255, 0.2)',
+                                          paddingLeft: '10px',
+                                        },
+                                        '&:hover fieldset': {
+                                          borderColor: 'rgba(255, 255, 255, 0.3)',
+                                        },
+                                        '&.Mui-focused fieldset': {
+                                          borderColor: '#00ff94',
+                                        },
+                                      },
+                                      '& .MuiInputLabel-root': {
+                                        color: 'rgba(255, 255, 255, 0.9)',
+                                        backgroundColor: 'rgba(40, 20, 60, 0.9)',
+                                        padding: '0 8px',
+                                        zIndex: 20,
+                                      },
+                                      '& .MuiInputLabel-shrink': {
+                                        transform: 'translate(14px, -8px) scale(0.75)',
+                                        backgroundColor: 'rgba(40, 20, 60, 0.9)',
+                                        padding: '0 8px',
+                                      },
+                                    }}
+                                  />
+                                </Box>
+                              </Box>
                             </Paper>
                           </Grid>
                         ))}

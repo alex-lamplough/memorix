@@ -15,7 +15,30 @@ import MenuBookIcon from '@mui/icons-material/MenuBook'
 // Assets
 import logoWhite from '../assets/MemorixLogoGreen.png'
 
-function SidebarItem({ icon, label, active, to, onClick }) {
+function SidebarItem({ icon, label, active, to, onClick, disabled, comingSoon }) {
+  if (disabled) {
+    return (
+      <div className="relative">
+        <div className={`flex items-center gap-3 px-4 py-3 rounded-lg text-white/40 cursor-not-allowed`}>
+          {icon}
+          <span className="font-medium">{label}</span>
+          {comingSoon && (
+            <span className="ml-auto text-xs px-1.5 py-0.5 bg-[#00ff94]/10 text-[#00ff94] rounded-full border border-[#00ff94]/30">
+              Soon
+            </span>
+          )}
+        </div>
+        {comingSoon && (
+          <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+            <div className="px-2 py-1 bg-[#18092a] text-[#00ff94] text-xs rounded-md border border-[#00ff94]/30">
+              Coming Soon
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+  
   if (onClick) {
     return (
       <button 
@@ -94,22 +117,23 @@ function Sidebar({ activePage = 'dashboard' }) {
             to="/flashcards"
           />
           <SidebarItem 
+            icon={<QuizIcon fontSize="small" />} 
+            label="Quizzes" 
+            active={activePage === 'quizzes'}
+            to="/quizzes"
+          />
+          <SidebarItem 
             icon={<AnalyticsIcon fontSize="small" />} 
             label="Progress" 
             active={activePage === 'progress'}
-            to="/progress"
+            disabled={true}
+            comingSoon={true}
           />
           <SidebarItem 
             icon={<StarIcon fontSize="small" />} 
             label="Favorites" 
             active={activePage === 'favorites'}
             to="/favorites"
-          />
-          <SidebarItem 
-            icon={<QuizIcon fontSize="small" />} 
-            label="Quizzes" 
-            active={activePage === 'quizzes'}
-            to="/quizzes"
           />
           <SidebarItem 
             icon={<SettingsIcon fontSize="small" />} 

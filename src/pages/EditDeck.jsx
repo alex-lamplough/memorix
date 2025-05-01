@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { flashcardService } from '../services/api'
+import { handleRequestError } from '../services/utils'
 
 // Icons
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
@@ -22,10 +23,22 @@ function EditDeck() {
   const [showSnackbar, setShowSnackbar] = useState(false)
   const [snackbarMessage, setSnackbarMessage] = useState('')
   const [snackbarSeverity, setSnackbarSeverity] = useState('success')
+  const isMountedRef = useRef(true)
+  const retryCount = useRef(0)
+  
+  // Set up isMountedRef for cleanup
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
   
   // Fetch the flashcard set
   useEffect(() => {
     const fetchFlashcardSet = async () => {
+      if (!isMountedRef.current) return;
+      
       try {
         setIsLoading(true)
         setError(null)
@@ -33,12 +46,38 @@ function EditDeck() {
         console.log(`Fetching flashcard set with ID: ${id}`)
         const data = await flashcardService.getFlashcardSet(id)
         
-        setFlashcardSet(data)
+        if (isMountedRef.current) {
+          setFlashcardSet(data)
+          // Reset retry count on successful fetch
+          retryCount.current = 0;
+        }
       } catch (err) {
         console.error('Error fetching flashcard set:', err)
-        setError(err.message || 'Failed to load flashcard set')
+        
+        // Check if it's a cancellation error - pass true to indicate this is a critical request
+        if (!handleRequestError(err, 'Flashcard set fetch', true)) {
+          if (isMountedRef.current) {
+            // If error is due to cancellation and we haven't retried too many times, retry fetch
+            if ((err.name === 'CanceledError' || err.message === 'canceled') && retryCount.current < 3) {
+              console.log(`Retrying flashcard fetch (attempt ${retryCount.current + 1})...`);
+              retryCount.current += 1;
+              
+              // Wait a moment then retry
+              setTimeout(() => {
+                if (isMountedRef.current) {
+                  fetchFlashcardSet();
+                }
+              }, 500);
+              return;
+            }
+            
+            setError(err.message || 'Failed to load flashcard set')
+          }
+        }
       } finally {
-        setIsLoading(false)
+        if (isMountedRef.current) {
+          setIsLoading(false)
+        }
       }
     }
     

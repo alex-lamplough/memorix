@@ -3,37 +3,75 @@ import axios from 'axios';
 
 // Keep track of ongoing requests so they can be cancelled when navigating away
 const cancelTokens = new Map();
+// Keep track of critical requests separately
+const criticalTokens = new Map();
+// Also track pending responses for critical requests to avoid duplicate fetches
+const pendingResponses = new Map();
 
 // Helper to create a request with a cancel token
 const createCancellableRequest = (endpoint) => {
-  // Cancel any ongoing request to this endpoint
-  if (cancelTokens.has(endpoint)) {
-    cancelTokens.get(endpoint).abort();
+  // Determine if this is a critical request (like study or edit pages)
+  const isCriticalRequest = endpoint.includes('quizzes/') && 
+                            !endpoint.includes('create') && 
+                            !endpoint.includes('update') && 
+                            !endpoint.includes('delete') &&
+                            !endpoint.includes('favorites');
+  
+  const tokenMap = isCriticalRequest ? criticalTokens : cancelTokens;
+  
+  // If this is a critical request already in progress, don't cancel it
+  // Instead, return the existing controller
+  if (isCriticalRequest && tokenMap.has(endpoint)) {
+    console.log(`Reusing existing critical request for: ${endpoint}`);
+    const controller = tokenMap.get(endpoint);
+    return {
+      controller,
+      signal: controller.signal,
+      cleanup: () => {
+        // Only clean up if this is actually done
+      },
+      isCritical: true
+    };
+  }
+  
+  // Otherwise, cancel any ongoing request to this endpoint in the appropriate map
+  if (tokenMap.has(endpoint)) {
+    tokenMap.get(endpoint).abort();
   }
   
   // Create a new AbortController
   const controller = new AbortController();
-  cancelTokens.set(endpoint, controller);
+  tokenMap.set(endpoint, controller);
   
   return {
     controller,
     signal: controller.signal,
     cleanup: () => {
-      cancelTokens.delete(endpoint);
-    }
+      tokenMap.delete(endpoint);
+    },
+    isCritical: isCriticalRequest
   };
 };
 
 // Cancel all ongoing requests (useful when navigating away)
 export const cancelAllRequests = () => {
-  console.log(`Cancelling ${cancelTokens.size} pending quiz API requests`);
+  // Only cancel non-critical requests
+  if (cancelTokens.size > 0) {
+    console.log(`Cancelling ${cancelTokens.size} pending quiz API requests`);
+    
+    cancelTokens.forEach((controller, endpoint) => {
+      console.log(`Cancelling request to: ${endpoint}`);
+      controller.abort('Navigation cancelled the request');
+    });
+    
+    // Clear all non-critical tokens
+    cancelTokens.clear();
+  }
   
-  cancelTokens.forEach((controller, endpoint) => {
-    console.log(`Cancelling request to: ${endpoint}`);
-    controller.abort('Navigation cancelled the request');
-  });
-  
-  cancelTokens.clear();
+  // Log information about preserved critical requests
+  if (criticalTokens.size > 0) {
+    console.log(`Preserved ${criticalTokens.size} critical quiz requests`);
+  }
 };
 
 export const quizService = {
@@ -59,19 +97,52 @@ export const quizService = {
   
   // Get a specific quiz by ID
   getQuiz: async (id) => {
-    const { controller, signal, cleanup } = createCancellableRequest(`quizzes/${id}`);
-    try {
-      const response = await api.get(`/quizzes/${id}`, { signal });
-      cleanup();
-      return response.data;
-    } catch (error) {
-      if (axios.isCancel(error)) {
-        console.log('Request cancelled:', error.message);
-      } else {
-        console.error(`Error fetching quiz ${id}:`, error);
+    const endpoint = `quizzes/${id}`;
+    
+    // For critical requests, check if we already have a pending request
+    if (pendingResponses.has(endpoint)) {
+      console.log(`Reusing pending response for: ${endpoint}`);
+      try {
+        return await pendingResponses.get(endpoint);
+      } catch (error) {
+        // If the cached promise rejected, remove it and continue with a fresh request
+        pendingResponses.delete(endpoint);
       }
-      throw error;
     }
+    
+    const { controller, signal, cleanup, isCritical } = createCancellableRequest(endpoint);
+    
+    // Create a promise for this request
+    const requestPromise = (async () => {
+      try {
+        const response = await api.get(`/quizzes/${id}`, { signal });
+        if (isCritical) {
+          // Only remove this from pendingResponses after a delay to prevent
+          // rapid consecutive requests
+          setTimeout(() => {
+            pendingResponses.delete(endpoint);
+          }, 500);
+        }
+        cleanup();
+        return response.data;
+      } catch (error) {
+        // Make sure to remove failed requests from the cache
+        pendingResponses.delete(endpoint);
+        if (axios.isCancel(error)) {
+          console.log('Request cancelled:', error.message);
+        } else {
+          console.error(`Error fetching quiz ${id}:`, error);
+        }
+        throw error;
+      }
+    })();
+    
+    // Store this promise for critical requests
+    if (isCritical) {
+      pendingResponses.set(endpoint, requestPromise);
+    }
+    
+    return requestPromise;
   },
   
   // Create a new quiz
@@ -103,6 +174,40 @@ export const quizService = {
         console.log('Request cancelled:', error.message);
       } else {
         console.error(`Error updating quiz ${id}:`, error);
+      }
+      throw error;
+    }
+  },
+  
+  // Toggle favorite status of a quiz
+  toggleFavorite: async (id, isFavorite) => {
+    const { controller, signal, cleanup } = createCancellableRequest(`quizzes-favorite-${id}`);
+    try {
+      const response = await api.patch(`/quizzes/${id}/favorite`, { isFavorite }, { signal });
+      cleanup();
+      return response.data;
+    } catch (error) {
+      if (axios.isCancel(error)) {
+        console.log('Request cancelled:', error.message);
+      } else {
+        console.error(`Error toggling favorite status for quiz ${id}:`, error);
+      }
+      throw error;
+    }
+  },
+  
+  // Get all favorite quizzes
+  getFavorites: async () => {
+    const { controller, signal, cleanup } = createCancellableRequest('quizzes-favorites');
+    try {
+      const response = await api.get('/quizzes/favorites', { signal });
+      cleanup();
+      return response.data;
+    } catch (error) {
+      if (axios.isCancel(error)) {
+        console.log('Request cancelled:', error.message);
+      } else {
+        console.error('Error fetching favorite quizzes:', error);
       }
       throw error;
     }

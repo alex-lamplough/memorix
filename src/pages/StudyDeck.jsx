@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { flashcardService } from '../services/api'
+import { handleRequestError } from '../services/utils'
 import FlashcardDeck from '../components/FlashcardDeck'
 
 // Icons
@@ -18,7 +19,9 @@ function StudyDeck() {
   const [flashcardSet, setFlashcardSet] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [studyStartTime, setStudyStartTime] = useState(null)
+  const [currentCardIndex, setCurrentCardIndex] = useState(0)
+  const [isFlipped, setIsFlipped] = useState(false)
+  const [reviewLaterCards, setReviewLaterCards] = useState({})
   const [studyStats, setStudyStats] = useState({
     timeSpent: 0,
     cardsStudied: 0,
@@ -27,16 +30,30 @@ function StudyDeck() {
     reviewLaterCount: 0,
     learnedCount: 0
   })
-  const [timeElapsed, setTimeElapsed] = useState(0)
-  const [isTimerActive, setIsTimerActive] = useState(true)
-  const [cardPerformance, setCardPerformance] = useState({})
-  const [reviewLaterCards, setReviewLaterCards] = useState({})
+  const [showEndSessionModal, setShowEndSessionModal] = useState(false)
+  const [studyStartTime, setStudyStartTime] = useState(null)
+  const [isTimerActive, setIsTimerActive] = useState(false)
+  const [elapsedTime, setElapsedTime] = useState(0)
   const [learnedCards, setLearnedCards] = useState({})
   const [isDeckCompleted, setIsDeckCompleted] = useState(false)
+  const isMountedRef = useRef(true)
+  const retryCount = useRef(0)
+  
+  // Set up isMountedRef for cleanup
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      // Record study session when unmounting
+      recordSessionOnExit();
+    };
+  }, []);
   
   // Fetch the flashcard set
   useEffect(() => {
     const fetchFlashcardSet = async () => {
+      if (!isMountedRef.current) return;
+      
       try {
         setIsLoading(true)
         setError(null)
@@ -44,69 +61,91 @@ function StudyDeck() {
         console.log(`Fetching flashcard set with ID: ${id}`)
         const data = await flashcardService.getFlashcardSet(id)
         
-        // Verify cards are present and in the right format
-        if (!data.cards || !Array.isArray(data.cards) || data.cards.length === 0) {
-          throw new Error('No cards found in this flashcard set')
+        if (isMountedRef.current) {
+          // Verify cards are present and in the right format
+          if (!data.cards || !Array.isArray(data.cards) || data.cards.length === 0) {
+            throw new Error('No cards found in this flashcard set')
+          }
+          
+          // Transform the cards format if needed
+          const formattedCards = data.cards.map(card => ({
+            question: card.front,
+            answer: card.back,
+            id: card._id
+          }))
+          
+          // Set the flashcard set with formatted cards
+          setFlashcardSet({
+            ...data,
+            cards: formattedCards
+          })
+          
+          // Initialize review later cards from saved data if available
+          if (data.studyStats?.reviewLaterCards) {
+            const reviewLaterObj = {};
+            data.studyStats.reviewLaterCards.forEach(cardId => {
+              reviewLaterObj[cardId] = true;
+            });
+            setReviewLaterCards(reviewLaterObj);
+          }
+          
+          // Initialize learned cards from saved data if available
+          if (data.studyStats?.learnedCards) {
+            const learnedObj = {};
+            data.studyStats.learnedCards.forEach(cardId => {
+              learnedObj[cardId] = true;
+            });
+            setLearnedCards(learnedObj);
+          }
+          
+          // Set study stats from the flashcard set data
+          setStudyStats({
+            timeSpent: data.studyStats?.totalTimeSpent || 0,
+            cardsStudied: data.cards.filter(card => card.lastReviewed).length,
+            masteryLevel: data.studyStats?.masteryLevel || 0,
+            totalSessions: data.studyStats?.totalStudySessions || 0,
+            reviewLaterCount: data.studyStats?.reviewLaterCards?.length || 0,
+            learnedCount: data.studyStats?.learnedCards?.length || 0
+          })
+          
+          // Record study start time
+          setStudyStartTime(Date.now())
+          setIsTimerActive(true)
+          
+          // Reset retry count on successful fetch
+          retryCount.current = 0;
         }
-        
-        // Transform the cards format if needed
-        const formattedCards = data.cards.map(card => ({
-          question: card.front,
-          answer: card.back,
-          id: card._id
-        }))
-        
-        // Set the flashcard set with formatted cards
-        setFlashcardSet({
-          ...data,
-          cards: formattedCards
-        })
-        
-        // Initialize review later cards from saved data if available
-        if (data.studyStats?.reviewLaterCards) {
-          const reviewLaterObj = {};
-          data.studyStats.reviewLaterCards.forEach(cardId => {
-            reviewLaterObj[cardId] = true;
-          });
-          setReviewLaterCards(reviewLaterObj);
-        }
-        
-        // Initialize learned cards from saved data if available
-        if (data.studyStats?.learnedCards) {
-          const learnedObj = {};
-          data.studyStats.learnedCards.forEach(cardId => {
-            learnedObj[cardId] = true;
-          });
-          setLearnedCards(learnedObj);
-        }
-        
-        // Set study stats from the flashcard set data
-        setStudyStats({
-          timeSpent: data.studyStats?.totalTimeSpent || 0,
-          cardsStudied: data.cards.filter(card => card.lastReviewed).length,
-          masteryLevel: data.studyStats?.masteryLevel || 0,
-          totalSessions: data.studyStats?.totalStudySessions || 0,
-          reviewLaterCount: data.studyStats?.reviewLaterCards?.length || 0,
-          learnedCount: data.studyStats?.learnedCards?.length || 0
-        })
-        
-        // Record study start time
-        setStudyStartTime(Date.now())
-        setIsTimerActive(true)
       } catch (err) {
         console.error('Error fetching flashcard set:', err)
-        setError(err.message || 'Failed to load flashcard set')
+        
+        // Check if it's a cancellation error - pass true to indicate this is a critical request
+        if (!handleRequestError(err, 'Flashcard set fetch', true)) {
+          if (isMountedRef.current) {
+            // If error is due to cancellation and we haven't retried too many times, retry fetch
+            if ((err.name === 'CanceledError' || err.message === 'canceled') && retryCount.current < 3) {
+              console.log(`Retrying flashcard fetch (attempt ${retryCount.current + 1})...`);
+              retryCount.current += 1;
+              
+              // Wait a moment then retry
+              setTimeout(() => {
+                if (isMountedRef.current) {
+                  fetchFlashcardSet();
+                }
+              }, 500);
+              return;
+            }
+            
+            setError(err.message || 'Failed to load flashcard set')
+          }
+        }
       } finally {
-        setIsLoading(false)
+        if (isMountedRef.current) {
+          setIsLoading(false)
+        }
       }
     }
     
     fetchFlashcardSet()
-    
-    // Clean up function to record the study session when unmounting
-    return () => {
-      recordSessionOnExit();
-    }
   }, [id])
   
   // Record session when exiting or unmounting
@@ -127,7 +166,7 @@ function StudyDeck() {
     
     const intervalId = setInterval(() => {
       const elapsedSeconds = Math.floor((Date.now() - studyStartTime) / 1000);
-      setTimeElapsed(elapsedSeconds);
+      setElapsedTime(elapsedSeconds);
     }, 1000);
     
     return () => clearInterval(intervalId);
@@ -175,12 +214,6 @@ function StudyDeck() {
       cardsStudied: prev.cardsStudied + 1,
       learnedCount: Object.keys(learnedCards).length
     }));
-    
-    // Track card performance for the study session
-    setCardPerformance(prev => ({
-      ...prev,
-      [cardId]: performance
-    }));
   }
   
   // Handle review later toggling
@@ -219,7 +252,7 @@ function StudyDeck() {
         console.log('Restarting deck in StudyDeck component');
         // Always reset the timer when deck is restarted, not just if it was completed
         setStudyStartTime(Date.now());
-        setTimeElapsed(0);
+        setElapsedTime(0);
         setIsTimerActive(true);
         setIsDeckCompleted(false);
         
@@ -241,10 +274,10 @@ function StudyDeck() {
   const recordStudySession = async (timeSpent) => {
     try {
       // Format card reviews for API
-      const cardReviews = Object.entries(cardPerformance).map(([cardId, performance]) => ({
+      const cardReviews = Object.entries(learnedCards).map(([cardId, performance]) => ({
         cardId,
         performance,
-        timeSpent: Math.floor(timeSpent / Object.keys(cardPerformance).length) // Distribute time evenly
+        timeSpent: Math.floor(timeSpent / Object.keys(learnedCards).length) // Distribute time evenly
       }));
       
       const response = await flashcardService.recordStudySession(id, {
@@ -340,7 +373,7 @@ function StudyDeck() {
             </div>
             <div className="flex items-center text-[#a259ff]">
               <TimerIcon fontSize="small" className="mr-0.5" />
-              <span>{formatTime(timeElapsed)}</span>
+              <span>{formatTime(elapsedTime)}</span>
             </div>
           </div>
         </div>

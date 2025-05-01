@@ -589,9 +589,7 @@ function Dashboard() {
       <div className={`flex-1 flex flex-col ${isMobile ? '' : 'md:ml-64'} ${isMobile && sidebarOpen ? 'blur-sm' : ''}`}>
         {!isMobile && (
           <DashboardHeader 
-            title="Dashboard" 
-            actionButton="Create New"
-            onActionButtonClick={handleCreateButtonClick}
+            title="Dashboard"
           />
         )}
         

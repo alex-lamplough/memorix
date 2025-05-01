@@ -24,6 +24,9 @@ let isRefreshing = false;
 let refreshPromise = null;
 let isRedirectingToLogin = false;
 
+// Also track pending responses for critical requests to avoid duplicate fetches
+const pendingResponses = new Map();
+
 // Add auth token to requests if available
 api.interceptors.request.use(
   async (config) => {
@@ -133,37 +136,73 @@ function handleAuthenticationFailure() {
 
 // Keep track of ongoing requests so they can be cancelled when navigating away
 const cancelTokens = new Map();
+// Keep track of critical requests separately
+const criticalTokens = new Map();
 
 // Helper to create a request with a cancel token
 const createCancellableRequest = (endpoint) => {
-  // Cancel any ongoing request to this endpoint
-  if (cancelTokens.has(endpoint)) {
-    cancelTokens.get(endpoint).abort();
+  // Determine if this is a critical request (like study or edit pages)
+  const isCriticalRequest = endpoint.includes('flashcards/') && 
+                            !endpoint.includes('create') && 
+                            !endpoint.includes('update') && 
+                            !endpoint.includes('delete') &&
+                            !endpoint.includes('favorites');
+  
+  const tokenMap = isCriticalRequest ? criticalTokens : cancelTokens;
+  
+  // If this is a critical request already in progress, don't cancel it
+  // Instead, return the existing controller
+  if (isCriticalRequest && tokenMap.has(endpoint)) {
+    console.log(`Reusing existing critical request for: ${endpoint}`);
+    const controller = tokenMap.get(endpoint);
+    return {
+      controller,
+      signal: controller.signal,
+      cleanup: () => {
+        // Only clean up if this is actually done
+      },
+      isCritical: true
+    };
+  }
+  
+  // Otherwise, cancel any ongoing request to this endpoint in the appropriate map
+  if (tokenMap.has(endpoint)) {
+    tokenMap.get(endpoint).abort();
   }
   
   // Create a new AbortController
   const controller = new AbortController();
-  cancelTokens.set(endpoint, controller);
+  tokenMap.set(endpoint, controller);
   
   return {
     controller,
     signal: controller.signal,
     cleanup: () => {
-      cancelTokens.delete(endpoint);
-    }
+      tokenMap.delete(endpoint);
+    },
+    isCritical: isCriticalRequest
   };
 };
 
 // Cancel all ongoing requests (useful when navigating away)
 export const cancelAllRequests = () => {
-  console.log(`Cancelling ${cancelTokens.size} pending flashcard API requests`);
+  // Only cancel non-critical requests
+  if (cancelTokens.size > 0) {
+    console.log(`Cancelling ${cancelTokens.size} pending flashcard API requests`);
+    
+    cancelTokens.forEach((controller, endpoint) => {
+      console.log(`Cancelling request to: ${endpoint}`);
+      controller.abort('Navigation cancelled the request');
+    });
+    
+    // Clear all non-critical tokens
+    cancelTokens.clear();
+  }
   
-  cancelTokens.forEach((controller, endpoint) => {
-    console.log(`Cancelling request to: ${endpoint}`);
-    controller.abort('Navigation cancelled the request');
-  });
-  
-  cancelTokens.clear();
+  // Log information about preserved critical requests
+  if (criticalTokens.size > 0) {
+    console.log(`Preserved ${criticalTokens.size} critical flashcard requests`);
+  }
 };
 
 // Flashcard Services
@@ -196,17 +235,50 @@ export const flashcardService = {
   
   // Get a specific flashcard set by ID
   getFlashcardSet: async (id) => {
-    const { controller, signal, cleanup } = createCancellableRequest(`flashcards/${id}`);
-    try {
-      const response = await api.get(`/flashcards/${id}`, { signal });
-      cleanup();
-      return response.data;
-    } catch (error) {
-      if (axios.isCancel(error)) {
-        console.log('Request cancelled:', error.message);
+    const endpoint = `flashcards/${id}`;
+    
+    // For critical requests, check if we already have a pending request
+    if (pendingResponses.has(endpoint)) {
+      console.log(`Reusing pending response for: ${endpoint}`);
+      try {
+        return await pendingResponses.get(endpoint);
+      } catch (error) {
+        // If the cached promise rejected, remove it and continue with a fresh request
+        pendingResponses.delete(endpoint);
       }
-      throw error;
     }
+    
+    const { controller, signal, cleanup, isCritical } = createCancellableRequest(endpoint);
+    
+    // Create a promise for this request
+    const requestPromise = (async () => {
+      try {
+        const response = await api.get(`/flashcards/${id}`, { signal });
+        if (isCritical) {
+          // Only remove this from pendingResponses after a delay to prevent
+          // rapid consecutive requests
+          setTimeout(() => {
+            pendingResponses.delete(endpoint);
+          }, 500);
+        }
+        cleanup();
+        return response.data;
+      } catch (error) {
+        // Make sure to remove failed requests from the cache
+        pendingResponses.delete(endpoint);
+        if (axios.isCancel(error)) {
+          console.log('Request cancelled:', error.message);
+        }
+        throw error;
+      }
+    })();
+    
+    // Store this promise for critical requests
+    if (isCritical) {
+      pendingResponses.set(endpoint, requestPromise);
+    }
+    
+    return requestPromise;
   },
   
   // Create a new flashcard set
@@ -231,6 +303,43 @@ export const flashcardService = {
       const response = await api.put(`/flashcards/${id}`, flashcardSet, { signal });
       cleanup();
       return response.data;
+    } catch (error) {
+      if (axios.isCancel(error)) {
+        console.log('Request cancelled:', error.message);
+      }
+      throw error;
+    }
+  },
+  
+  // Toggle favorite status of a flashcard set
+  toggleFavorite: async (id, isFavorite) => {
+    const { controller, signal, cleanup } = createCancellableRequest(`flashcards-favorite-${id}`);
+    try {
+      const response = await api.patch(`/flashcards/${id}/favorite`, { isFavorite }, { signal });
+      cleanup();
+      return response.data;
+    } catch (error) {
+      if (axios.isCancel(error)) {
+        console.log('Request cancelled:', error.message);
+      }
+      throw error;
+    }
+  },
+  
+  // Get all favorite flashcard sets
+  getFavorites: async () => {
+    const { controller, signal, cleanup } = createCancellableRequest('flashcards-favorites');
+    try {
+      const response = await api.get('/flashcards/favorites', { signal });
+      cleanup();
+      
+      // Process the response to include cardCount
+      const flashcardSets = response.data.map(set => ({
+        ...set,
+        cardCount: set.cardCount || (set.cards ? set.cards.length : 0)
+      }));
+      
+      return flashcardSets;
     } catch (error) {
       if (axios.isCancel(error)) {
         console.log('Request cancelled:', error.message);
@@ -305,28 +414,6 @@ export const flashcardService = {
       return response.data;
     } catch (error) {
       console.error(`Error updating progress for flashcard set ${id}:`, error);
-      throw error;
-    }
-  },
-  
-  // Mark a flashcard set as favorite/unfavorite
-  toggleFavorite: async (id, isFavorite) => {
-    try {
-      const response = await api.post(`/flashcards/${id}/favorite`, { isFavorite });
-      return response.data;
-    } catch (error) {
-      console.error(`Error toggling favorite status for flashcard set ${id}:`, error);
-      throw error;
-    }
-  },
-  
-  // Get all favorite flashcard sets
-  getFavorites: async () => {
-    try {
-      const response = await api.get('/flashcards/favorites');
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching favorite flashcard sets:', error);
       throw error;
     }
   },
