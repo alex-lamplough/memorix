@@ -28,6 +28,7 @@ import Dashboard from './pages/Dashboard'
 import Progress from './pages/Progress'
 import Favorites from './pages/Favorites'
 import Quizzes from './pages/Quizzes'
+import Flashcards from './pages/Flashcards'
 import Settings from './pages/Settings'
 import SharedItem from './pages/SharedItem'
 import ShareFeature from './pages/ShareFeature'
@@ -669,6 +670,7 @@ function App() {
   return (
     <Routes>
       <Route path="/dashboard" element={<ProtectedRoute element={<Dashboard />} />} />
+      <Route path="/flashcards" element={<ProtectedRoute element={<Flashcards />} />} />
       <Route path="/progress" element={<ProtectedRoute element={<Progress />} />} />
       <Route path="/favorites" element={<ProtectedRoute element={<Favorites />} />} />
       <Route path="/quizzes" element={<ProtectedRoute element={<Quizzes />} />} />

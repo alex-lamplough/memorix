@@ -10,6 +10,7 @@ import StarIcon from '@mui/icons-material/Star'
 import QuizIcon from '@mui/icons-material/Quiz'
 import SettingsIcon from '@mui/icons-material/Settings'
 import LogoutIcon from '@mui/icons-material/Logout'
+import MenuBookIcon from '@mui/icons-material/MenuBook'
 
 // Assets
 import logoWhite from '../assets/MemorixLogoGreen.png'
@@ -85,6 +86,12 @@ function Sidebar({ activePage = 'dashboard' }) {
             label="Dashboard" 
             active={activePage === 'dashboard'}
             to="/dashboard"
+          />
+          <SidebarItem 
+            icon={<MenuBookIcon fontSize="small" />} 
+            label="Flashcards" 
+            active={activePage === 'flashcards'}
+            to="/flashcards"
           />
           <SidebarItem 
             icon={<AnalyticsIcon fontSize="small" />} 

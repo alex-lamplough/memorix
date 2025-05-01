@@ -23,7 +23,6 @@ import Todo from '../components/Todo'
 import FlashcardCreationModal from '../components/FlashcardCreationModal'
 import ShareModal from '../components/ShareModal'
 import ActivityModal from '../components/ActivityModal'
-import FlashcardModal from '../components/FlashcardModal'
 
 // Services
 import { flashcardService } from '../services/api'
@@ -404,7 +403,6 @@ function Dashboard() {
   const [error, setError] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [isFlashcardModalOpen, setIsFlashcardModalOpen] = useState(false);
   const isMobile = useMediaQuery('(max-width:768px)');
   const navigate = useNavigationWithCancellation();
   const isMountedRef = useRef(true);
@@ -543,10 +541,6 @@ function Dashboard() {
     setIsCreateModalOpen(true);
   };
   
-  const handleViewAllFlashcards = () => {
-    setIsFlashcardModalOpen(true);
-  };
-  
   // Also update the handleCloseCreateModal method to use the debounced version
   const handleCloseCreateModal = () => {
     setIsCreateModalOpen(false);
@@ -647,12 +641,12 @@ function Dashboard() {
                 <div className="flex justify-between items-center mb-4">
                   <h2 className="text-xl font-bold">Recent Flashcard Sets</h2>
                   {hasMoreFlashcards && (
-                    <button 
+                    <Link 
+                      to="/flashcards"
                       className="text-[#00ff94] text-sm hover:underline flex items-center"
-                      onClick={handleViewAllFlashcards}
                     >
                       View all flashcards
-                    </button>
+                    </Link>
                   )}
                 </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
@@ -686,13 +680,6 @@ function Dashboard() {
       <FlashcardCreationModal 
         open={isCreateModalOpen}
         onClose={handleCloseCreateModal}
-      />
-      
-      {/* Flashcard View All Modal */}
-      <FlashcardModal
-        open={isFlashcardModalOpen}
-        onClose={() => setIsFlashcardModalOpen(false)}
-        onUpdate={fetchData}
       />
     </div>
   )
