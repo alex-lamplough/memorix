@@ -33,6 +33,7 @@ import SharedItem from './pages/SharedItem'
 import ShareFeature from './pages/ShareFeature'
 import StudyDeck from './pages/StudyDeck'
 import EditDeck from './pages/EditDeck'
+import EditQuiz from './pages/EditQuiz'
 import Header from './Header'
 // import Collections from './pages/Collections'
 
@@ -71,14 +72,14 @@ function AnimatedHeading() {
   }, [currentPhrase, phrases])
   
   return (
-    <div className="text-center mb-8 max-w-full overflow-hidden">
-      <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold inline-flex items-center justify-center flex-wrap">
+    <div className="text-center mb-8 w-full overflow-hidden px-2">
+      <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold flex flex-wrap items-center justify-center gap-x-1">
         <span className="text-[#00ff94] drop-shadow-[0_0_12px_rgba(0,255,148,0.8)]">M/</span>
-        <span>aster </span>
+        <span>aster</span>
         <span className={`transition-all duration-500 mx-1 ${isChanging ? 'opacity-0 -translate-y-2' : 'opacity-100 translate-y-0'}`}>
           {currentPhrase}
         </span>
-        <span>with Memorix</span>
+        <span className="whitespace-nowrap">with Memorix</span>
       </h1>
     </div>
   )
@@ -88,19 +89,19 @@ function Hero() {
   return (
     <div className="container mx-auto px-4 flex flex-col items-center text-white">
       {/* Top spacer */}
-      <div className="h-[15vh]"></div>
+      <div className="h-[10vh] sm:h-[15vh]"></div>
       
-      {/* Title section with fixed height - reducing the height */}
-      <div className="h-[120px] flex flex-col items-center justify-center">
+      {/* Title section with responsive height */}
+      <div className="min-h-[150px] py-4 flex flex-col items-center justify-center">
         <AnimatedHeading />
         
-        <p className="text-base text-white/80 mt-0 max-w-xl">
+        <p className="text-sm sm:text-base text-white/80 mt-2 max-w-xl text-center px-2">
           Notes to flashcards in seconds, with your personal AI tutor
         </p>
       </div>
       
-      {/* Reduced spacer for seamless transition */}
-      <div className="h-[120px]"></div>
+      {/* Responsive spacer */}
+      <div className="h-[80px] sm:h-[120px]"></div>
     </div>
   )
 }
@@ -608,6 +609,7 @@ function App() {
       <Route path="/settings" element={<ProtectedRoute element={<Settings />} />} />
       <Route path="/study/:id" element={<ProtectedRoute element={<StudyDeck />} />} />
       <Route path="/edit/:id" element={<ProtectedRoute element={<EditDeck />} />} />
+      <Route path="/edit-quiz/:id" element={<ProtectedRoute element={<EditQuiz />} />} />
       <Route path="/share/:type/:id" element={<SharedItem />} />
       <Route path="/share" element={<ShareFeature />} />
       <Route path="/" element={

@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 import { useMediaQuery } from '@mui/material'
@@ -9,6 +10,11 @@ import StarIcon from '@mui/icons-material/Star'
 import QuizIcon from '@mui/icons-material/Quiz'
 import SettingsIcon from '@mui/icons-material/Settings'
 import LogoutIcon from '@mui/icons-material/Logout'
+import CircularProgress from '@mui/icons-material/RotateRight'
+
+// Services
+import { flashcardService } from '../services/api'
+import { quizService } from '../services/quiz-service'
 
 // Assets
 import logoWhite from '../assets/MemorixLogoGreen.png'
@@ -36,6 +42,88 @@ function SidebarItem({ icon, label, active, to, onClick }) {
       {active && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-[#00ff94]"></div>}
     </Link>
   )
+}
+
+function RecentActivitySection() {
+  const [recentItems, setRecentItems] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  useEffect(() => {
+    async function fetchRecentActivity() {
+      try {
+        setIsLoading(true);
+        
+        // Fetch both flashcard sets and quizzes
+        const flashcardSets = await flashcardService.getAllFlashcardSets();
+        const quizzes = await quizService.getAllQuizzes();
+        
+        // Transform flashcard sets
+        const flashcardItems = flashcardSets.map(set => ({
+          id: set._id,
+          title: set.title,
+          type: 'flashcard',
+          updatedAt: new Date(set.updatedAt),
+          editLink: `/edit/${set._id}`
+        }));
+        
+        // Transform quizzes
+        const quizItems = quizzes.map(quiz => ({
+          id: quiz._id,
+          title: quiz.title,
+          type: 'quiz',
+          updatedAt: new Date(quiz.updatedAt),
+          editLink: `/edit-quiz/${quiz._id}`
+        }));
+        
+        // Combine and sort by date (most recent first)
+        const allItems = [...flashcardItems, ...quizItems].sort((a, b) => 
+          b.updatedAt - a.updatedAt
+        );
+        
+        // Take only the 3 most recent
+        setRecentItems(allItems.slice(0, 3));
+      } catch (error) {
+        console.error('Error fetching recent activity:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    
+    fetchRecentActivity();
+  }, []);
+  
+  return (
+    <div>
+      <div className="px-4 text-xs text-white/50 uppercase tracking-wider mb-2">
+        Recent Activity
+      </div>
+      
+      {isLoading ? (
+        <div className="flex justify-center py-3">
+          <CircularProgress className="text-white/50 animate-spin" fontSize="small" />
+        </div>
+      ) : recentItems.length === 0 ? (
+        <div className="px-4 py-2.5 text-white/50 text-sm italic">
+          No recent activity
+        </div>
+      ) : (
+        recentItems.map(item => (
+          <Link 
+            key={item.id} 
+            to={item.editLink}
+            className="flex items-center px-4 py-2.5 text-white/70 hover:text-white hover:bg-white/5 rounded-lg transition-colors text-sm"
+          >
+            {item.type === 'flashcard' ? (
+              <CollectionsBookmarkIcon fontSize="small" className="mr-2 text-white/40" />
+            ) : (
+              <QuizIcon fontSize="small" className="mr-2 text-white/40" />
+            )}
+            <span className="truncate">{item.title}</span>
+          </Link>
+        ))
+      )}
+    </div>
+  );
 }
 
 function Sidebar({ activePage = 'dashboard' }) {
@@ -110,20 +198,7 @@ function Sidebar({ activePage = 'dashboard' }) {
           />
         </div>
         
-        <div>
-          <div className="px-4 text-xs text-white/50 uppercase tracking-wider mb-2">
-            Recent Sets
-          </div>
-          <Link to="#" className="block px-4 py-2.5 text-white/70 hover:text-white text-sm">
-            Physics Fundamentals
-          </Link>
-          <Link to="#" className="block px-4 py-2.5 text-white/70 hover:text-white text-sm">
-            Spanish Vocabulary
-          </Link>
-          <Link to="#" className="block px-4 py-2.5 text-white/70 hover:text-white text-sm">
-            Web Development
-          </Link>
-        </div>
+        <RecentActivitySection />
       </div>
       
       <div className="p-4 border-t border-gray-800/30 bg-[#1b1b2f]">

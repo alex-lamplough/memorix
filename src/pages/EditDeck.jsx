@@ -9,6 +9,9 @@ import SaveIcon from '@mui/icons-material/Save'
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline'
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline'
 
+// MUI components for Snackbar
+import { Snackbar, Alert } from '@mui/material'
+
 function EditDeck() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -16,6 +19,9 @@ function EditDeck() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
   const [isSaving, setIsSaving] = useState(false)
+  const [showSnackbar, setShowSnackbar] = useState(false)
+  const [snackbarMessage, setSnackbarMessage] = useState('')
+  const [snackbarSeverity, setSnackbarSeverity] = useState('success')
   
   // Fetch the flashcard set
   useEffect(() => {
@@ -38,6 +44,12 @@ function EditDeck() {
     
     fetchFlashcardSet()
   }, [id])
+  
+  const showSnackbarMessage = (message, severity) => {
+    setSnackbarMessage(message)
+    setSnackbarSeverity(severity)
+    setShowSnackbar(true)
+  }
   
   const handleTitleChange = (e) => {
     setFlashcardSet(prev => ({
@@ -92,10 +104,10 @@ function EditDeck() {
     try {
       setIsSaving(true)
       await flashcardService.updateFlashcardSet(id, flashcardSet)
-      navigate(`/study/${id}`)
+      showSnackbarMessage('Flashcard set saved successfully!', 'success')
     } catch (err) {
       console.error('Error saving flashcard set:', err)
-      setError('Failed to save changes. Please try again.')
+      showSnackbarMessage('Failed to save changes. Please try again.', 'error')
     } finally {
       setIsSaving(false)
     }
@@ -161,26 +173,34 @@ function EditDeck() {
             <ArrowBackIcon fontSize="small" className="mr-1" /> Back
           </button>
           
-          <button 
-            onClick={handleSave}
-            disabled={isSaving}
-            className={`px-4 py-2 rounded-lg inline-flex items-center ${
-              isSaving 
-                ? 'bg-gray-700/50 text-gray-400 cursor-not-allowed' 
-                : 'bg-[#00ff94]/10 text-[#00ff94] hover:bg-[#00ff94]/20 transition-colors border border-[#00ff94]/30'
-            }`}
-          >
-            {isSaving ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white/20 border-t-[#00ff94] rounded-full animate-spin mr-2"></div>
-                Saving...
-              </>
-            ) : (
-              <>
-                <SaveIcon fontSize="small" className="mr-1" /> Save Changes
-              </>
-            )}
-          </button>
+          <div className="flex space-x-2">
+            <button
+              onClick={() => navigate(`/study/${id}`)}
+              className="bg-[#a259ff]/10 text-[#a259ff] px-3 py-1.5 rounded-lg hover:bg-[#a259ff]/20 transition-colors border border-[#a259ff]/30 inline-flex items-center"
+            >
+              Study Deck
+            </button>
+            <button 
+              onClick={handleSave}
+              disabled={isSaving}
+              className={`px-4 py-2 rounded-lg inline-flex items-center ${
+                isSaving 
+                  ? 'bg-gray-700/50 text-gray-400 cursor-not-allowed' 
+                  : 'bg-[#00ff94]/10 text-[#00ff94] hover:bg-[#00ff94]/20 transition-colors border border-[#00ff94]/30'
+              }`}
+            >
+              {isSaving ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white/20 border-t-[#00ff94] rounded-full animate-spin mr-2"></div>
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <SaveIcon fontSize="small" className="mr-1" /> Save Changes
+                </>
+              )}
+            </button>
+          </div>
         </div>
         
         <div className="mb-8">
@@ -274,6 +294,26 @@ function EditDeck() {
           </div>
         </div>
       </div>
+      
+      {/* Snackbar for notifications */}
+      <Snackbar 
+        open={showSnackbar} 
+        autoHideDuration={4000} 
+        onClose={() => setShowSnackbar(false)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={() => setShowSnackbar(false)} 
+          severity={snackbarSeverity}
+          sx={{ 
+            backgroundColor: snackbarSeverity === 'success' ? '#00ff94' : undefined,
+            color: snackbarSeverity === 'success' ? '#18092a' : undefined,
+            fontWeight: snackbarSeverity === 'success' ? 'bold' : undefined
+          }}
+        >
+          {snackbarMessage}
+        </Alert>
+      </Snackbar>
     </div>
   )
 }
