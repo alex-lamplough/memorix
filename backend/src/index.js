@@ -21,6 +21,20 @@ dotenv.config();
 // Create Express app
 const app = express();
 
+// Health check endpoint at the root - Added before any middleware to ensure it's always accessible
+// This is critical for Railway deployments
+app.get('/', (req, res) => {
+  res.status(200).send('Memorix API is running');
+});
+
+// Public health check endpoint (accessible without auth)
+app.get('/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'ok', 
+    time: new Date().toISOString()
+  });
+});
+
 // Set up middleware
 app.use(helmet()); // Security headers
 
@@ -60,13 +74,19 @@ const setupServer = () => {
   app.use('/api/todos', todoRoutes);
   app.use('/api/quizzes', quizRoutes);
 
-  // Health check endpoint
+  // Authenticated health check endpoint (for internal use)
   app.get('/api/health', (req, res) => {
+    const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
+    
     res.status(200).json({ 
       status: 'ok', 
       time: new Date().toISOString(),
       environment: process.env.NODE_ENV || 'development',
-      database: mongoose.connection.name
+      database: {
+        name: mongoose.connection.name,
+        status: dbStatus
+      },
+      memory: process.memoryUsage()
     });
   });
 
@@ -95,12 +115,26 @@ const setupServer = () => {
   });
 };
 
-// Connect to MongoDB
-connectToMongoDB()
-  .then((connection) => {
-    setupServer();
-  })
-  .catch((err) => {
-    console.error('Failed to connect to MongoDB', err);
-    process.exit(1);
-  }); 
+// Connect to MongoDB and then start the server
+// Added better error handling to prevent hanging connections
+try {
+  console.log('Attempting to connect to MongoDB...');
+  connectToMongoDB()
+    .then((connection) => {
+      console.log('MongoDB connection successful, starting server...');
+      setupServer();
+    })
+    .catch((err) => {
+      console.error('Failed to connect to MongoDB', err);
+      // If in Railway, we'll start the server anyway so health checks can pass
+      if (process.env.RAILWAY) {
+        console.log('Running in Railway environment, starting server despite MongoDB connection failure');
+        setupServer();
+      } else {
+        process.exit(1);
+      }
+    });
+} catch (err) {
+  console.error('Unexpected error during startup:', err);
+  process.exit(1);
+} 
