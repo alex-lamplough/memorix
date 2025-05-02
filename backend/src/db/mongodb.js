@@ -167,14 +167,8 @@ export const connectToMongoDB = async () => {
     console.log('Attempting to connect with URI:', 
       connectionString.replace(/mongodb(\+srv)?:\/\/[^:]+:[^@]+@/, 'mongodb$1://username:password@')); 
     
-    // Improved connection options
     const options = {
-      serverSelectionTimeoutMS: 15000, // Increased timeout to 15 seconds
-      socketTimeoutMS: 45000, // How long the MongoDB driver will wait for a response from the server
-      connectTimeoutMS: 30000, // How long to wait for a connection to be established
-      heartbeatFrequencyMS: 10000, // How frequently to send heartbeats to the server
-      retryWrites: true, // Automatically retry writes that fail due to network issues
-      maxPoolSize: 10 // Maximum number of connections in the connection pool
+      serverSelectionTimeoutMS: 10000 // Timeout after 10 seconds
     };
     
     await mongoose.connect(connectionString, options);
@@ -185,44 +179,17 @@ export const connectToMongoDB = async () => {
     console.log(`Database name: ${db.name}`);
     console.log(`Connection state: ${db.readyState === 1 ? 'connected' : 'not connected'}`);
     
-    // Add connection error handlers
-    mongoose.connection.on('error', (err) => {
-      console.error('MongoDB connection error:', err);
-    });
-    
-    mongoose.connection.on('disconnected', () => {
-      console.log('MongoDB disconnected');
-    });
-    
-    mongoose.connection.on('reconnected', () => {
-      console.log('MongoDB reconnected');
-    });
-    
     // Initialize database with required collections
-    // Wrap in try/catch to prevent failures here from affecting server startup
-    try {
-      await initializeDatabase(db);
-      
-      // Log all collections after initialization
-      const collections = await db.db.listCollections().toArray();
-      console.log('Collections in database:', collections.length ? 
-        collections.map(c => c.name) : 'No collections found');
-    } catch (initError) {
-      console.error('Database initialization error (non-fatal):', initError);
-    }
+    await initializeDatabase(db);
+    
+    // Log all collections after initialization
+    const collections = await db.db.listCollections().toArray();
+    console.log('Collections in database:', collections.length ? 
+      collections.map(c => c.name) : 'No collections found');
     
     return db;
   } catch (error) {
     console.error('❌ MongoDB connection error:', error);
-    
-    // Provide more detailed error information
-    if (error.name === 'MongoServerSelectionError') {
-      console.error('Could not connect to any MongoDB server. Please check:');
-      console.error('1. Is the MongoDB connection string correct?');
-      console.error('2. Is the MongoDB server running?');
-      console.error('3. Are there any network issues or firewall rules preventing the connection?');
-    }
-    
     throw error; // Re-throw to be handled by caller
   }
 };
