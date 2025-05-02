@@ -35,6 +35,7 @@ import ShareFeature from './pages/ShareFeature'
 import StudyDeck from './pages/StudyDeck'
 import EditDeck from './pages/EditDeck'
 import EditQuiz from './pages/EditQuiz'
+import FlashcardStudyExample from './pages/FlashcardStudyExample'
 import Header from './Header'
 // import Collections from './pages/Collections'
 
@@ -712,6 +713,8 @@ function App() {
       <Route path="/edit-quiz/:id" element={<ProtectedRoute element={<EditQuiz />} />} />
       <Route path="/share/:type/:id" element={<SharedItem />} />
       <Route path="/share" element={<ShareFeature />} />
+      <Route path="/flashcard-study-example" element={<FlashcardStudyExample />} />
+      <Route path="/flashcard-study-example/:id" element={<FlashcardStudyExample />} />
       <Route path="/" element={
         <div className="min-h-screen bg-gradient-to-b from-[#2E0033] via-[#260041] to-[#1b1b2f] text-white">
           <Header />
