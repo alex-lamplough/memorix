@@ -12,6 +12,7 @@ import aiRoutes from './routes/ai-routes.js';
 import flashcardGeneratorRoutes from './routes/flashcard-generator-routes.js';
 import todoRoutes from './routes/todo-routes.js';
 import quizRoutes from './routes/quiz-routes.js';
+import healthRoutes from './routes/health-routes.js';
 import { errorHandler } from './middleware/error-middleware.js';
 import { connectToMongoDB } from './db/mongodb.js';
 
@@ -21,19 +22,17 @@ dotenv.config();
 // Create Express app
 const app = express();
 
-// Health check endpoint at the root - Added before any middleware to ensure it's always accessible
-// This is critical for Railway deployments
+// Add simple health check endpoints at root level
+// IMPORTANT: These must be before any middleware to ensure they're always accessible
+// Railway health checks need these endpoints to be accessible without error
+
+// Root endpoint - simple response for basic checks
 app.get('/', (req, res) => {
   res.status(200).send('Memorix API is running');
 });
 
-// Public health check endpoint (accessible without auth)
-app.get('/health', (req, res) => {
-  res.status(200).json({ 
-    status: 'ok', 
-    time: new Date().toISOString()
-  });
-});
+// Health check endpoint - always returns OK for Railway
+app.use('/health', healthRoutes);
 
 // Set up middleware
 app.use(helmet()); // Security headers
@@ -43,7 +42,11 @@ const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:5174',
   'http://localhost:3000',
-  process.env.CORS_ORIGIN
+  process.env.CORS_ORIGIN,
+  'https://memorix.app',
+  'https://www.memorix.app',
+  'https://getmemorix.app',
+  'https://www.getmemorix.app'
 ].filter(Boolean); // Remove any undefined or empty values
 
 app.use(cors({
@@ -51,7 +54,7 @@ app.use(cors({
     // Allow requests with no origin (like mobile apps, curl, Postman)
     if (!origin) return callback(null, true);
     
-    if (allowedOrigins.indexOf(origin) !== -1 || !origin) {
+    if (allowedOrigins.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
       console.log('Blocked by CORS:', origin);
@@ -73,22 +76,7 @@ const setupServer = () => {
   app.use('/api/generator', flashcardGeneratorRoutes);
   app.use('/api/todos', todoRoutes);
   app.use('/api/quizzes', quizRoutes);
-
-  // Authenticated health check endpoint (for internal use)
-  app.get('/api/health', (req, res) => {
-    const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
-    
-    res.status(200).json({ 
-      status: 'ok', 
-      time: new Date().toISOString(),
-      environment: process.env.NODE_ENV || 'development',
-      database: {
-        name: mongoose.connection.name,
-        status: dbStatus
-      },
-      memory: process.memoryUsage()
-    });
-  });
+  app.use('/api/health', healthRoutes);
 
   // Error handling middleware
   app.use(errorHandler);
@@ -96,7 +84,7 @@ const setupServer = () => {
   // Start server
   const PORT = process.env.PORT || 3000;
   
-  const server = app.listen(PORT, () => {
+  const server = app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Server running on port ${PORT}`);
     console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
     console.log(`🔒 CORS allowed origins:`, allowedOrigins);
@@ -104,7 +92,7 @@ const setupServer = () => {
     if (err.code === 'EADDRINUSE') {
       console.log(`⚠️ Port ${PORT} is already in use, trying port ${PORT + 1}...`);
       // Try another port
-      app.listen(PORT + 1, () => {
+      app.listen(PORT + 1, '0.0.0.0', () => {
         console.log(`🚀 Server running on port ${PORT + 1}`);
         console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
         console.log(`🔒 CORS allowed origins:`, allowedOrigins);
@@ -118,22 +106,33 @@ const setupServer = () => {
 // Connect to MongoDB and then start the server
 // Added better error handling to prevent hanging connections
 try {
-  console.log('Attempting to connect to MongoDB...');
-  connectToMongoDB()
-    .then((connection) => {
-      console.log('MongoDB connection successful, starting server...');
-      setupServer();
-    })
-    .catch((err) => {
-      console.error('Failed to connect to MongoDB', err);
-      // If in Railway, we'll start the server anyway so health checks can pass
-      if (process.env.RAILWAY) {
-        console.log('Running in Railway environment, starting server despite MongoDB connection failure');
+  // If running on Railway, start the server immediately so health checks can pass
+  if (process.env.RAILWAY === 'true') {
+    console.log('🚂 Running on Railway - starting server immediately for health checks');
+    setupServer();
+    
+    // Connect to MongoDB in the background
+    console.log('Attempting to connect to MongoDB in the background...');
+    connectToMongoDB()
+      .then((connection) => {
+        console.log('✅ MongoDB connection successful!');
+      })
+      .catch((err) => {
+        console.error('❌ Failed to connect to MongoDB:', err);
+      });
+  } else {
+    // Normal startup sequence for local development
+    console.log('Attempting to connect to MongoDB...');
+    connectToMongoDB()
+      .then((connection) => {
+        console.log('MongoDB connection successful, starting server...');
         setupServer();
-      } else {
+      })
+      .catch((err) => {
+        console.error('Failed to connect to MongoDB:', err);
         process.exit(1);
-      }
-    });
+      });
+  }
 } catch (err) {
   console.error('Unexpected error during startup:', err);
   process.exit(1);
