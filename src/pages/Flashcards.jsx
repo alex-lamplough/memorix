@@ -11,6 +11,7 @@ import Sidebar from '../components/Sidebar'
 import DashboardHeader from '../components/DashboardHeader'
 import ShareModal from '../components/ShareModal'
 import FlashcardCreationModal from '../components/FlashcardCreationModal'
+import Layout from '../components/Layout'
 
 // Icons
 import ShareIcon from '@mui/icons-material/Share'
@@ -469,210 +470,152 @@ function Flashcards() {
   };
   
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#2E0033] via-[#260041] to-[#1b1b2f] text-white flex flex-col md:flex-row">
-      {/* Mobile menu button */}
-      {isMobile && (
-        <div className="p-4 flex items-center justify-end sticky top-0 z-30">
-          <button 
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-2 text-white rounded-lg hover:bg-white/10"
-          >
-            <MenuIcon />
-          </button>
-        </div>
-      )}
-      
-      {/* Overlay for mobile when sidebar is open */}
-      {isMobile && sidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-20" 
-          onClick={() => setSidebarOpen(false)}
-        ></div>
-      )}
-      
-      {/* Sidebar - fixed position on desktop, overlay on mobile */}
-      <div className={`fixed top-0 left-0 bottom-0 w-64 transform transition-transform duration-300 ease-in-out z-40 ${isMobile && !sidebarOpen ? '-translate-x-full' : ''} ${isMobile && sidebarOpen ? 'translate-x-0' : ''}`}>
-        <Sidebar activePage="flashcards" />
-      </div>
-      
-      {/* Main content - adjusted margin to account for fixed sidebar */}
-      <div className={`flex-1 flex flex-col ${isMobile ? '' : 'md:ml-64'} ${isMobile && sidebarOpen ? 'blur-sm' : ''}`}>
-        {!isMobile && (
-          <DashboardHeader
-            title="My Flashcards" 
-            actionButton="Create Flashcards"
-            onActionButtonClick={handleOpenCreateModal}
+    <Layout
+      title="My Flashcards"
+      activePage="flashcards"
+      actionButton="Create Flashcards"
+      onActionButtonClick={handleOpenCreateModal}
+    >
+      {/* Search and filter bar */}
+      <div className="bg-[#18092a]/60 rounded-xl p-4 mb-6 border border-gray-800/30 flex flex-col md:flex-row gap-4 justify-between items-center">
+        <div className="relative w-full md:w-2/3">
+          <input
+            type="text"
+            placeholder="Search flashcards..."
+            value={searchQuery}
+            onChange={handleSearchChange}
+            className="w-full bg-[#15052a]/80 text-white rounded-lg pl-10 pr-4 py-2 border border-gray-800/50 focus:outline-none focus:border-[#00ff94]/50"
           />
-        )}
+          <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/50">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+        </div>
         
-        <div className="flex-1 p-4 md:p-6">
-          <div className="container mx-auto max-w-6xl">
-            {isMobile && (
-              <div className="flex justify-between items-center mb-4">
-                <h1 className="text-2xl font-bold text-white">Flashcards</h1>
-                <div className="flex gap-2">
-                  <button 
-                    className="p-2 text-white rounded-lg bg-[#18092a]/60 border border-gray-800/30"
-                    onClick={() => setShowFilterDropdown(!showFilterDropdown)}
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" />
-                    </svg>
-                  </button>
-                  <button 
-                    className="bg-[#00ff94]/10 text-[#00ff94] px-3 py-1.5 rounded-lg hover:bg-[#00ff94]/20 transition-colors border border-[#00ff94]/30 flex items-center gap-1"
-                    onClick={handleOpenCreateModal}
-                  >
-                    <AddCircleOutlineIcon fontSize="small" />
-                    <span>Create</span>
-                  </button>
-                </div>
-              </div>
-            )}
+        <div className="flex items-center gap-3 w-full md:w-auto">
+          <div className="relative ml-auto" ref={filterMenuRef}>
+            <button 
+              className="flex items-center gap-1 bg-[#15052a]/80 px-3 py-2 rounded-lg border border-gray-800/50 hover:bg-[#15052a] transition-colors"
+              onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+            >
+              <span className="text-white/80">Sort by: </span>
+              <span className="text-white font-medium">
+                {sortBy === 'lastStudied' ? 'Last Studied' : 
+                 sortBy === 'createdAt' ? 'Created Date' : 
+                 sortBy === 'title' ? 'Title' : 
+                 sortBy === 'cards' ? 'Card Count' : 
+                 'Progress'}
+              </span>
+              <svg xmlns="http://www.w3.org/2000/svg" className={`w-4 h-4 transition-transform ${showFilterDropdown ? 'rotate-180' : ''}`} viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+              </svg>
+            </button>
             
-            {/* Search and filter bar */}
-            <div className="bg-[#18092a]/60 rounded-xl p-4 mb-6 border border-gray-800/30 flex flex-col md:flex-row gap-4 justify-between items-center">
-              <div className="relative w-full md:w-2/3">
-                <input
-                  type="text"
-                  placeholder="Search flashcards..."
-                  value={searchQuery}
-                  onChange={handleSearchChange}
-                  className="w-full bg-[#15052a]/80 text-white rounded-lg pl-10 pr-4 py-2 border border-gray-800/50 focus:outline-none focus:border-[#00ff94]/50"
-                />
-                <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-white/50">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                </div>
-              </div>
-              
-              <div className="flex items-center gap-3 w-full md:w-auto">
-                <div className="relative ml-auto" ref={filterMenuRef}>
-                  <button 
-                    className="flex items-center gap-1 bg-[#15052a]/80 px-3 py-2 rounded-lg border border-gray-800/50 hover:bg-[#15052a] transition-colors"
-                    onClick={() => setShowFilterDropdown(!showFilterDropdown)}
-                  >
-                    <span className="text-white/80">Sort by: </span>
-                    <span className="text-white font-medium">
-                      {sortBy === 'lastStudied' ? 'Last Studied' : 
-                       sortBy === 'createdAt' ? 'Created Date' : 
-                       sortBy === 'title' ? 'Title' : 
-                       sortBy === 'cards' ? 'Card Count' : 
-                       'Progress'}
-                    </span>
-                    <svg xmlns="http://www.w3.org/2000/svg" className={`w-4 h-4 transition-transform ${showFilterDropdown ? 'rotate-180' : ''}`} viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-                    </svg>
-                  </button>
-                  
-                  {showFilterDropdown && (
-                    <div className="absolute right-0 mt-2 w-48 bg-[#15052a] rounded-lg border border-gray-800/30 shadow-xl z-10 py-1">
-                      <button 
-                        className={`w-full text-left px-4 py-2 hover:bg-[#18092a] flex items-center justify-between ${sortBy === 'lastStudied' ? 'text-[#00ff94]' : 'text-white/80'}`}
-                        onClick={() => handleSortChange('lastStudied')}
-                      >
-                        <span>Last Studied</span>
-                        {getSortIcon('lastStudied')}
-                      </button>
-                      <button 
-                        className={`w-full text-left px-4 py-2 hover:bg-[#18092a] flex items-center justify-between ${sortBy === 'createdAt' ? 'text-[#00ff94]' : 'text-white/80'}`}
-                        onClick={() => handleSortChange('createdAt')}
-                      >
-                        <span>Created Date</span>
-                        {getSortIcon('createdAt')}
-                      </button>
-                      <button 
-                        className={`w-full text-left px-4 py-2 hover:bg-[#18092a] flex items-center justify-between ${sortBy === 'title' ? 'text-[#00ff94]' : 'text-white/80'}`}
-                        onClick={() => handleSortChange('title')}
-                      >
-                        <span>Title</span>
-                        {getSortIcon('title')}
-                      </button>
-                      <button 
-                        className={`w-full text-left px-4 py-2 hover:bg-[#18092a] flex items-center justify-between ${sortBy === 'cards' ? 'text-[#00ff94]' : 'text-white/80'}`}
-                        onClick={() => handleSortChange('cards')}
-                      >
-                        <span>Card Count</span>
-                        {getSortIcon('cards')}
-                      </button>
-                      <button 
-                        className={`w-full text-left px-4 py-2 hover:bg-[#18092a] flex items-center justify-between ${sortBy === 'progress' ? 'text-[#00ff94]' : 'text-white/80'}`}
-                        onClick={() => handleSortChange('progress')}
-                      >
-                        <span>Progress</span>
-                        {getSortIcon('progress')}
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-            
-            {isLoading ? (
-              <div className="flex justify-center items-center py-12">
-                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#00ff94]"></div>
-              </div>
-            ) : error ? (
-              <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-6 text-center">
-                <p className="text-white">{error}</p>
+            {showFilterDropdown && (
+              <div className="absolute right-0 mt-2 w-48 bg-[#15052a] rounded-lg border border-gray-800/30 shadow-xl z-10 py-1">
                 <button 
-                  className="mt-4 bg-[#00ff94]/10 text-[#00ff94] px-4 py-2 rounded-lg hover:bg-[#00ff94]/20 transition-colors border border-[#00ff94]/30"
-                  onClick={() => debouncedFetchFlashcardSets()}
+                  className={`w-full text-left px-4 py-2 hover:bg-[#18092a] flex items-center justify-between ${sortBy === 'lastStudied' ? 'text-[#00ff94]' : 'text-white/80'}`}
+                  onClick={() => handleSortChange('lastStudied')}
                 >
-                  Retry
+                  <span>Last Studied</span>
+                  {getSortIcon('lastStudied')}
                 </button>
-              </div>
-            ) : flashcardSets.length === 0 ? (
-              <div className="bg-[#18092a]/60 rounded-xl p-8 border border-gray-800/30 shadow-lg text-center">
-                <h3 className="text-xl font-bold mb-4">No Flashcard Sets Yet</h3>
-                <p className="text-white/70 mb-6">Create your first flashcard set to start learning!</p>
                 <button 
-                  className="bg-[#00ff94]/10 text-[#00ff94] px-4 py-2 rounded-lg hover:bg-[#00ff94]/20 transition-colors border border-[#00ff94]/30 inline-flex items-center gap-1"
-                  onClick={handleOpenCreateModal}
+                  className={`w-full text-left px-4 py-2 hover:bg-[#18092a] flex items-center justify-between ${sortBy === 'createdAt' ? 'text-[#00ff94]' : 'text-white/80'}`}
+                  onClick={() => handleSortChange('createdAt')}
                 >
-                  <AddCircleOutlineIcon fontSize="small" />
-                  <span>Create Your First Set</span>
+                  <span>Created Date</span>
+                  {getSortIcon('createdAt')}
                 </button>
-              </div>
-            ) : filteredSets.length === 0 ? (
-              <div className="bg-[#18092a]/60 rounded-xl p-8 border border-gray-800/30 shadow-lg text-center">
-                <h3 className="text-xl font-bold mb-4">No Matching Flashcard Sets</h3>
-                <p className="text-white/70 mb-6">No flashcard sets match your search criteria.</p>
                 <button 
-                  className="bg-[#00ff94]/10 text-[#00ff94] px-4 py-2 rounded-lg hover:bg-[#00ff94]/20 transition-colors border border-[#00ff94]/30"
-                  onClick={() => setSearchQuery('')}
+                  className={`w-full text-left px-4 py-2 hover:bg-[#18092a] flex items-center justify-between ${sortBy === 'title' ? 'text-[#00ff94]' : 'text-white/80'}`}
+                  onClick={() => handleSortChange('title')}
                 >
-                  Clear Search
+                  <span>Title</span>
+                  {getSortIcon('title')}
                 </button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-                {filteredSets.map(set => (
-                  <FlashcardCard 
-                    key={set.id}
-                    id={set.id}
-                    title={set.title}
-                    cards={set.cards}
-                    lastStudied={set.lastStudiedFormatted}
-                    progress={set.progress}
-                    onDelete={handleFlashcardDeleted}
-                    isFavorite={set.favorite}
-                    onToggleFavorite={handleToggleFavorite}
-                  />
-                ))}
+                <button 
+                  className={`w-full text-left px-4 py-2 hover:bg-[#18092a] flex items-center justify-between ${sortBy === 'cards' ? 'text-[#00ff94]' : 'text-white/80'}`}
+                  onClick={() => handleSortChange('cards')}
+                >
+                  <span>Card Count</span>
+                  {getSortIcon('cards')}
+                </button>
+                <button 
+                  className={`w-full text-left px-4 py-2 hover:bg-[#18092a] flex items-center justify-between ${sortBy === 'progress' ? 'text-[#00ff94]' : 'text-white/80'}`}
+                  onClick={() => handleSortChange('progress')}
+                >
+                  <span>Progress</span>
+                  {getSortIcon('progress')}
+                </button>
               </div>
             )}
           </div>
         </div>
       </div>
       
+      {isLoading ? (
+        <div className="flex justify-center items-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#00ff94]"></div>
+        </div>
+      ) : error ? (
+        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-6 text-center">
+          <p className="text-white">{error}</p>
+          <button 
+            className="mt-4 bg-[#00ff94]/10 text-[#00ff94] px-4 py-2 rounded-lg hover:bg-[#00ff94]/20 transition-colors border border-[#00ff94]/30"
+            onClick={() => debouncedFetchFlashcardSets()}
+          >
+            Retry
+          </button>
+        </div>
+      ) : flashcardSets.length === 0 ? (
+        <div className="bg-[#18092a]/60 rounded-xl p-8 border border-gray-800/30 shadow-lg text-center">
+          <h3 className="text-xl font-bold mb-4">No Flashcard Sets Yet</h3>
+          <p className="text-white/70 mb-6">Create your first flashcard set to start learning!</p>
+          <button 
+            className="bg-[#00ff94]/10 text-[#00ff94] px-4 py-2 rounded-lg hover:bg-[#00ff94]/20 transition-colors border border-[#00ff94]/30 inline-flex items-center gap-1"
+            onClick={handleOpenCreateModal}
+          >
+            <AddCircleOutlineIcon fontSize="small" />
+            <span>Create Your First Set</span>
+          </button>
+        </div>
+      ) : filteredSets.length === 0 ? (
+        <div className="bg-[#18092a]/60 rounded-xl p-8 border border-gray-800/30 shadow-lg text-center">
+          <h3 className="text-xl font-bold mb-4">No Matching Flashcard Sets</h3>
+          <p className="text-white/70 mb-6">No flashcard sets match your search criteria.</p>
+          <button 
+            className="bg-[#00ff94]/10 text-[#00ff94] px-4 py-2 rounded-lg hover:bg-[#00ff94]/20 transition-colors border border-[#00ff94]/30"
+            onClick={() => setSearchQuery('')}
+          >
+            Clear Search
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+          {filteredSets.map(set => (
+            <FlashcardCard 
+              key={set.id}
+              id={set.id}
+              title={set.title}
+              cards={set.cards}
+              lastStudied={set.lastStudiedFormatted}
+              progress={set.progress}
+              onDelete={handleFlashcardDeleted}
+              isFavorite={set.favorite}
+              onToggleFavorite={handleToggleFavorite}
+            />
+          ))}
+        </div>
+      )}
+      
       {/* Flashcard Creation Modal */}
       <FlashcardCreationModal 
         open={isCreateModalOpen}
         onClose={handleCloseCreateModal}
       />
-    </div>
+    </Layout>
   )
 }
 

@@ -23,6 +23,7 @@ import Todo from '../components/Todo'
 import FlashcardCreationModal from '../components/FlashcardCreationModal'
 import ShareModal from '../components/ShareModal'
 import ActivityModal from '../components/ActivityModal'
+import Layout from '../components/Layout'
 
 // Services
 import { flashcardService } from '../services/api'
@@ -397,17 +398,19 @@ function RecentActivity({ flashcardSets, quizSets }) {
 }
 
 function Dashboard() {
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [flashcardSets, setFlashcardSets] = useState([]);
   const [quizSets, setQuizSets] = useState([]);
+  const [transformedFlashcardSets, setTransformedFlashcardSets] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [error, setError] = useState('');
+  const [activityModalOpen, setActivityModalOpen] = useState(false);
+  const [selectedActivity, setSelectedActivity] = useState(null);
+  const controllerRef = useRef(null);
+  const isMountedRef = useRef(true);
+  const fetchTimeoutRef = useRef(null);
   const isMobile = useMediaQuery('(max-width:768px)');
   const navigate = useNavigationWithCancellation();
-  const isMountedRef = useRef(true);
-  const controllerRef = useRef(null);
-  const [transformedFlashcardSets, setTransformedFlashcardSets] = useState([]);
   
   // Define fetchData to get both flashcards and quizzes at once
   const fetchData = async () => {
@@ -470,7 +473,6 @@ function Dashboard() {
   };
   
   // Debounced version of fetchData to prevent multiple calls
-  const fetchTimeoutRef = useRef(null);
   const debouncedFetchData = () => {
     // Clear any existing timeout
     if (fetchTimeoutRef.current) {
@@ -524,19 +526,6 @@ function Dashboard() {
     }
   };
   
-  // Lock body scroll when sidebar is open on mobile
-  useEffect(() => {
-    if (isMobile && sidebarOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'auto';
-    }
-    
-    return () => {
-      document.body.style.overflow = 'auto';
-    };
-  }, [isMobile, sidebarOpen]);
-  
   const handleCreateButtonClick = () => {
     setIsCreateModalOpen(true);
   };
@@ -553,125 +542,73 @@ function Dashboard() {
   const hasMoreFlashcards = transformedFlashcardSets.length > 6;
   
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#2E0033] via-[#260041] to-[#1b1b2f] text-white flex flex-col md:flex-row">
-      {/* Mobile menu button */}
-      {isMobile && (
-    <div className="p-4 flex items-center justify-end sticky top-0 z-30">
+    <Layout 
+      title="Dashboard" 
+      activePage="dashboard" 
+      actionButton="Create" 
+      onActionButtonClick={handleCreateButtonClick}
+    >
+      {isLoading ? (
+        <div className="flex justify-center items-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#00ff94]"></div>
+        </div>
+      ) : error ? (
+        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-6 text-center">
+          <p className="text-white">{error}</p>
           <button 
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-2 text-white rounded-lg hover:bg-white/10"
+            className="mt-4 bg-[#00ff94]/10 text-[#00ff94] px-4 py-2 rounded-lg hover:bg-[#00ff94]/20 transition-colors border border-[#00ff94]/30"
+            onClick={() => window.location.reload()}
           >
-            <MenuIcon />
+            Retry
           </button>
         </div>
+      ) : transformedFlashcardSets.length === 0 ? (
+        <div className="bg-[#18092a]/60 rounded-xl p-8 border border-gray-800/30 shadow-lg text-center">
+          <h3 className="text-xl font-bold mb-4">No Flashcard Sets Yet</h3>
+          <p className="text-white/70 mb-6">Create your first flashcard set to start learning!</p>
+          <button 
+            className="bg-[#00ff94]/10 text-[#00ff94] px-4 py-2 rounded-lg hover:bg-[#00ff94]/20 transition-colors border border-[#00ff94]/30 inline-flex items-center gap-1"
+            onClick={handleCreateButtonClick}
+          >
+            <AddCircleOutlineIcon fontSize="small" />
+            <span>Create Your First Set</span>
+          </button>
+        </div>
+      ) : (
+        <>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-bold">Recent Flashcard Sets</h2>
+            {hasMoreFlashcards && (
+              <Link 
+                to="/flashcards"
+                className="text-[#00ff94] text-sm hover:underline flex items-center"
+              >
+                View all flashcards
+              </Link>
+            )}
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+            {limitedFlashcardSets.map(set => (
+              <FlashcardCard 
+                key={set.id}
+                id={set.id}
+                title={set.title}
+                cards={set.cards}
+                lastStudied={set.lastStudied}
+                progress={set.progress}
+              />
+            ))}
+          </div>
+        </>
       )}
       
-      {/* Overlay for mobile when sidebar is open */}
-      {isMobile && sidebarOpen && (
-    <div 
-      className="fixed inset-0 bg-black/50 z-20"
-      onClick={() => setSidebarOpen(false)}
-    />
-  )}
+      <div className="mt-6 md:mt-8">
+        <RecentActivity flashcardSets={flashcardSets} quizSets={quizSets} />
+      </div>
       
-      {/* Sidebar - slides in/out on mobile */}
-  <div
-    className={`fixed top-0 left-0 bottom-0 w-64 
-      transform transition-transform duration-300 ease-in-out 
-      z-40
-      ${isMobile && sidebarOpen ? "translate-x-0" : ""}
-      ${isMobile && !sidebarOpen ? "-translate-x-full" : ""}`}
-  >
-    <Sidebar activePage="dashboard" />
-  </div>
-      
-      {/* Main content - adjusted margin to account for fixed sidebar */}
-      <div className={`flex-1 flex flex-col ${isMobile ? '' : 'md:ml-64'} ${isMobile && sidebarOpen ? 'blur-sm' : ''}`}>
-        {!isMobile && (
-          <DashboardHeader 
-            title="Dashboard"
-          />
-        )}
-        
-        <div className="flex-1 p-4 md:p-6">
-          <div className="container mx-auto max-w-6xl">
-            {isMobile && (
-              <div className="flex justify-between items-center mb-4">
-                <h1 className="text-2xl font-bold text-white">Dashboard</h1>
-                <button 
-                  className="bg-[#00ff94]/10 text-[#00ff94] px-3 py-1.5 text-sm rounded-lg hover:bg-[#00ff94]/20 transition-colors border border-[#00ff94]/30 flex items-center gap-1"
-                  onClick={handleCreateButtonClick}
-                >
-                  <AddCircleOutlineIcon fontSize="small" />
-                  <span>Create</span>
-                </button>
-              </div>
-            )}
-            
-            {isLoading ? (
-              <div className="flex justify-center items-center py-12">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#00ff94]"></div>
-              </div>
-            ) : error ? (
-              <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-6 text-center">
-                <p className="text-white">{error}</p>
-                <button 
-                  className="mt-4 bg-[#00ff94]/10 text-[#00ff94] px-4 py-2 rounded-lg hover:bg-[#00ff94]/20 transition-colors border border-[#00ff94]/30"
-                  onClick={() => window.location.reload()}
-                >
-                  Retry
-                </button>
-              </div>
-            ) : transformedFlashcardSets.length === 0 ? (
-              <div className="bg-[#18092a]/60 rounded-xl p-8 border border-gray-800/30 shadow-lg text-center">
-                <h3 className="text-xl font-bold mb-4">No Flashcard Sets Yet</h3>
-                <p className="text-white/70 mb-6">Create your first flashcard set to start learning!</p>
-                <button 
-                  className="bg-[#00ff94]/10 text-[#00ff94] px-4 py-2 rounded-lg hover:bg-[#00ff94]/20 transition-colors border border-[#00ff94]/30 inline-flex items-center gap-1"
-                  onClick={handleCreateButtonClick}
-                >
-                  <AddCircleOutlineIcon fontSize="small" />
-                  <span>Create Your First Set</span>
-                </button>
-              </div>
-            ) : (
-              <>
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-xl font-bold">Recent Flashcard Sets</h2>
-                  {hasMoreFlashcards && (
-                    <Link 
-                      to="/flashcards"
-                      className="text-[#00ff94] text-sm hover:underline flex items-center"
-                    >
-                      View all flashcards
-                    </Link>
-                  )}
-                </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-                  {limitedFlashcardSets.map(set => (
-                  <FlashcardCard 
-                    key={set.id}
-                    id={set.id}
-                    title={set.title}
-                    cards={set.cards}
-                    lastStudied={set.lastStudied}
-                    progress={set.progress}
-                  />
-                ))}
-              </div>
-              </>
-            )}
-            
-            <div className="mt-6 md:mt-8">
-              <RecentActivity flashcardSets={flashcardSets} quizSets={quizSets} />
-            </div>
-            
-            <div className="mt-6 md:mt-8">
-              <h2 className="text-xl font-bold mb-4">Study Tasks</h2>
-              <Todo />
-            </div>
-          </div>
-        </div>
+      <div className="mt-6 md:mt-8">
+        <h2 className="text-xl font-bold mb-4">Study Tasks</h2>
+        <Todo />
       </div>
       
       {/* Flashcard Creation Modal */}
@@ -679,7 +616,14 @@ function Dashboard() {
         open={isCreateModalOpen}
         onClose={handleCloseCreateModal}
       />
-    </div>
+      
+      {/* Activity Modal */}
+      <ActivityModal
+        open={activityModalOpen}
+        onClose={() => setActivityModalOpen(false)}
+        activity={selectedActivity}
+      />
+    </Layout>
   )
 }
 

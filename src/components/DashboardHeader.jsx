@@ -6,11 +6,11 @@ import FilterListIcon from '@mui/icons-material/FilterList'
 import SearchIcon from '@mui/icons-material/Search'
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline'
 
-function DashboardHeader({ title, actionButton, searchEnabled = false, filterEnabled = false, onActionButtonClick }) {
+function DashboardHeader({ title, actionButton, searchEnabled = false, filterEnabled = false, onActionButtonClick, transparentBg = false }) {
   const isMobile = useMediaQuery('(max-width:640px)');
   
   return (
-    <div className="py-4 md:py-6 border-b border-gray-800/30">
+    <div className={`py-4 md:py-6 border-b border-gray-800/30 ${transparentBg ? 'bg-transparent' : ''}`}>
       <div className="container mx-auto px-4">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-0">
           <h1 className="text-xl md:text-2xl font-bold text-white">{title}</h1>

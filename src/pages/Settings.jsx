@@ -5,6 +5,7 @@ import { Menu as MenuIcon } from '@mui/icons-material'
 // Components
 import Sidebar from '../components/Sidebar'
 import DashboardHeader from '../components/DashboardHeader'
+import Layout from '../components/Layout'
 
 // Icons
 import NotificationsIcon from '@mui/icons-material/Notifications'
@@ -360,85 +361,55 @@ function SettingsContent({ activeSection }) {
 
 function Settings() {
   const [activeSection, setActiveSection] = useState('account');
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
   const isMobile = useMediaQuery('(max-width:768px)');
   const isTablet = useMediaQuery('(max-width:1024px)');
-  const [showMobileMenu, setShowMobileMenu] = useState(false);
   
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#2E0033] via-[#260041] to-[#1b1b2f] text-white flex flex-col md:flex-row">
-      {/* Mobile menu button */}
+    <Layout
+      title="Settings"
+      activePage="settings"
+      searchEnabled={false}
+      filterEnabled={false}
+    >
       {isMobile && (
-        <div className="p-4 flex items-center justify-end sticky top-0 z-30">
-          <button 
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-2 text-white rounded-lg hover:bg-white/10"
-          >
-            <MenuIcon />
-          </button>
+        <div className="mb-4 flex items-center">
+          {showMobileMenu ? (
+            <button 
+              onClick={() => setShowMobileMenu(false)}
+              className="flex items-center gap-1 text-white/70 hover:text-white"
+            >
+              <KeyboardArrowLeftIcon fontSize="small" />
+              <span>Back</span>
+            </button>
+          ) : (
+            <h1 className="text-2xl font-bold text-white">Settings</h1>
+          )}
         </div>
       )}
       
-      {/* Overlay for mobile when sidebar is open */}
-      {isMobile && sidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-20" 
-          onClick={() => setSidebarOpen(false)}
-        ></div>
-      )}
-      
-      {/* Sidebar - fixed position on desktop, overlay on mobile */}
-      <div className={`fixed top-0 left-0 bottom-0 w-64 transform transition-transform duration-300 ease-in-out z-40 ${isMobile && !sidebarOpen ? '-translate-x-full' : ''} ${isMobile && sidebarOpen ? 'translate-x-0' : ''}`}>
-        <Sidebar activePage="settings" />
-      </div>
-      
-      {/* Main content - adjusted margin to account for fixed sidebar */}
-      <div className={`flex-1 flex flex-col ${isMobile ? '' : 'md:ml-64'} ${isMobile && sidebarOpen ? 'blur-sm' : ''}`}>
-        {!isMobile && <DashboardHeader title="Settings" searchEnabled={false} filterEnabled={false} />}
-        
-        <div className="flex-1 p-4 md:p-6">
-          <div className="container mx-auto max-w-6xl">
-            {isMobile && (
-              <div className="mb-4 flex items-center">
-                {showMobileMenu ? (
-                  <button 
-                    onClick={() => setShowMobileMenu(false)}
-                    className="flex items-center gap-1 text-white/70 hover:text-white"
-                  >
-                    <KeyboardArrowLeftIcon fontSize="small" />
-                    <span>Back</span>
-                  </button>
-                ) : (
-                  <h1 className="text-2xl font-bold text-white">Settings</h1>
-                )}
-              </div>
-            )}
-            
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-              {(!isMobile || !showMobileMenu) && (
-                <div className="lg:col-span-1">
-                  <SettingsNav
-                    activeSection={activeSection}
-                    setActiveSection={(section) => {
-                      setActiveSection(section);
-                      if (isMobile) {
-                        setShowMobileMenu(true);
-                      }
-                    }}
-                  />
-                </div>
-              )}
-              
-              {(!isMobile || showMobileMenu) && (
-                <div className="lg:col-span-3">
-                  <SettingsContent activeSection={activeSection} />
-                </div>
-              )}
-            </div>
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {(!isMobile || !showMobileMenu) && (
+          <div className="lg:col-span-1">
+            <SettingsNav
+              activeSection={activeSection}
+              setActiveSection={(section) => {
+                setActiveSection(section);
+                if (isMobile) {
+                  setShowMobileMenu(true);
+                }
+              }}
+            />
           </div>
-        </div>
+        )}
+        
+        {(!isMobile || showMobileMenu) && (
+          <div className="lg:col-span-3">
+            <SettingsContent activeSection={activeSection} />
+          </div>
+        )}
       </div>
-    </div>
+    </Layout>
   );
 }
 

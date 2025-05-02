@@ -63,14 +63,14 @@ function SidebarItem({ icon, label, active, to, onClick, disabled, comingSoon })
   )
 }
 
-function Sidebar({ activePage = 'dashboard' }) {
+function Sidebar({ activePage = 'dashboard', transparentBg = false }) {
   const { user, logout } = useAuth();
   const isMobile = useMediaQuery('(max-width:768px)');
   
   return (
-    <div className="fixed top-0 left-0 bottom-0 w-64 flex flex-col h-screen bg-gradient-to-b from-[#2E0033] via-[#260041] to-[#1b1b2f] border-r border-gray-800/30 z-40">
+    <div className={`fixed top-0 left-0 bottom-0 w-64 flex flex-col h-screen ${!transparentBg ? 'bg-gradient-to-b from-[#2E0033] via-[#260041] to-[#1b1b2f]' : 'bg-transparent'} border-r border-gray-800/30 z-40`}>
       {/* Fixed header */}
-      <div className="flex-shrink-0 bg-[#2E0033] p-4 pb-6 border-b border-gray-800/20">
+      <div className={`flex-shrink-0 ${!transparentBg ? 'bg-[#2E0033]' : 'bg-transparent'} p-4 pb-6 border-b border-gray-800/20`}>
         <div className="flex justify-center items-center py-4">
           <Link to="/">
             <img src={logoWhite} alt="Memorix" className="w-24 h-auto" />
@@ -145,7 +145,7 @@ function Sidebar({ activePage = 'dashboard' }) {
       </div>
       
       {/* Fixed footer with logout button */}
-      <div className="flex-shrink-0 p-4 border-t border-gray-800/30 bg-[#1b1b2f] mt-auto">
+      <div className={`flex-shrink-0 p-4 border-t border-gray-800/30 ${!transparentBg ? 'bg-[#1b1b2f]' : 'bg-transparent'} mt-auto`}>
         <SidebarItem 
           icon={<LogoutIcon fontSize="small" />} 
           label="Log Out" 
