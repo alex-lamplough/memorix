@@ -471,7 +471,7 @@ function Flashcards() {
   
   return (
     <Layout
-      title="My Flashcards"
+      title="Flashcards"
       activePage="flashcards"
       actionButton="Create Flashcards"
       onActionButtonClick={handleOpenCreateModal}

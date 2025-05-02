@@ -3,6 +3,7 @@ import { useMediaQuery } from '@mui/material';
 import { Menu as MenuIcon } from '@mui/icons-material';
 import Sidebar from './Sidebar';
 import DashboardHeader from './DashboardHeader';
+import { setPageTitle } from '../utils/title-utils';
 
 /**
  * Layout component that provides a consistent layout for authenticated pages
@@ -11,6 +12,11 @@ import DashboardHeader from './DashboardHeader';
 function Layout({ children, title, activePage, showHeader = true, searchEnabled = false, filterEnabled = false, actionButton = null, onActionButtonClick = null }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const isMobile = useMediaQuery('(max-width:768px)');
+  
+  // Set the page title when the component mounts or title changes
+  useEffect(() => {
+    setPageTitle(title);
+  }, [title]);
   
   // Lock body scroll when sidebar is open on mobile
   useEffect(() => {

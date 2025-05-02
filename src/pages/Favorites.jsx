@@ -4,6 +4,7 @@ import { Menu as MenuIcon } from '@mui/icons-material'
 import { useAuth0 } from '@auth0/auth0-react'
 
 // Components
+import Layout from '../components/Layout'
 import Sidebar from '../components/Sidebar'
 import DashboardHeader from '../components/DashboardHeader'
 import FlashcardSet from '../components/FlashcardSet'
@@ -593,214 +594,147 @@ function Favorites() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#2E0033] via-[#260041] to-[#1b1b2f] text-white flex flex-col md:flex-row">
-      {/* Mobile menu button */}
-      {isMobile && (
-        <div className="p-4 flex items-center justify-end sticky top-0 z-30">
+    <Layout
+      title="Favorites"
+      activePage="favorites"
+      searchEnabled={true}
+      filterEnabled={false}
+    >
+      {/* Filter tabs */}
+      <div className="flex mb-6 bg-[#18092a]/40 p-1 rounded-lg">
+        <button
+          className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${activeTab === 'all' ? 'bg-[#18092a] text-white' : 'text-white/70 hover:bg-white/5'}`}
+          onClick={() => handleTabChange('all')}
+        >
+          <div className="flex items-center justify-center gap-2">
+            <AppsIcon fontSize="small" />
+            <span>All</span>
+          </div>
+        </button>
+        <button
+          className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${activeTab === 'flashcards' ? 'bg-[#18092a] text-white' : 'text-white/70 hover:bg-white/5'}`}
+          onClick={() => handleTabChange('flashcards')}
+        >
+          <div className="flex items-center justify-center gap-2">
+            <MenuBookIcon fontSize="small" />
+            <span>Flashcards</span>
+          </div>
+        </button>
+        <button
+          className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${activeTab === 'quizzes' ? 'bg-[#18092a] text-white' : 'text-white/70 hover:bg-white/5'}`}
+          onClick={() => handleTabChange('quizzes')}
+        >
+          <div className="flex items-center justify-center gap-2">
+            <QuizIcon fontSize="small" />
+            <span>Quizzes</span>
+          </div>
+        </button>
+      </div>
+      
+      {isLoading ? (
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="w-12 h-12 rounded-full border-4 border-[#00ff94]/20 border-t-[#00ff94] animate-spin"></div>
+        </div>
+      ) : error ? (
+        <div className="text-center py-8">
+          <p className="text-white/70 mb-4">{error}</p>
           <button 
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-2 text-white rounded-lg hover:bg-white/10"
+            onClick={fetchFavorites}
+            className="bg-[#00ff94]/10 text-[#00ff94] px-4 py-2 rounded-lg hover:bg-[#00ff94]/20 transition-colors border border-[#00ff94]/30"
           >
-            <MenuIcon />
+            Try Again
           </button>
         </div>
-      )}
-      
-      {/* Overlay for mobile when sidebar is open */}
-      {isMobile && sidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-20" 
-          onClick={() => setSidebarOpen(false)}
-        ></div>
-      )}
-      
-      {/* Sidebar - fixed position on desktop, overlay on mobile */}
-      <div className={`fixed top-0 left-0 bottom-0 w-64 transform transition-transform duration-300 ease-in-out z-40 ${isMobile && !sidebarOpen ? '-translate-x-full' : ''} ${isMobile && sidebarOpen ? 'translate-x-0' : ''}`}>
-        <Sidebar activePage="favorites" />
-      </div>
-      
-      {/* Main content - adjusted margin to account for fixed sidebar */}
-      <div className={`flex-1 flex flex-col ${isMobile ? '' : 'md:ml-64'} ${isMobile && sidebarOpen ? 'blur-sm' : ''}`}>
-        {!isMobile && (
-          <DashboardHeader 
-            title="Favorites" 
-            searchEnabled={true}
-            filterEnabled={true}
-            searchValue={searchQuery}
-            onSearchChange={handleSearchChange}
-          />
-        )}
-        
-        <div className="flex-1 p-4 md:p-6">
-          <div className="container mx-auto max-w-6xl">
-            {isMobile && (
-              <div className="flex justify-between items-center mb-4">
-                <h1 className="text-2xl font-bold text-white">Favorites</h1>
-                <div className="flex gap-2">
-                  <div className="relative">
-                    <input
-                      type="text"
-                      value={searchQuery}
-                      onChange={handleSearchChange}
-                      placeholder="Search..."
-                      className="py-2 px-3 pl-9 bg-[#18092a]/60 border border-gray-800/30 rounded-lg text-white w-full focus:outline-none focus:border-[#00ff94]/50"
-                    />
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 text-white/50 absolute left-2 top-1/2 -translate-y-1/2">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
-                    </svg>
-                  </div>
-                </div>
+      ) : (
+        <>
+          {/* Flashcards Section */}
+          {(activeTab === 'all' || activeTab === 'flashcards') && filteredFavorites.flashcards.length > 0 && (
+            <div className="mb-8">
+              {activeTab === 'all' && (
+                <h2 className="text-xl font-bold mb-4 px-2">Flashcard Sets</h2>
+              )}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                {filteredFavorites.flashcards.map(set => (
+                  <FlashcardCard 
+                    key={set.id}
+                    id={set.id}
+                    title={set.title}
+                    cards={set.cardCount}
+                    lastStudied={set.lastStudied || 'Never'}
+                    progress={set.progress || 0}
+                    isFavorite={true}
+                    onToggleFavorite={handleFlashcardFavoriteToggle}
+                    onDelete={(id) => {
+                      // Remove deleted flashcard from favorites
+                      setFavoriteFlashcards(prev => prev.filter(item => item.id !== id));
+                    }}
+                  />
+                ))}
               </div>
-            )}
-            
-            {/* Filter tabs */}
-            <div className="flex mb-6 bg-[#18092a]/40 p-1 rounded-lg">
-              <button
-                className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${activeTab === 'all' ? 'bg-[#18092a] text-white' : 'text-white/70 hover:bg-white/5'}`}
-                onClick={() => handleTabChange('all')}
-              >
-                <div className="flex items-center justify-center gap-2">
-                  <AppsIcon fontSize="small" />
-                  <span>All</span>
-                </div>
-              </button>
-              <button
-                className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${activeTab === 'flashcards' ? 'bg-[#18092a] text-white' : 'text-white/70 hover:bg-white/5'}`}
-                onClick={() => handleTabChange('flashcards')}
-              >
-                <div className="flex items-center justify-center gap-2">
-                  <MenuBookIcon fontSize="small" />
-                  <span>Flashcards</span>
-                </div>
-              </button>
-              <button
-                className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${activeTab === 'quizzes' ? 'bg-[#18092a] text-white' : 'text-white/70 hover:bg-white/5'}`}
-                onClick={() => handleTabChange('quizzes')}
-              >
-                <div className="flex items-center justify-center gap-2">
-                  <QuizIcon fontSize="small" />
-                  <span>Quizzes</span>
-                </div>
-              </button>
             </div>
-            
-            {isLoading ? (
-              <div className="flex items-center justify-center min-h-[400px]">
-                <div className="w-12 h-12 rounded-full border-4 border-[#00ff94]/20 border-t-[#00ff94] animate-spin"></div>
+          )}
+          
+          {/* Quizzes Section */}
+          {(activeTab === 'all' || activeTab === 'quizzes') && filteredFavorites.quizzes.length > 0 && (
+            <div>
+              {activeTab === 'all' && (
+                <h2 className="text-xl font-bold mb-4 px-2">Quizzes</h2>
+              )}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                {filteredFavorites.quizzes.map(quiz => (
+                  <QuizCard 
+                    key={quiz.id}
+                    id={quiz.id}
+                    title={quiz.title}
+                    description={quiz.description}
+                    questionCount={quiz.questionCount}
+                    difficulty={quiz.difficulty}
+                    time={quiz.time}
+                    tags={quiz.tags}
+                    isFavorite={true}
+                    onToggleFavorite={handleQuizFavoriteToggle}
+                    onDelete={(id) => {
+                      // Remove deleted quiz from favorites
+                      setFavoriteQuizzes(prev => prev.filter(item => item.id !== id));
+                    }}
+                  />
+                ))}
               </div>
-            ) : error ? (
-              <div className="text-center py-8">
-                <p className="text-white/70 mb-4">{error}</p>
-                <button 
-                  onClick={fetchFavorites}
-                  className="bg-[#00ff94]/10 text-[#00ff94] px-4 py-2 rounded-lg hover:bg-[#00ff94]/20 transition-colors border border-[#00ff94]/30"
-                >
-                  Try Again
-                </button>
+            </div>
+          )}
+          
+          {/* No favorites message */}
+          {filteredFavorites.flashcards.length === 0 && filteredFavorites.quizzes.length === 0 && (
+            <div className="text-center py-16">
+              <div className="bg-[#18092a]/60 rounded-xl p-8 border border-gray-800/30 shadow-lg inline-block max-w-md">
+                <div className="text-[#00ff94] mb-4">
+                  <StarIcon style={{ fontSize: 48 }} />
+                </div>
+                <h3 className="text-xl font-bold mb-2">No favorites yet</h3>
+                <p className="text-white/70 mb-6">
+                  Add flashcard sets and quizzes to your favorites by clicking the star icon.
+                </p>
+                <div className="flex gap-4 justify-center">
+                  <button 
+                    onClick={() => navigate('/flashcards')}
+                    className="bg-[#00ff94]/10 text-[#00ff94] px-4 py-2 rounded-lg hover:bg-[#00ff94]/20 transition-colors border border-[#00ff94]/30"
+                  >
+                    Browse Flashcards
+                  </button>
+                  <button 
+                    onClick={() => navigate('/quizzes')}
+                    className="bg-[#00ff94]/10 text-[#00ff94] px-4 py-2 rounded-lg hover:bg-[#00ff94]/20 transition-colors border border-[#00ff94]/30"
+                  >
+                    Browse Quizzes
+                  </button>
+                </div>
               </div>
-            ) : (
-              <>
-                {/* Flashcards Section */}
-                {(activeTab === 'all' || activeTab === 'flashcards') && filteredFavorites.flashcards.length > 0 && (
-                  <div className="mb-8">
-                    {activeTab === 'all' && (
-                      <h2 className="text-xl font-bold mb-4 px-2">Flashcard Sets</h2>
-                    )}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-                      {filteredFavorites.flashcards.map(set => (
-                        <FlashcardCard 
-                          key={set.id}
-                          id={set.id}
-                          title={set.title}
-                          cards={set.cardCount}
-                          lastStudied={set.lastStudied || 'Never'}
-                          progress={set.progress || 0}
-                          isFavorite={true}
-                          onToggleFavorite={(id, newFavoriteStatus) => {
-                            if (!newFavoriteStatus) {
-                              // Remove from favorites list
-                              setFavoriteFlashcards(prev => prev.filter(item => item.id !== id));
-                            }
-                          }}
-                          onDelete={(id) => {
-                            // Remove deleted flashcard from favorites
-                            setFavoriteFlashcards(prev => prev.filter(item => item.id !== id));
-                          }}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                )}
-                
-                {/* Quizzes Section */}
-                {(activeTab === 'all' || activeTab === 'quizzes') && filteredFavorites.quizzes.length > 0 && (
-                  <div>
-                    {activeTab === 'all' && (
-                      <h2 className="text-xl font-bold mb-4 px-2">Quizzes</h2>
-                    )}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-                      {filteredFavorites.quizzes.map(quiz => (
-                        <QuizCard 
-                          key={quiz.id}
-                          id={quiz.id}
-                          title={quiz.title}
-                          description={quiz.description}
-                          questionCount={quiz.questionCount}
-                          difficulty={quiz.difficulty}
-                          time={quiz.time}
-                          tags={quiz.tags}
-                          isFavorite={true}
-                          onToggleFavorite={(id, newFavoriteStatus) => {
-                            if (!newFavoriteStatus) {
-                              // Remove from favorites list
-                              setFavoriteQuizzes(prev => prev.filter(item => item.id !== id));
-                            }
-                          }}
-                          onDelete={(id) => {
-                            // Remove deleted quiz from favorites
-                            setFavoriteQuizzes(prev => prev.filter(item => item.id !== id));
-                          }}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                )}
-                
-                {/* No favorites message */}
-                {filteredFavorites.flashcards.length === 0 && filteredFavorites.quizzes.length === 0 && (
-                  <div className="text-center py-16">
-                    <div className="bg-[#18092a]/60 rounded-xl p-8 border border-gray-800/30 shadow-lg inline-block max-w-md">
-                      <div className="text-[#00ff94] mb-4">
-                        <StarIcon style={{ fontSize: 48 }} />
-                      </div>
-                      <h3 className="text-xl font-bold mb-2">No favorites yet</h3>
-                      <p className="text-white/70 mb-6">
-                        Add flashcard sets and quizzes to your favorites by clicking the star icon.
-                      </p>
-                      <div className="flex gap-4 justify-center">
-                        <button 
-                          onClick={() => navigate('/flashcards')}
-                          className="bg-[#00ff94]/10 text-[#00ff94] px-4 py-2 rounded-lg hover:bg-[#00ff94]/20 transition-colors border border-[#00ff94]/30"
-                        >
-                          Browse Flashcards
-                        </button>
-                        <button 
-                          onClick={() => navigate('/quizzes')}
-                          className="bg-[#00ff94]/10 text-[#00ff94] px-4 py-2 rounded-lg hover:bg-[#00ff94]/20 transition-colors border border-[#00ff94]/30"
-                        >
-                          Browse Quizzes
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  )
+            </div>
+          )}
+        </>
+      )}
+    </Layout>
+  );
 }
 
 export default Favorites 
