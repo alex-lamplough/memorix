@@ -2,6 +2,7 @@ import express from 'express';
 import { checkJwt, getUserFromToken } from '../middleware/auth-middleware.js';
 import User from '../models/user-model.js';
 import { getUserProfile } from '../services/auth0-service.js';
+import { emailService } from '../services/email-service.js';
 
 const router = express.Router();
 
@@ -75,6 +76,21 @@ router.get('/me', async (req, res, next) => {
         });
         
         console.log(`✅ New user created in database: ${user._id}`);
+        
+        // Send welcome email if SENDGRID_API_KEY is configured
+        if (process.env.SENDGRID_API_KEY) {
+          try {
+            console.log(`📧 Sending welcome email to new user: ${email}`);
+            const emailResult = await emailService.sendWelcomeEmail(email, name);
+            console.log(`📧 Welcome email result:`, emailResult);
+          } catch (emailError) {
+            // Don't fail registration if email fails
+            console.error(`❌ Error sending welcome email:`, emailError);
+          }
+        } else {
+          console.log('⚠️ SendGrid API key not configured. Skipping welcome email.');
+        }
+        
       } catch (createError) {
         console.error('❌ Failed to create user in database:', createError);
         console.error('Error details:', JSON.stringify(createError, null, 2));
@@ -95,9 +111,23 @@ router.get('/me', async (req, res, next) => {
         
         if (auth0Profile && auth0Profile.email) {
           console.log(`✅ Updating email from ${user.email} to ${auth0Profile.email}`);
+          const oldEmail = user.email;
           user.email = auth0Profile.email;
           user.needsProfileUpdate = false;
           await user.save();
+          
+          // Send welcome email if we just got a real email address and SENDGRID_API_KEY is configured
+          if (process.env.SENDGRID_API_KEY && !oldEmail.includes('@memorix-user.com') && auth0Profile.email) {
+            try {
+              console.log(`📧 Sending welcome email to user with updated email: ${auth0Profile.email}`);
+              await emailService.sendWelcomeEmail(
+                auth0Profile.email, 
+                user.name || auth0Profile.name || 'Memorix User'
+              );
+            } catch (emailError) {
+              console.error(`❌ Error sending welcome email after profile update:`, emailError);
+            }
+          }
         }
       }
       
