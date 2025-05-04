@@ -1,5 +1,5 @@
 import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, lazy, Suspense } from 'react'
 
 // Feature icons
 import BoltIcon from '@mui/icons-material/Bolt'
@@ -22,21 +22,22 @@ import LoginButton from './components/LoginButton'
 import ProtectedRoute from './auth/ProtectedRoute'
 import Todo from './components/Todo'
 import FeatureDetailModal from './components/FeatureDetailModal'
-
-// Pages
-import Dashboard from './pages/Dashboard'
-import Progress from './pages/Progress'
-import Favorites from './pages/Favorites'
-import Quizzes from './pages/Quizzes'
-import Flashcards from './pages/Flashcards'
-import Settings from './pages/Settings'
-import SharedItem from './pages/SharedItem'
-import ShareFeature from './pages/ShareFeature'
-import StudyDeck from './pages/StudyDeck'
-import EditDeck from './pages/EditDeck'
-import EditQuiz from './pages/EditQuiz'
 import Header from './Header'
-// import Collections from './pages/Collections'
+
+// Lazy load page components
+// These components are only loaded when they are needed
+const Dashboard = lazy(() => import('./pages/Dashboard'))
+const Progress = lazy(() => import('./pages/Progress'))
+const Favorites = lazy(() => import('./pages/Favorites'))
+const Quizzes = lazy(() => import('./pages/Quizzes'))
+const Flashcards = lazy(() => import('./pages/Flashcards'))
+const Settings = lazy(() => import('./pages/Settings'))
+const SharedItem = lazy(() => import('./pages/SharedItem'))
+const ShareFeature = lazy(() => import('./pages/ShareFeature'))
+const StudyDeck = lazy(() => import('./pages/StudyDeck'))
+const EditDeck = lazy(() => import('./pages/EditDeck'))
+const EditQuiz = lazy(() => import('./pages/EditQuiz'))
+const FlashcardStudyExample = lazy(() => import('./pages/FlashcardStudyExample'))
 
 // Assets
 import logoWhite from './assets/MemorixLogoWhite.png'
@@ -638,6 +639,18 @@ function Footer() {
   );
 }
 
+// Loading component for suspense fallback
+function LoadingScreen() {
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-[#2E0033] via-[#260041] to-[#1b1b2f] flex items-center justify-center">
+      <div className="flex flex-col items-center">
+        <div className="w-16 h-16 border-4 border-[#00ff94]/20 border-t-[#00ff94] rounded-full animate-spin mb-4"></div>
+        <p className="text-[#00ff94] font-medium">Loading...</p>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -700,34 +713,38 @@ function App() {
   }, [navigate]);
   
   return (
-    <Routes>
-      <Route path="/dashboard" element={<ProtectedRoute element={<Dashboard />} />} />
-      <Route path="/flashcards" element={<ProtectedRoute element={<Flashcards />} />} />
-      <Route path="/progress" element={<ProtectedRoute element={<ComingSoon />} />} />
-      <Route path="/favorites" element={<ProtectedRoute element={<Favorites />} />} />
-      <Route path="/quizzes" element={<ProtectedRoute element={<Quizzes />} />} />
-      <Route path="/settings" element={<ProtectedRoute element={<Settings />} />} />
-      <Route path="/study/:id" element={<ProtectedRoute element={<StudyDeck />} />} />
-      <Route path="/edit/:id" element={<ProtectedRoute element={<EditDeck />} />} />
-      <Route path="/edit-quiz/:id" element={<ProtectedRoute element={<EditQuiz />} />} />
-      <Route path="/share/:type/:id" element={<SharedItem />} />
-      <Route path="/share" element={<ShareFeature />} />
-      <Route path="/" element={
-        <div className="min-h-screen bg-gradient-to-b from-[#2E0033] via-[#260041] to-[#1b1b2f] text-white">
-          <Header />
-          <main>
-            <Hero />
-            <div className="container mx-auto px-4 pb-16">
-              <Features />
-              <PricingSection />
-              <Testimonials />
-              <FAQSection />
-            </div>
-          </main>
-          <Footer />
-        </div>
-      } />
-    </Routes>
+    <Suspense fallback={<LoadingScreen />}>
+      <Routes>
+        <Route path="/dashboard" element={<ProtectedRoute element={<Dashboard />} />} />
+        <Route path="/flashcards" element={<ProtectedRoute element={<Flashcards />} />} />
+        <Route path="/progress" element={<ProtectedRoute element={<ComingSoon />} />} />
+        <Route path="/favorites" element={<ProtectedRoute element={<Favorites />} />} />
+        <Route path="/quizzes" element={<ProtectedRoute element={<Quizzes />} />} />
+        <Route path="/settings" element={<ProtectedRoute element={<Settings />} />} />
+        <Route path="/study/:id" element={<ProtectedRoute element={<StudyDeck />} />} />
+        <Route path="/edit/:id" element={<ProtectedRoute element={<EditDeck />} />} />
+        <Route path="/edit-quiz/:id" element={<ProtectedRoute element={<EditQuiz />} />} />
+        <Route path="/share/:type/:id" element={<SharedItem />} />
+        <Route path="/share" element={<ShareFeature />} />
+        <Route path="/flashcard-study-example" element={<FlashcardStudyExample />} />
+        <Route path="/flashcard-study-example/:id" element={<FlashcardStudyExample />} />
+        <Route path="/" element={
+          <div className="min-h-screen bg-gradient-to-b from-[#2E0033] via-[#260041] to-[#1b1b2f] text-white">
+            <Header />
+            <main>
+              <Hero />
+              <div className="container mx-auto px-4 pb-16">
+                <Features />
+                <PricingSection />
+                <Testimonials />
+                <FAQSection />
+              </div>
+            </main>
+            <Footer />
+          </div>
+        } />
+      </Routes>
+    </Suspense>
   )
 }
 

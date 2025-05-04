@@ -22,9 +22,10 @@ import AccessTimeIcon from '@mui/icons-material/AccessTime'
 import StarIcon from '@mui/icons-material/Star'
 import StarBorderIcon from '@mui/icons-material/StarBorder'
 
-// Services
+// Services & Queries
 import { flashcardService } from '../services/api'
 import { handleRequestError } from '../services/utils'
+import { useFlashcardSets, useDeleteFlashcardSet, useToggleFavorite } from '../api/queries/flashcards'
 
 function FlashcardCard({ title, cards, lastStudied, progress, id, onDelete, isFavorite = false, onToggleFavorite }) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -39,10 +40,7 @@ function FlashcardCard({ title, cards, lastStudied, progress, id, onDelete, isFa
       const newFavoriteStatus = !favorite;
       setFavorite(newFavoriteStatus);
       
-      // Call the API to update the favorite status
-      await flashcardService.toggleFavorite(id, newFavoriteStatus);
-      
-      // If there's a parent callback, invoke it
+      // Call the parent callback to update the state
       if (onToggleFavorite) {
         onToggleFavorite(id, newFavoriteStatus);
       }
@@ -72,14 +70,8 @@ function FlashcardCard({ title, cards, lastStudied, progress, id, onDelete, isFa
   const confirmDelete = async () => {
     try {
       setIsDeleting(true);
-      // Call API to delete the flashcard set
-      await flashcardService.deleteFlashcardSet(id);
+      await onDelete(id);
       setIsDeleting(false);
-      
-      // Call the parent component's onDelete function to update the UI
-      if (onDelete) {
-        onDelete(id);
-      }
     } catch (error) {
       console.error('Error deleting flashcard set:', error);
       setIsDeleting(false);
@@ -192,22 +184,27 @@ function FlashcardCard({ title, cards, lastStudied, progress, id, onDelete, isFa
 }
 
 function Flashcards() {
-  const [flashcardSets, setFlashcardSets] = useState([]);
   const [filteredSets, setFilteredSets] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('lastStudied');
   const [sortOrder, setSortOrder] = useState('desc');
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const isMobile = useMediaQuery('(max-width:768px)');
-  const isMountedRef = useRef(true);
-  const controllerRef = useRef(null);
-  const fetchTimeoutRef = useRef(null);
   const filterMenuRef = useRef(null);
   const { user } = useAuth0();
+  
+  // Use React Query to fetch flashcard sets
+  const {
+    data: flashcardSets = [],
+    isLoading,
+    error,
+    refetch: refetchFlashcards
+  } = useFlashcardSets();
+  
+  // Use mutations
+  const { mutate: deleteFlashcardSet } = useDeleteFlashcardSet();
+  const { mutate: toggleFavorite } = useToggleFavorite();
   
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -223,80 +220,51 @@ function Flashcards() {
     };
   }, []);
   
-  // Fetch user's flashcard sets
-  const fetchFlashcardSets = async () => {
-    if (!isMountedRef.current) return;
+  // Format the last studied date in a user-friendly way
+  const formatLastStudied = (dateString) => {
+    if (!dateString) return 'Never';
     
-    // Cancel any ongoing request
-    if (controllerRef.current) {
-      controllerRef.current.abort();
-    }
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffTime = Math.abs(now - date);
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
     
-    // Create new controller for this request
-    controllerRef.current = new AbortController();
-    
-    try {
-      setIsLoading(true);
-      setError(null);
-      
-      // Use a timeout to prevent long-running requests
-      const timeoutId = setTimeout(() => {
-        if (controllerRef.current) {
-          controllerRef.current.abort();
-          if (isMountedRef.current) {
-            setError('Request timed out. Please try again.');
-            setIsLoading(false);
-          }
-        }
-      }, 15000); // 15 second timeout
-      
-      const response = await flashcardService.getAllFlashcardSets();
-      
-      // Clear the timeout since request completed
-      clearTimeout(timeoutId);
-      
-      // Guard against setting state on unmounted component
-      if (!isMountedRef.current) return;
-      
-      console.log('Fetched flashcard sets:', response);
-      
-      // Transform data to match our component requirements if needed
-      const transformedSets = response.map(set => ({
-        id: set._id,
-        title: set.title,
-        cards: set.cardCount || 0,
-        lastStudied: set.lastStudied ? new Date(set.lastStudied) : null,
-        lastStudiedFormatted: formatLastStudied(set.lastStudied),
-        progress: set.progress || 0,
-        createdAt: new Date(set.createdAt || Date.now()),
-        favorite: set.isFavorite || false // Use isFavorite property from API response
-      }));
-      
-      if (isMountedRef.current) {
-        setFlashcardSets(transformedSets);
-        applyFiltersAndSort(transformedSets);
-      }
-    } catch (err) {
-      // Only log and update state for non-cancellation errors
-      if (!handleRequestError(err, 'Flashcards fetch')) {
-        console.error('Error fetching flashcard sets:', err);
-        if (isMountedRef.current) {
-          setError('Failed to load your flashcard sets. Please try again later.');
-        }
-      }
-    } finally {
-      if (isMountedRef.current) {
-        setIsLoading(false);
-      }
+    if (diffDays === 0) {
+      // Check if it's today
+      return 'Today';
+    } else if (diffDays === 1) {
+      return 'Yesterday';
+    } else if (diffDays < 7) {
+      return `${diffDays} days ago`;
+    } else if (diffDays < 30) {
+      const weeks = Math.floor(diffDays / 7);
+      return `${weeks} ${weeks === 1 ? 'week' : 'weeks'} ago`;
+    } else {
+      return date.toLocaleDateString();
     }
   };
   
-  // Apply search, filters and sorting
-  const applyFiltersAndSort = (sets = flashcardSets) => {
-    if (!sets || !sets.length) return;
+  // Transform and apply filters whenever flashcard data changes or filters change
+  useEffect(() => {
+    if (!flashcardSets || !flashcardSets.length) {
+      setFilteredSets([]);
+      return;
+    }
+    
+    // Transform data for display
+    const transformedSets = flashcardSets.map(set => ({
+      id: set._id,
+      title: set.title,
+      cards: set.cardCount || 0,
+      lastStudied: set.lastStudied ? new Date(set.lastStudied) : null,
+      lastStudiedFormatted: formatLastStudied(set.lastStudied),
+      progress: set.progress || 0,
+      createdAt: new Date(set.createdAt || Date.now()),
+      favorite: set.isFavorite || false
+    }));
     
     // First apply search filter
-    let result = sets;
+    let result = transformedSets;
     
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase().trim();
@@ -341,36 +309,7 @@ function Flashcards() {
     });
     
     setFilteredSets(result);
-  };
-  
-  // Apply filters whenever search or sort options change
-  useEffect(() => {
-    applyFiltersAndSort();
-  }, [searchQuery, sortBy, sortOrder]);
-  
-  // Format the last studied date in a user-friendly way
-  const formatLastStudied = (dateString) => {
-    if (!dateString) return 'Never';
-    
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffTime = Math.abs(now - date);
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-    
-    if (diffDays === 0) {
-      // Check if it's today
-      return 'Today';
-    } else if (diffDays === 1) {
-      return 'Yesterday';
-    } else if (diffDays < 7) {
-      return `${diffDays} days ago`;
-    } else if (diffDays < 30) {
-      const weeks = Math.floor(diffDays / 7);
-      return `${weeks} ${weeks === 1 ? 'week' : 'weeks'} ago`;
-    } else {
-      return date.toLocaleDateString();
-    }
-  };
+  }, [flashcardSets, searchQuery, sortBy, sortOrder]);
   
   // Handle search input change
   const handleSearchChange = (e) => {
@@ -405,68 +344,24 @@ function Flashcards() {
     );
   };
   
-  // Debounced version of fetchFlashcardSets to prevent multiple calls
-  const debouncedFetchFlashcardSets = () => {
-    // Clear any existing timeout
-    if (fetchTimeoutRef.current) {
-      clearTimeout(fetchTimeoutRef.current);
-    }
-    
-    // Set a new timeout
-    fetchTimeoutRef.current = setTimeout(() => {
-      fetchFlashcardSets();
-    }, 50); // Short delay of 50ms
-  };
-  
-  // Initialize the isMounted ref and fetch flashcard sets on component mount
-  useEffect(() => {
-    isMountedRef.current = true;
-    debouncedFetchFlashcardSets();
-    
-    return () => {
-      isMountedRef.current = false;
-      // Cancel any pending requests when component unmounts
-      if (controllerRef.current) {
-        controllerRef.current.abort();
-      }
-      if (fetchTimeoutRef.current) {
-        clearTimeout(fetchTimeoutRef.current);
-      }
-    };
-  }, []);
-  
   const handleOpenCreateModal = () => {
     setIsCreateModalOpen(true);
   }
   
   const handleCloseCreateModal = () => {
     setIsCreateModalOpen(false);
-    // Refresh flashcards
-    debouncedFetchFlashcardSets();
+    // Refresh flashcards using React Query's refetch
+    refetchFlashcards();
   }
   
-  // Handle flashcard set deletion
+  // Handle flashcard set deletion with React Query
   const handleFlashcardDeleted = (flashcardId) => {
-    const updatedSets = flashcardSets.filter(set => set.id !== flashcardId);
-    setFlashcardSets(updatedSets);
-    applyFiltersAndSort(updatedSets);
+    deleteFlashcardSet(flashcardId);
   }
   
-  // Handle flashcard favorite toggle
+  // Handle flashcard favorite toggle with React Query
   const handleToggleFavorite = (id, isFavorite) => {
-    // Update state to reflect the new favorite status
-    setFlashcardSets(prevSets => 
-      prevSets.map(set => 
-        set.id === id ? { ...set, favorite: isFavorite } : set
-      )
-    );
-    
-    // Also update filtered sets
-    setFilteredSets(prevSets => 
-      prevSets.map(set => 
-        set.id === id ? { ...set, favorite: isFavorite } : set
-      )
-    );
+    toggleFavorite({ id, isFavorite });
   };
   
   return (
@@ -561,10 +456,10 @@ function Flashcards() {
         </div>
       ) : error ? (
         <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-6 text-center">
-          <p className="text-white">{error}</p>
+          <p className="text-white">{error.message || 'Failed to load your flashcard sets. Please try again.'}</p>
           <button 
             className="mt-4 bg-[#00ff94]/10 text-[#00ff94] px-4 py-2 rounded-lg hover:bg-[#00ff94]/20 transition-colors border border-[#00ff94]/30"
-            onClick={() => debouncedFetchFlashcardSets()}
+            onClick={() => refetchFlashcards()}
           >
             Retry
           </button>

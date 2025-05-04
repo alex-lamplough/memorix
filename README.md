@@ -13,6 +13,7 @@ A modern flashcard and quiz application powered by AI, designed to help users le
 - **Share & Collaborate**: Share flashcard sets and quizzes with others
 - **Beautiful UI**: Intuitive, modern interface with dark theme
 - **Responsive Design**: Works on all devices from mobile to desktop
+- **Universal Flashcard Study Component**: Consistent interface for studying flashcards across the entire application
 
 ## Technology Stack
 
@@ -119,3 +120,78 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 - All contributors who have helped make Memorix better
 - The open-source community for the amazing tools and libraries
+
+## Components
+
+### FlashcardStudy Component
+
+The `FlashcardStudy` component provides a universal interface for studying flashcards throughout the application.
+
+#### Features
+- Clean, consistent UI for studying flashcards
+- Next/Previous card navigation
+- Progress tracking (card count and percentage)
+- "Learned it" / "Review Later" functionality
+- Card flipping to show question/answer
+
+#### Usage
+
+```jsx
+import { FlashcardStudy } from '../components';
+
+function YourComponent() {
+  // Sample flashcard data
+  const cards = [
+    { 
+      id: '1', 
+      question: 'What is the capital of France?', 
+      answer: 'Paris' 
+    },
+    // More cards...
+  ];
+
+  // Optional state for tracking learned/review cards
+  const [reviewLaterCards, setReviewLaterCards] = useState({});
+  const [learnedCards, setLearnedCards] = useState({});
+
+  // Handlers
+  const handleCardComplete = (cardId, status) => {
+    console.log(`Card ${cardId} marked as ${status}`);
+    // Update your state/database
+  };
+
+  const handleReviewLaterToggle = (cardId, isMarkedForReview) => {
+    console.log(`Card ${cardId} ${isMarkedForReview ? 'marked' : 'unmarked'} for review`);
+    // Update your state/database
+  };
+
+  const handleDeckComplete = () => {
+    console.log('Deck completed!');
+    // Show completion UI or navigate
+  };
+
+  return (
+    <FlashcardStudy
+      cards={cards}
+      initialCardIndex={0}
+      onCardComplete={handleCardComplete}
+      onReviewLaterToggle={handleReviewLaterToggle}
+      onDeckComplete={handleDeckComplete}
+      reviewLaterCards={reviewLaterCards}
+      learnedCards={learnedCards}
+    />
+  );
+}
+```
+
+#### Props
+
+| Prop | Type | Required | Description |
+|------|------|----------|-------------|
+| `cards` | Array | Yes | Array of card objects with `id`, `question` and `answer` properties |
+| `initialCardIndex` | Number | No | Starting index for the cards (default: 0) |
+| `onCardComplete` | Function | No | Callback when card is marked as learned |
+| `onReviewLaterToggle` | Function | No | Callback when review status is toggled |
+| `onDeckComplete` | Function | No | Callback when all cards have been reviewed |
+| `reviewLaterCards` | Object | No | Object tracking which cards are marked for review |
+| `learnedCards` | Object | No | Object tracking which cards are marked as learned |
