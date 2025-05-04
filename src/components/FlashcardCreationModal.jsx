@@ -38,7 +38,9 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle'
 import FlashOnIcon from '@mui/icons-material/FlashOn'
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline'
 
-// Services
+// Import React Query hooks
+import { useCreateFlashcardSet } from '../api/queries/flashcards'
+// Keep old service for AI generation until we migrate that as well
 import { flashcardService } from '../services/api'
 
 /**
@@ -56,11 +58,14 @@ const FlashcardCreationModal = ({ open, onClose }) => {
   const [aiPrompt, setAiPrompt] = useState('')
   const [cardCount, setCardCount] = useState(5)
   const [difficulty, setDifficulty] = useState('intermediate')
-  const [isLoading, setIsLoading] = useState(false)
   const [aiGeneratedCards, setAiGeneratedCards] = useState([])
   const [showSnackbar, setShowSnackbar] = useState(false)
   const [snackbarMessage, setSnackbarMessage] = useState('')
   const [snackbarSeverity, setSnackbarSeverity] = useState('success')
+  
+  // Use React Query mutation for creating flashcard sets
+  const createMutation = useCreateFlashcardSet();
+  const isLoading = createMutation.isPending || createMutation.isLoading;
   
   // Reset form when modal is opened
   useEffect(() => {
@@ -109,8 +114,6 @@ const FlashcardCreationModal = ({ open, onClose }) => {
       return
     }
     
-    setIsLoading(true)
-    
     try {
       // Call backend API to generate flashcards using our service
       const data = await flashcardService.generateFlashcards({
@@ -133,8 +136,6 @@ const FlashcardCreationModal = ({ open, onClose }) => {
     } catch (error) {
       console.error('Error generating flashcards:', error)
       showSnackbarMessage('Failed to generate flashcards. Please try again.', 'error')
-    } finally {
-      setIsLoading(false)
     }
   }
   
@@ -156,7 +157,7 @@ const FlashcardCreationModal = ({ open, onClose }) => {
     setShowSnackbar(true)
   }
   
-  // Save flashcard set
+  // Save flashcard set using React Query mutation
   const saveFlashcardSet = async () => {
     if (!title) {
       showSnackbarMessage('Please enter a title for your flashcard set', 'error')
@@ -173,27 +174,25 @@ const FlashcardCreationModal = ({ open, onClose }) => {
       return
     }
     
-    setIsLoading(true)
+    const flashcardSet = {
+      title,
+      description,
+      category,
+      isPublic,
+      cards: cardsToSave
+    };
     
-    try {
-      // Call backend API to save flashcard set
-      await flashcardService.createFlashcardSet({
-        title,
-        description,
-        category,
-        isPublic,
-        cards: cardsToSave
-      })
-      
-      showSnackbarMessage('Flashcard set saved successfully!', 'success')
-      resetForm()
-      onClose()
-    } catch (error) {
-      console.error('Error saving flashcard set:', error)
-      showSnackbarMessage('Failed to save flashcard set. Please try again.', 'error')
-    } finally {
-      setIsLoading(false)
-    }
+    createMutation.mutate(flashcardSet, {
+      onSuccess: () => {
+        showSnackbarMessage('Flashcard set saved successfully!', 'success');
+        resetForm();
+        onClose();
+      },
+      onError: (error) => {
+        console.error('Error saving flashcard set:', error);
+        showSnackbarMessage('Failed to save flashcard set. Please try again.', 'error');
+      }
+    });
   }
   
   return (

@@ -24,6 +24,9 @@ import DeleteIcon from '@mui/icons-material/Delete'
 import { quizService } from '../services/quiz-service'
 import { handleRequestError } from '../services/utils'
 
+// Queries
+import { useQuizzes, useDeleteQuiz, useToggleFavorite } from '../api/queries/quizzes'
+
 function QuizCard({ title, description, questionCount, difficulty, time, tags, id = 1, onDelete, isFavorite = false, onToggleFavorite }) {
   const [isShareModalOpen, setIsShareModalOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -215,111 +218,32 @@ function QuizCard({ title, description, questionCount, difficulty, time, tags, i
 }
 
 function Quizzes() {
-  const [quizzes, setQuizzes] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [isQuizModalOpen, setIsQuizModalOpen] = useState(false);
   const isMobile = useMediaQuery('(max-width:768px)');
-  const isMountedRef = useRef(true);
-  const controllerRef = useRef(null);
-  const fetchTimeoutRef = useRef(null);
   
-  // Fetch user's quizzes
-  const fetchQuizzes = async () => {
-    if (!isMountedRef.current) return;
-    
-    // Cancel any ongoing request
-    if (controllerRef.current) {
-      controllerRef.current.abort();
-    }
-    
-    // Create new controller for this request
-    controllerRef.current = new AbortController();
-    
-    try {
-      setIsLoading(true);
-      setError(null);
-      
-      // Use a timeout to prevent long-running requests
-      const timeoutId = setTimeout(() => {
-        if (controllerRef.current) {
-          controllerRef.current.abort();
-          if (isMountedRef.current) {
-            setError('Request timed out. Please try again.');
-            setIsLoading(false);
-          }
-        }
-      }, 15000); // 15 second timeout
-      
-      const response = await quizService.getAllQuizzes();
-      
-      // Clear the timeout since request completed
-      clearTimeout(timeoutId);
-      
-      // Guard against setting state on unmounted component
-      if (!isMountedRef.current) return;
-      
-      console.log('Fetched quizzes:', response);
-      
-      // Transform data to match our component requirements if needed
-      const transformedQuizzes = response.map(quiz => ({
-        id: quiz._id,
-        title: quiz.title,
-        description: quiz.description,
-        questionCount: quiz.questionCount || quiz.totalQuestions || 0,
-        difficulty: quiz.difficulty || 'Medium',
-        time: quiz.estimatedTime || '15 min',
-        tags: quiz.tags || [],
-        isFavorite: quiz.isFavorite || false
-      }));
-      
-      if (isMountedRef.current) {
-        setQuizzes(transformedQuizzes);
-      }
-    } catch (err) {
-      // Only log and update state for non-cancellation errors
-      if (!handleRequestError(err, 'Quizzes fetch')) {
-        console.error('Error fetching quizzes:', err);
-        if (isMountedRef.current) {
-          setError('Failed to load your quizzes. Please try again later.');
-        }
-      }
-    } finally {
-      if (isMountedRef.current) {
-        setIsLoading(false);
-      }
-    }
-  };
+  // Use React Query to fetch quizzes
+  const { 
+    data: quizzesData = [], 
+    isLoading, 
+    error,
+    refetch: refetchQuizzes
+  } = useQuizzes();
   
-  // Debounced version of fetchQuizzes to prevent multiple calls
-  const debouncedFetchQuizzes = () => {
-    // Clear any existing timeout
-    if (fetchTimeoutRef.current) {
-      clearTimeout(fetchTimeoutRef.current);
-    }
-    
-    // Set a new timeout
-    fetchTimeoutRef.current = setTimeout(() => {
-      fetchQuizzes();
-    }, 50); // Short delay of 50ms
-  };
+  // Use mutations
+  const { mutate: deleteQuiz } = useDeleteQuiz();
+  const { mutate: toggleFavorite } = useToggleFavorite();
   
-  // Initialize the isMounted ref and fetch quizzes on component mount
-  useEffect(() => {
-    isMountedRef.current = true;
-    debouncedFetchQuizzes();
-    
-    return () => {
-      isMountedRef.current = false;
-      // Cancel any pending requests when component unmounts
-      if (controllerRef.current) {
-        controllerRef.current.abort();
-      }
-      if (fetchTimeoutRef.current) {
-        clearTimeout(fetchTimeoutRef.current);
-      }
-    };
-  }, []);
+  // Transform data to match our component requirements
+  const quizzes = quizzesData.map(quiz => ({
+    id: quiz._id,
+    title: quiz.title,
+    description: quiz.description,
+    questionCount: quiz.questionCount || quiz.totalQuestions || 0,
+    difficulty: quiz.difficulty || 'Medium',
+    time: quiz.estimatedTime || '15 min',
+    tags: quiz.tags || [],
+    isFavorite: quiz.isFavorite || false
+  }));
   
   const handleOpenQuizModal = () => {
     setIsQuizModalOpen(true);
@@ -331,13 +255,18 @@ function Quizzes() {
 
   // Refresh quizzes after creating a new one
   const handleQuizCreated = () => {
-    debouncedFetchQuizzes();
+    refetchQuizzes();
   }
   
   // Handle quiz deletion
   const handleQuizDeleted = (quizId) => {
-    setQuizzes(quizzes.filter(quiz => quiz.id !== quizId));
+    deleteQuiz(quizId);
   }
+  
+  // Handle toggling favorite status
+  const handleToggleFavorite = (id, newStatus) => {
+    toggleFavorite({ id, isFavorite: newStatus });
+  };
   
   return (
     <Layout
@@ -352,7 +281,7 @@ function Quizzes() {
         </div>
       ) : error ? (
         <div className="bg-red-500/10 text-red-400 p-4 rounded-lg text-center">
-          {error}
+          {error.message || 'Failed to load your quizzes. Please try again.'}
         </div>
       ) : quizzes.length === 0 ? (
         <div className="bg-[#18092a]/60 rounded-xl p-6 border border-gray-800/30 shadow-lg text-center">
@@ -381,18 +310,7 @@ function Quizzes() {
               time={quiz.time}
               tags={quiz.tags}
               isFavorite={quiz.isFavorite}
-              onToggleFavorite={async (id, newStatus) => {
-                try {
-                  await quizService.toggleFavorite(id, newStatus);
-                  setQuizzes(prevQuizzes => 
-                    prevQuizzes.map(q => 
-                      q.id === id ? {...q, isFavorite: newStatus} : q
-                    )
-                  );
-                } catch (error) {
-                  console.error('Error toggling favorite:', error);
-                }
-              }}
+              onToggleFavorite={handleToggleFavorite}
               onDelete={handleQuizDeleted}
             />
           ))}

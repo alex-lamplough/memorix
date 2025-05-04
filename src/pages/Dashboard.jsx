@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useMediaQuery } from '@mui/material'
 import { Menu as MenuIcon } from '@mui/icons-material'
@@ -25,16 +25,16 @@ import ShareModal from '../components/ShareModal'
 import ActivityModal from '../components/ActivityModal'
 import Layout from '../components/Layout'
 
-// Services
-import { flashcardService } from '../services/api'
-import { quizService } from '../services/quiz-service'
+// Services & Queries
 import { handleRequestError } from '../services/utils'
+import { useFlashcardSets, useDeleteFlashcardSet } from '../api/queries/flashcards'
+import { useQuizzes, useDeleteQuiz } from '../api/queries/quizzes'
 
 // Custom hooks
 import useNavigationWithCancellation from '../hooks/useNavigationWithCancellation'
 
 // This component was causing a conflict with the imported FlashcardSet
-function FlashcardCard({ title, cards, lastStudied, progress, id }) {
+function FlashcardCard({ title, cards, lastStudied, progress, id, onDelete }) {
   const navigate = useNavigationWithCancellation();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
@@ -57,10 +57,7 @@ function FlashcardCard({ title, cards, lastStudied, progress, id }) {
   
   const confirmDelete = async () => {
     try {
-      // Call your API to delete the flashcard set
-      await flashcardService.deleteFlashcardSet(id);
-      // Refresh the page or update the state to remove the deleted set
-      window.location.reload();
+      await onDelete(id);
     } catch (error) {
       console.error('Error deleting flashcard set:', error);
       alert('Failed to delete flashcard set. Please try again.');
@@ -200,6 +197,31 @@ function RecentActivity({ flashcardSets, quizSets }) {
     };
   }, [flashcardSets, quizSets]);
   
+  // Format the last studied date in a user-friendly way
+  const formatLastStudied = (dateString) => {
+    if (!dateString) return 'Never';
+    
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffTime = Math.abs(now - date);
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) {
+      // Check if it's today
+      return 'Today';
+    } else if (diffDays === 1) {
+      return 'Yesterday';
+    } else if (diffDays < 7) {
+      return `${diffDays} days ago`;
+    } else if (diffDays < 30) {
+      const weeks = Math.floor(diffDays / 7);
+      return `${weeks} ${weeks === 1 ? 'week' : 'weeks'} ago`;
+    } else {
+      return date.toLocaleDateString();
+    }
+  };
+  
+  // Process activity data
   const processActivityData = (flashcardSets, quizzes) => {
     if (!isMountedRef.current) return;
     
@@ -235,7 +257,7 @@ function RecentActivity({ flashcardSets, quizSets }) {
       });
       
       // Transform quizzes into activity items
-      const quizActivities = quizzes.flatMap(quiz => {
+      const quizActivities = quizzes?.flatMap(quiz => {
         const activities = [];
         
         // Create activity
@@ -259,7 +281,7 @@ function RecentActivity({ flashcardSets, quizSets }) {
         }
         
         return activities;
-      });
+      }) || [];
       
       // Combine all activities
       const allActivities = [...flashcardActivities, ...quizActivities];
@@ -394,113 +416,34 @@ function RecentActivity({ flashcardSets, quizSets }) {
         onClose={() => setIsActivityModalOpen(false)} 
       />
     </div>
-  )
+  );
 }
 
 function Dashboard() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [flashcardSets, setFlashcardSets] = useState([]);
-  const [quizSets, setQuizSets] = useState([]);
   const [transformedFlashcardSets, setTransformedFlashcardSets] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState('');
   const [activityModalOpen, setActivityModalOpen] = useState(false);
   const [selectedActivity, setSelectedActivity] = useState(null);
-  const controllerRef = useRef(null);
-  const isMountedRef = useRef(true);
-  const fetchTimeoutRef = useRef(null);
   const isMobile = useMediaQuery('(max-width:768px)');
   const navigate = useNavigationWithCancellation();
   
-  // Define fetchData to get both flashcards and quizzes at once
-  const fetchData = async () => {
-    if (!isMountedRef.current) return;
-    
-    // Cancel any ongoing fetch
-    if (controllerRef.current) {
-      controllerRef.current.abort();
-    }
-    
-    // Create new controller
-    controllerRef.current = new AbortController();
-    
-    try {
-      setIsLoading(true);
-      setError(null);
-      
-      // Fetch both flashcards and quizzes together
-      const [flashcardResponse, quizResponse] = await Promise.all([
-        flashcardService.getAllFlashcardSets(),
-        quizService.getAllQuizzes()
-      ]);
-      
-      // Guard against setting state on unmounted component
-      if (!isMountedRef.current) return;
-      
-      console.log('Fetched flashcard sets:', flashcardResponse);
-      console.log('Fetched quizzes:', quizResponse);
-      
-      // Process flashcard data for display
-      const transformedSets = flashcardResponse.map(set => ({
-        id: set._id,
-        title: set.title,
-        cards: set.cardCount || 0,
-        lastStudied: formatLastStudied(set.lastStudied),
-        progress: set.progress || 0
-      }));
-      
-      if (isMountedRef.current) {
-        setFlashcardSets(flashcardResponse); // Keep the original format for recent activity
-        setTransformedFlashcardSets(transformedSets); // For display purposes
-        setQuizSets(quizResponse);
-      }
-    } catch (err) {
-      // Handle cancellation errors separately
-      if (err.name === 'CanceledError' || err.name === 'AbortError') {
-        console.log('Request to fetch data was cancelled');
-        return;
-      }
-      
-      console.error('Error fetching data:', err);
-      if (isMountedRef.current) {
-        setError('Failed to load your data. Please try again later.');
-      }
-    } finally {
-      if (isMountedRef.current) {
-        setIsLoading(false);
-      }
-    }
-  };
+  // Use React Query to fetch flashcards
+  const { 
+    data: flashcardSets = [], 
+    isLoading: isFlashcardsLoading,
+    error: flashcardsError
+  } = useFlashcardSets();
   
-  // Debounced version of fetchData to prevent multiple calls
-  const debouncedFetchData = () => {
-    // Clear any existing timeout
-    if (fetchTimeoutRef.current) {
-      clearTimeout(fetchTimeoutRef.current);
-    }
-    
-    // Set a new timeout
-    fetchTimeoutRef.current = setTimeout(() => {
-      fetchData();
-    }, 50); // Short delay of 50ms
-  };
+  // Use React Query to fetch quizzes
+  const {
+    data: quizSets = [],
+    isLoading: isQuizzesLoading,
+    error: quizzesError
+  } = useQuizzes();
   
-  // Fetch data on component mount
-  useEffect(() => {
-    isMountedRef.current = true;
-    debouncedFetchData();
-    
-    // Cleanup function
-    return () => {
-      isMountedRef.current = false;
-      if (controllerRef.current) {
-        controllerRef.current.abort();
-      }
-      if (fetchTimeoutRef.current) {
-        clearTimeout(fetchTimeoutRef.current);
-      }
-    };
-  }, []);
+  // Use the delete mutations
+  const { mutate: deleteFlashcardSet } = useDeleteFlashcardSet();
+  const { mutate: deleteQuiz } = useDeleteQuiz();
   
   // Format the last studied date in a user-friendly way
   const formatLastStudied = (dateString) => {
@@ -526,20 +469,41 @@ function Dashboard() {
     }
   };
   
+  // Transform flashcard data for display when flashcardSets changes
+  // Using useMemo to prevent unnecessary recalculations
+  useMemo(() => {
+    if (!flashcardSets || !flashcardSets.length) return;
+    
+    const transformedSets = flashcardSets.map(set => ({
+      id: set._id,
+      title: set.title,
+      cards: set.cardCount || 0,
+      lastStudied: formatLastStudied(set.lastStudied),
+      progress: set.progress || 0
+    }));
+    
+    setTransformedFlashcardSets(transformedSets);
+  }, [flashcardSets]);
+  
   const handleCreateButtonClick = () => {
     setIsCreateModalOpen(true);
   };
   
-  // Also update the handleCloseCreateModal method to use the debounced version
   const handleCloseCreateModal = () => {
     setIsCreateModalOpen(false);
-    // Refresh flashcard sets
-    debouncedFetchData();
+  };
+  
+  const handleDeleteFlashcard = (id) => {
+    deleteFlashcardSet(id);
   };
   
   // Get only the first 6 flashcards to display on dashboard
   const limitedFlashcardSets = transformedFlashcardSets.slice(0, 6);
   const hasMoreFlashcards = transformedFlashcardSets.length > 6;
+  
+  // Combine errors from both data sources
+  const combinedError = flashcardsError || quizzesError;
+  const isLoading = isFlashcardsLoading || isQuizzesLoading;
   
   return (
     <Layout 
@@ -552,9 +516,9 @@ function Dashboard() {
         <div className="flex justify-center items-center py-12">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#00ff94]"></div>
         </div>
-      ) : error ? (
+      ) : combinedError ? (
         <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-6 text-center">
-          <p className="text-white">{error}</p>
+          <p className="text-white">{combinedError.message || 'Failed to load your data. Please try again later.'}</p>
           <button 
             className="mt-4 bg-[#00ff94]/10 text-[#00ff94] px-4 py-2 rounded-lg hover:bg-[#00ff94]/20 transition-colors border border-[#00ff94]/30"
             onClick={() => window.location.reload()}
@@ -596,35 +560,33 @@ function Dashboard() {
                 cards={set.cards}
                 lastStudied={set.lastStudied}
                 progress={set.progress}
+                onDelete={handleDeleteFlashcard}
               />
             ))}
+          </div>
+          
+          {/* Recent Activity */}
+          <div className="mt-12">
+            <RecentActivity 
+              flashcardSets={flashcardSets} 
+              quizSets={quizSets}
+            />
+          </div>
+          
+          {/* Todo List */}
+          <div className="mt-12">
+            <Todo />
           </div>
         </>
       )}
       
-      <div className="mt-6 md:mt-8">
-        <RecentActivity flashcardSets={flashcardSets} quizSets={quizSets} />
-      </div>
-      
-      <div className="mt-6 md:mt-8">
-        <h2 className="text-xl font-bold mb-4">Study Tasks</h2>
-        <Todo />
-      </div>
-      
       {/* Flashcard Creation Modal */}
       <FlashcardCreationModal 
-        open={isCreateModalOpen}
-        onClose={handleCloseCreateModal}
-      />
-      
-      {/* Activity Modal */}
-      <ActivityModal
-        open={activityModalOpen}
-        onClose={() => setActivityModalOpen(false)}
-        activity={selectedActivity}
+        open={isCreateModalOpen} 
+        onClose={handleCloseCreateModal} 
       />
     </Layout>
-  )
+  );
 }
 
-export default Dashboard 
+export default Dashboard; 

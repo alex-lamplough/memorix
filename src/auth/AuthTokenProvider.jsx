@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
-import { setAuthTokenGetter } from '../services/api';
+import { setAuthTokenGetter as setOldAuthTokenGetter } from '../services/api';
+import { setAuthTokenGetter, refreshAuthToken } from '../api/apiClient';
 
 /**
  * This component initializes the auth token getter for the API service.
@@ -10,63 +11,75 @@ const AuthTokenProvider = ({ children }) => {
   const { getAccessTokenSilently, isAuthenticated, logout } = useAuth0();
   const [tokenErrorCount, setTokenErrorCount] = useState(0);
   
-  useEffect(() => {
-    // Set up the token getter function that the API service will use
-    setAuthTokenGetter(async () => {
-      if (!isAuthenticated) return null;
+  // Define token getter with useCallback to prevent infinite renders
+  const tokenGetter = useCallback(async () => {
+    if (!isAuthenticated) return null;
+    
+    try {
+      // Try to get a fresh token
+      const token = await getAccessTokenSilently({
+        detailedResponse: true,
+        timeoutInSeconds: 10
+      });
       
-      try {
-        // Try to get a fresh token
-        const token = await getAccessTokenSilently({
-          detailedResponse: true,
-          timeoutInSeconds: 10
-        });
-        
-        // If we succeeded in getting a token after errors, reset error count
-        if (tokenErrorCount > 0) {
-          setTokenErrorCount(0);
-        }
-        
-        // Auth0 may return a different format based on options
-        const accessToken = token.access_token || token;
-        return accessToken;
-      } catch (error) {
-        // Increment error counter to track recurring issues
-        setTokenErrorCount(prev => prev + 1);
-        
-        // Check error type to provide better logging
-        if (error.error === 'login_required' || 
-            error.error === 'consent_required' || 
-            error.error === 'interaction_required') {
-          console.error('Session expired or login required:', error.error);
-          
-          // If we've had multiple failures, attempt logout
-          if (tokenErrorCount > 2) {
-            console.warn('Multiple token failures detected, logging out');
-            setTimeout(() => {
-              logout({ returnTo: window.location.origin });
-            }, 500);
-          }
-        } else {
-          console.error('Error in AuthTokenProvider getting token:', error);
-        }
-        return null;
+      // If we succeeded in getting a token after errors, reset error count
+      if (tokenErrorCount > 0) {
+        setTokenErrorCount(0);
       }
-    });
+      
+      // Auth0 may return a different format based on options
+      const accessToken = token.access_token || token;
+      return accessToken;
+    } catch (error) {
+      // Increment error counter to track recurring issues
+      setTokenErrorCount(prev => prev + 1);
+      
+      // Check error type to provide better logging
+      if (error.error === 'login_required' || 
+          error.error === 'consent_required' || 
+          error.error === 'interaction_required') {
+        console.error('Session expired or login required:', error.error);
+        
+        // If we've had multiple failures, attempt logout
+        if (tokenErrorCount > 2) {
+          console.warn('Multiple token failures detected, logging out');
+          setTimeout(() => {
+            logout({ returnTo: window.location.origin });
+          }, 500);
+        }
+      } else {
+        console.error('Error in AuthTokenProvider getting token:', error);
+      }
+      return null;
+    }
+  }, [getAccessTokenSilently, isAuthenticated, logout, tokenErrorCount]);
+  
+  // Set up the token getter function when component mounts or tokenGetter changes
+  useEffect(() => {
+    // Set up the token getter function for both APIs
+    setAuthTokenGetter(tokenGetter);
+    setOldAuthTokenGetter(tokenGetter); // For backward compatibility
     
     // Log that the token provider is initialized
     console.log('🔐 Auth token provider initialized');
     
-    // Set up periodic token checks to keep session fresh
+    // Force refresh token immediately if authenticated
+    if (isAuthenticated) {
+      refreshAuthToken();
+    }
+  }, [tokenGetter, isAuthenticated]);
+  
+  // Set up periodic token checks to keep session fresh - separate effect to avoid dependency issues
+  useEffect(() => {
     const checkInterval = setInterval(() => {
       if (isAuthenticated) {
         console.log('Performing periodic token check');
-        getAccessTokenSilently()
+        refreshAuthToken()
           .then(() => console.log('Token check successful'))
           .catch(error => {
             console.warn('Token check failed:', error);
             // Reset UI state if token is expired
-            if (error.error === 'login_required') {
+            if (error?.error === 'login_required') {
               console.error('Session expired during token check');
               
               // Show a warning to the user
@@ -95,7 +108,7 @@ const AuthTokenProvider = ({ children }) => {
     }, 15 * 60 * 1000); // Check every 15 minutes
     
     return () => clearInterval(checkInterval);
-  }, [getAccessTokenSilently, isAuthenticated, logout, tokenErrorCount]);
+  }, [isAuthenticated, logout]);
   
   // This component doesn't render anything, just passes children through
   return <>{children}</>;

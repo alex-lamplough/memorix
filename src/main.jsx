@@ -1,4 +1,4 @@
-import { StrictMode } from 'react'
+import { StrictMode, useState, useEffect } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import './index.css'
@@ -10,6 +10,8 @@ import { getEnvironmentName, isProduction } from './utils/env-utils'
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns'
 import { ThemeProvider, createTheme } from '@mui/material/styles'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import queryClient from './api/queryClient'
 
 // Create a dark theme for MUI components
 const darkTheme = createTheme({
@@ -59,15 +61,17 @@ console.log(`📱 Memorix starting in ${env} environment (${isProduction() ? 'pr
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <BrowserRouter>
-      <AuthProvider>
-        <AuthTokenProvider>
-          <ThemeProvider theme={darkTheme}>
-            <LocalizationProvider dateAdapter={AdapterDateFns}>
-              <App />
-            </LocalizationProvider>
-          </ThemeProvider>
-        </AuthTokenProvider>
-      </AuthProvider>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <AuthTokenProvider>
+            <ThemeProvider theme={darkTheme}>
+              <LocalizationProvider dateAdapter={AdapterDateFns}>
+                <App />
+              </LocalizationProvider>
+            </ThemeProvider>
+          </AuthTokenProvider>
+        </AuthProvider>
+      </QueryClientProvider>
     </BrowserRouter>
   </StrictMode>,
 )
