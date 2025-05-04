@@ -5,6 +5,7 @@ import apiClient from '../apiClient';
 export const QUERY_KEYS = {
   QUIZZES: 'quizzes',
   QUIZ: (id) => ['quiz', id],
+  FAVORITES: 'quiz-favorites',
 };
 
 // Hook to fetch all quizzes
@@ -116,6 +117,7 @@ export const useDeleteQuiz = () => {
     onSuccess: (data, id) => {
       // Invalidate and refetch relevant queries
       queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.QUIZZES] });
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.FAVORITES] });
       // Remove the specific quiz from the cache
       queryClient.removeQueries({ queryKey: QUERY_KEYS.QUIZ(id) });
     },
@@ -140,7 +142,53 @@ export const useToggleFavorite = () => {
     onSuccess: () => {
       // Invalidate and refetch the quizzes list
       queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.QUIZZES] });
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.FAVORITES] });
     },
+    retry: 1,
+  });
+};
+
+// Hook to fetch favorite quizzes
+export const useFavoriteQuizzes = () => {
+  return useQuery({
+    queryKey: [QUERY_KEYS.FAVORITES],
+    queryFn: async () => {
+      try {
+        const response = await apiClient.get('/quizzes/favorites');
+        
+        // Process the response to ensure necessary fields
+        const quizzes = response.data.map(quiz => ({
+          ...quiz,
+          questionCount: quiz.questionCount || quiz.totalQuestions || 0
+        }));
+        
+        return quizzes;
+      } catch (error) {
+        if (error.response && error.response.status === 404) {
+          console.log('Favorites endpoint not found, trying alternative path...');
+          try {
+            // Some backends might expect /api/quizzes/favorites format
+            const altResponse = await apiClient.get('/api/quizzes/favorites');
+            
+            // Process the response
+            const quizzes = altResponse.data.map(quiz => ({
+              ...quiz,
+              questionCount: quiz.questionCount || quiz.totalQuestions || 0
+            }));
+            
+            return quizzes;
+          } catch (altError) {
+            console.error('Error fetching from alternative path:', altError);
+            return [];
+          }
+        }
+        
+        console.error('Error fetching favorite quizzes:', error);
+        // Return empty array for better UI experience
+        return [];
+      }
+    },
+    staleTime: 1000 * 60 * 2, // 2 minute stale time
     retry: 1,
   });
 }; 

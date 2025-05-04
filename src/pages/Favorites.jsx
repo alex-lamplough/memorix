@@ -1,7 +1,16 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useRef } from 'react'
 import { useMediaQuery } from '@mui/material'
 import { Menu as MenuIcon } from '@mui/icons-material'
 import { useAuth0 } from '@auth0/auth0-react'
+import { useQueryClient } from '@tanstack/react-query'
+
+// React Query hooks
+import { useFavoriteFlashcardSets, QUERY_KEYS as FLASHCARD_QUERY_KEYS } from '../api/queries/flashcards'
+import { useFavoriteQuizzes, useToggleFavorite as useToggleQuizFavorite, useDeleteQuiz, QUERY_KEYS as QUIZ_QUERY_KEYS } from '../api/queries/quizzes'
+import { useToggleFavorite as useToggleFlashcardFavorite, useDeleteFlashcardSet } from '../api/queries/flashcards'
+
+// Custom hooks
+import useNavigationWithCancellation from '../hooks/useNavigationWithCancellation'
 
 // Components
 import Layout from '../components/Layout'
@@ -9,14 +18,6 @@ import Sidebar from '../components/Sidebar'
 import DashboardHeader from '../components/DashboardHeader'
 import FlashcardSet from '../components/FlashcardSet'
 import ShareModal from '../components/ShareModal'
-
-// Services
-import { flashcardService } from '../services/api'
-import { quizService } from '../services/quiz-service'
-import { handleRequestError } from '../services/utils'
-
-// Custom hooks
-import useNavigationWithCancellation from '../hooks/useNavigationWithCancellation'
 
 // Icons
 import AppsIcon from '@mui/icons-material/Apps'
@@ -32,13 +33,18 @@ import ShareIcon from '@mui/icons-material/Share'
 import DeleteIcon from '@mui/icons-material/Delete'
 import AccessTimeIcon from '@mui/icons-material/AccessTime'
 
-// FlashcardCard component - Reused from Flashcards.jsx
+// FlashcardCard component - Updated to use React Query
 function FlashcardCard({ title, cards, lastStudied, progress, id, onDelete, isFavorite = false, onToggleFavorite }) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [favorite, setFavorite] = useState(isFavorite);
   const navigate = useNavigationWithCancellation();
+  
+  // Use React Query mutation for toggling favorite
+  const toggleFavoriteMutation = useToggleFlashcardFavorite();
+  
+  // Use React Query mutation for deletion
+  const deleteFlashcardMutation = useDeleteFlashcardSet();
   
   // Handle favorite toggle
   const handleToggleFavorite = async () => {
@@ -46,13 +52,22 @@ function FlashcardCard({ title, cards, lastStudied, progress, id, onDelete, isFa
       const newFavoriteStatus = !favorite;
       setFavorite(newFavoriteStatus);
       
-      // Call the API to update the favorite status
-      await flashcardService.toggleFavorite(id, newFavoriteStatus);
-      
-      // If there's a parent callback, invoke it
-      if (onToggleFavorite) {
-        onToggleFavorite(id, newFavoriteStatus);
-      }
+      // Use mutation to update favorite status
+      toggleFavoriteMutation.mutate(
+        { id, isFavorite: newFavoriteStatus },
+        {
+          onSuccess: () => {
+            // If there's a parent callback, invoke it
+            if (onToggleFavorite) {
+              onToggleFavorite(id, newFavoriteStatus);
+            }
+          },
+          onError: () => {
+            // Revert the UI state on error
+            setFavorite(favorite);
+          }
+        }
+      );
     } catch (error) {
       console.error('Error toggling favorite:', error);
       // Revert the UI state on error
@@ -77,21 +92,20 @@ function FlashcardCard({ title, cards, lastStudied, progress, id, onDelete, isFa
   }
   
   const confirmDelete = async () => {
-    try {
-      setIsDeleting(true);
-      // Call API to delete the flashcard set
-      await flashcardService.deleteFlashcardSet(id);
-      setIsDeleting(false);
-      
-      // Call the parent component's onDelete function to update the UI
-      if (onDelete) {
-        onDelete(id);
+    // Use mutation for delete
+    deleteFlashcardMutation.mutate(id, {
+      onSuccess: () => {
+        // Call the parent component's onDelete function to update the UI
+        if (onDelete) {
+          onDelete(id);
+        }
+        setShowDeleteConfirm(false);
+      },
+      onError: (error) => {
+        console.error('Error deleting flashcard set:', error);
+        setShowDeleteConfirm(false);
       }
-    } catch (error) {
-      console.error('Error deleting flashcard set:', error);
-      setIsDeleting(false);
-    }
-    setShowDeleteConfirm(false);
+    });
   }
   
   return (
@@ -136,16 +150,16 @@ function FlashcardCard({ title, cards, lastStudied, progress, id, onDelete, isFa
               <button 
                 onClick={() => setShowDeleteConfirm(false)} 
                 className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg"
-                disabled={isDeleting}
+                disabled={deleteFlashcardMutation.isPending}
               >
                 Cancel
               </button>
               <button 
                 onClick={confirmDelete} 
                 className="px-4 py-2 bg-red-500/20 text-red-400 hover:bg-red-500/30 rounded-lg"
-                disabled={isDeleting}
+                disabled={deleteFlashcardMutation.isPending}
               >
-                {isDeleting ? 'Deleting...' : 'Delete'}
+                {deleteFlashcardMutation.isPending ? 'Deleting...' : 'Delete'}
               </button>
             </div>
           </div>
@@ -198,13 +212,16 @@ function FlashcardCard({ title, cards, lastStudied, progress, id, onDelete, isFa
   )
 }
 
-// QuizCard component - Reused from Quizzes.jsx
+// QuizCard component - Updated to use React Query
 function QuizCard({ title, description, questionCount, difficulty, time, tags, id = 1, onDelete, isFavorite = false, onToggleFavorite }) {
   const [isShareModalOpen, setIsShareModalOpen] = useState(false)
-  const [isDeleting, setIsDeleting] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [favorite, setFavorite] = useState(isFavorite)
   const navigate = useNavigationWithCancellation()
+  
+  // Use React Query mutations
+  const toggleFavoriteMutation = useToggleQuizFavorite();
+  const deleteQuizMutation = useDeleteQuiz();
   
   const handleEditClick = () => {
     navigate(`/edit-quiz/${id}`)
@@ -219,13 +236,22 @@ function QuizCard({ title, description, questionCount, difficulty, time, tags, i
       const newFavoriteStatus = !favorite
       setFavorite(newFavoriteStatus)
       
-      // Call the API to update the favorite status
-      await quizService.toggleFavorite(id, newFavoriteStatus)
-      
-      // If there's a parent callback, invoke it
-      if (onToggleFavorite) {
-        onToggleFavorite(id, newFavoriteStatus)
-      }
+      // Use mutation to update favorite status
+      toggleFavoriteMutation.mutate(
+        { id, isFavorite: newFavoriteStatus },
+        {
+          onSuccess: () => {
+            // If there's a parent callback, invoke it
+            if (onToggleFavorite) {
+              onToggleFavorite(id, newFavoriteStatus)
+            }
+          },
+          onError: () => {
+            // Revert the UI state on error
+            setFavorite(favorite)
+          }
+        }
+      );
     } catch (error) {
       console.error('Error toggling favorite:', error)
       // Revert the UI state on error
@@ -234,46 +260,27 @@ function QuizCard({ title, description, questionCount, difficulty, time, tags, i
   }
   
   const confirmDelete = async () => {
-    try {
-      setIsDeleting(true)
-      console.log('Starting delete operation for quiz ID:', id);
-      
-      // First, fetch the quiz to confirm we can delete it
-      try {
-        const quizData = await quizService.getQuiz(id);
-        console.log('Quiz data before deletion:', quizData);
-      } catch (error) {
-        console.log('Error fetching quiz data (non-critical):', error);
-      }
-      
-      const response = await quizService.deleteQuiz(id);
-      console.log('Delete response:', response);
-      setIsDeleting(false)
-      
-      if (onDelete) {
-        console.log('Calling onDelete with ID:', id);
-        onDelete(id)
-      }
-    } catch (error) {
-      console.error('Detailed error deleting quiz:', error)
-      
-      if (error.response) {
+    // Use mutation for delete
+    deleteQuizMutation.mutate(id, {
+      onSuccess: () => {
+        if (onDelete) {
+          onDelete(id);
+        }
+        setShowDeleteConfirm(false);
+      },
+      onError: (error) => {
+        console.error('Error deleting quiz:', error);
+        
         // If 403, user is not authorized (owner ID mismatch)
-        if (error.response.status === 403) {
-          console.error('Error 403: You are not authorized to delete this quiz. Contact the administrator.');
+        if (error.response && error.response.status === 403) {
           // Handle by removing from UI anyway for better UX
           if (onDelete) {
-            console.log('Calling onDelete with ID (despite error):', id);
             onDelete(id);
           }
-        } else {
-          console.error('Error response data:', error.response.data);
-          console.error('Error response status:', error.response.status);
         }
+        setShowDeleteConfirm(false);
       }
-      setIsDeleting(false)
-    }
-    setShowDeleteConfirm(false)
+    });
   }
   
   return (
@@ -363,16 +370,16 @@ function QuizCard({ title, description, questionCount, difficulty, time, tags, i
               <button
                 className="px-4 py-2 rounded-lg border border-gray-700 text-white/80 hover:bg-white/5"
                 onClick={() => setShowDeleteConfirm(false)}
-                disabled={isDeleting}
+                disabled={deleteQuizMutation.isPending}
               >
                 Cancel
               </button>
               <button
                 className="px-4 py-2 rounded-lg bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500/20"
                 onClick={confirmDelete}
-                disabled={isDeleting}
+                disabled={deleteQuizMutation.isPending}
               >
-                {isDeleting ? 'Deleting...' : 'Delete'}
+                {deleteQuizMutation.isPending ? 'Deleting...' : 'Delete'}
               </button>
             </div>
           </div>
@@ -393,176 +400,64 @@ function QuizCard({ title, description, questionCount, difficulty, time, tags, i
 }
 
 function Favorites() {
-  const [favoriteFlashcards, setFavoriteFlashcards] = useState([]);
-  const [favoriteQuizzes, setFavoriteQuizzes] = useState([]);
   const [activeTab, setActiveTab] = useState('all'); // 'all', 'flashcards', 'quizzes'
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterType, setFilterType] = useState('all');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const isMobile = useMediaQuery('(max-width:768px)');
-  const isMountedRef = useRef(true);
-  const { isAuthenticated, getAccessTokenSilently } = useAuth0();
   const navigate = useNavigationWithCancellation();
-
-  // Check authentication
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        console.log('Checking authentication status:', isAuthenticated);
-        
-        if (isAuthenticated) {
-          const token = await getAccessTokenSilently();
-          console.log('Auth token available:', token ? 'Yes' : 'No');
-        } else {
-          console.log('User is not authenticated');
-          setError('Please log in to view your favorites');
-          setIsLoading(false);
-        }
-      } catch (error) {
-        console.error('Auth token error:', error);
-        setError('Authentication error. Please try logging in again.');
-        setIsLoading(false);
-      }
-    };
-    
-    checkAuth();
-  }, [isAuthenticated, getAccessTokenSilently]);
-
-  // Fetch favorites on component mount
-  useEffect(() => {
-    console.log('Favorites component mounted');
-    isMountedRef.current = true;
-    
-    if (isAuthenticated) {
-      console.log('User is authenticated, fetching favorites');
-      // Add a small delay to ensure authentication is fully processed
-      const timer = setTimeout(() => {
-        if (isMountedRef.current) {
-          fetchFavorites();
-        }
-      }, 500);
-      
-      return () => {
-        clearTimeout(timer);
-        console.log('Favorites component unmounting, cleaning up');
-        isMountedRef.current = false;
-      };
-    } else {
-      console.log('User is not authenticated, skipping fetch');
-      setIsLoading(false);
-      
-      return () => {
-        console.log('Favorites component unmounting, cleaning up');
-        isMountedRef.current = false;
-      };
-    }
-  }, [isAuthenticated]);
-
-  // Fetch favorite items
-  const fetchFavorites = async () => {
-    if (!isMountedRef.current) return;
-    
-    try {
-      setIsLoading(true);
-      setError(null);
-      
-      console.log('Fetching favorites - component mounted:', isMountedRef.current);
-      
-      // Fetch flashcards and quizzes in parallel
-      const [flashcardsResponse, quizzesResponse] = await Promise.all([
-        flashcardService.getFavorites().catch(err => {
-          console.error('Error in flashcard favorites request:', err);
-          return [];
-        }),
-        quizService.getFavorites().catch(err => {
-          console.error('Error in quiz favorites request:', err);
-          return [];
-        })
-      ]);
-      
-      // Guard against setting state on unmounted component
-      if (!isMountedRef.current) return;
-      
-      console.log('Favorites API responses received:', { 
-        flashcards: flashcardsResponse,
-        quizzes: quizzesResponse
-      });
-      
-      // If both responses are empty arrays, show a helpful message
-      if (Array.isArray(flashcardsResponse) && flashcardsResponse.length === 0 &&
-          Array.isArray(quizzesResponse) && quizzesResponse.length === 0) {
-        console.log('No favorites found for this user');
-        // Only set error if we have user info (not a cancelled request)
-        if (isAuthenticated) {
-          setError('No favorites found. Try adding some flashcards or quizzes to your favorites!');
-        }
-      }
-      
-      // Process flashcards
-      const transformedFlashcards = Array.isArray(flashcardsResponse) 
-        ? flashcardsResponse.map(set => ({
-            id: set._id || set.id,
-            title: set.title,
-            description: set.description || '',
-            category: set.category || '',
-            tags: set.tags || [],
-            cardCount: set.cardCount || (set.cards ? set.cards.length : 0),
-            createdAt: set.createdAt,
-            type: 'flashcard',
-            isFavorite: true
-          }))
-        : [];
-      
-      // Process quizzes
-      const transformedQuizzes = Array.isArray(quizzesResponse)
-        ? quizzesResponse.map(quiz => ({
-            id: quiz._id || quiz.id,
-            title: quiz.title,
-            description: quiz.description || '',
-            category: quiz.category || '',
-            tags: quiz.tags || [],
-            questionCount: quiz.questionCount || 0,
-            difficulty: quiz.difficulty || 'Medium',
-            time: quiz.time || '5 min',
-            createdAt: quiz.createdAt,
-            type: 'quiz',
-            isFavorite: true,
-            showOptionsMenu: false
-          }))
-        : [];
-      
-      console.log('Setting state with transformed responses:', {
-        flashcards: transformedFlashcards,
-        quizzes: transformedQuizzes
-      });
-      
-      // Update state with transformed data
-      setFavoriteFlashcards(transformedFlashcards);
-      setFavoriteQuizzes(transformedQuizzes);
-    } catch (error) {
-      console.error('Error fetching favorites:', error);
-      
-      // Guard against setting state on unmounted component
-      if (!isMountedRef.current) return;
-      
-      setError('Error fetching favorites. Please try again later.');
-    } finally {
-      // Guard against setting state on unmounted component
-      if (!isMountedRef.current) return;
-      
-      console.log('Setting loading state to false');
-      setIsLoading(false);
-    }
-  };
+  const queryClient = useQueryClient();
+  
+  // Use React Query hooks for fetching favorites
+  const { 
+    data: favoriteFlashcards = [], 
+    isLoading: isLoadingFlashcards,
+    error: flashcardsError,
+  } = useFavoriteFlashcardSets();
+  
+  const { 
+    data: favoriteQuizzes = [], 
+    isLoading: isLoadingQuizzes,
+    error: quizzesError,
+  } = useFavoriteQuizzes();
+  
+  // Determine overall loading and error states
+  const isLoading = isLoadingFlashcards || isLoadingQuizzes;
+  const error = flashcardsError || quizzesError;
+  
+  // Transform flashcards data if needed
+  const transformedFlashcards = favoriteFlashcards.map(set => ({
+    id: set._id || set.id,
+    title: set.title,
+    description: set.description || '',
+    category: set.category || '',
+    tags: set.tags || [],
+    cardCount: set.cardCount || (set.cards ? set.cards.length : 0),
+    createdAt: set.createdAt,
+    type: 'flashcard',
+    isFavorite: true
+  }));
+  
+  // Transform quizzes data if needed
+  const transformedQuizzes = favoriteQuizzes.map(quiz => ({
+    id: quiz._id || quiz.id,
+    title: quiz.title,
+    description: quiz.description || '',
+    category: quiz.category || '',
+    tags: quiz.tags || [],
+    questionCount: quiz.questionCount || 0,
+    difficulty: quiz.difficulty || 'Medium',
+    time: quiz.time || '5 min',
+    createdAt: quiz.createdAt,
+    type: 'quiz',
+    isFavorite: true
+  }));
 
   // Filter favorites based on search query and active tab
   const filteredFavorites = {
-    flashcards: favoriteFlashcards.filter(item => 
+    flashcards: transformedFlashcards.filter(item => 
       item.title.toLowerCase().includes(searchQuery.toLowerCase())
     ),
-    quizzes: favoriteQuizzes.filter(item => 
+    quizzes: transformedQuizzes.filter(item => 
       item.title.toLowerCase().includes(searchQuery.toLowerCase())
     )
   };
@@ -580,16 +475,14 @@ function Favorites() {
   // Handle favorite toggle for flashcard sets
   const handleFlashcardFavoriteToggle = (id, newStatus) => {
     if (!newStatus) {
-      // Remove from favorites list
-      setFavoriteFlashcards(prev => prev.filter(item => item.id !== id));
+      // This is handled automatically by React Query invalidation
     }
   };
 
   // Handle favorite toggle for quizzes
   const handleQuizFavoriteToggle = (id, newStatus) => {
     if (!newStatus) {
-      // Remove from favorites list
-      setFavoriteQuizzes(prev => prev.filter(item => item.id !== id));
+      // This is handled automatically by React Query invalidation
     }
   };
 
@@ -639,7 +532,11 @@ function Favorites() {
         <div className="text-center py-8">
           <p className="text-white/70 mb-4">{error}</p>
           <button 
-            onClick={fetchFavorites}
+            onClick={() => {
+              // Refresh both queries
+              queryClient.invalidateQueries({ queryKey: [FLASHCARD_QUERY_KEYS.FAVORITES] });
+              queryClient.invalidateQueries({ queryKey: [QUIZ_QUERY_KEYS.FAVORITES] });
+            }}
             className="bg-[#00ff94]/10 text-[#00ff94] px-4 py-2 rounded-lg hover:bg-[#00ff94]/20 transition-colors border border-[#00ff94]/30"
           >
             Try Again
@@ -666,7 +563,7 @@ function Favorites() {
                     onToggleFavorite={handleFlashcardFavoriteToggle}
                     onDelete={(id) => {
                       // Remove deleted flashcard from favorites
-                      setFavoriteFlashcards(prev => prev.filter(item => item.id !== id));
+                      // This is handled automatically by React Query invalidation
                     }}
                   />
                 ))}
@@ -695,7 +592,7 @@ function Favorites() {
                     onToggleFavorite={handleQuizFavoriteToggle}
                     onDelete={(id) => {
                       // Remove deleted quiz from favorites
-                      setFavoriteQuizzes(prev => prev.filter(item => item.id !== id));
+                      // This is handled automatically by React Query invalidation
                     }}
                   />
                 ))}
