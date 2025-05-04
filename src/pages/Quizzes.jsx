@@ -47,10 +47,7 @@ function QuizCard({ title, description, questionCount, difficulty, time, tags, i
       const newFavoriteStatus = !favorite
       setFavorite(newFavoriteStatus)
       
-      // Call the API to update the favorite status
-      await quizService.toggleFavorite(id, newFavoriteStatus)
-      
-      // If there's a parent callback, invoke it
+      // Use the parent callback that uses React Query
       if (onToggleFavorite) {
         onToggleFavorite(id, newFavoriteStatus)
       }
@@ -64,41 +61,15 @@ function QuizCard({ title, description, questionCount, difficulty, time, tags, i
   const confirmDelete = async () => {
     try {
       setIsDeleting(true)
-      console.log('Starting delete operation for quiz ID:', id);
       
-      // First, fetch the quiz to confirm we can delete it
-      try {
-        const quizData = await quizService.getQuiz(id);
-        console.log('Quiz data before deletion:', quizData);
-      } catch (error) {
-        console.log('Error fetching quiz data (non-critical):', error);
-      }
-      
-      const response = await quizService.deleteQuiz(id);
-      console.log('Delete response:', response);
-      setIsDeleting(false)
-      
+      // Use the parent callback that uses React Query
       if (onDelete) {
-        console.log('Calling onDelete with ID:', id);
-        onDelete(id)
+        await onDelete(id)
       }
-    } catch (error) {
-      console.error('Detailed error deleting quiz:', error)
       
-      if (error.response) {
-        // If 403, user is not authorized (owner ID mismatch)
-        if (error.response.status === 403) {
-          console.error('Error 403: You are not authorized to delete this quiz. Contact the administrator.');
-          // Handle by removing from UI anyway for better UX
-          if (onDelete) {
-            console.log('Calling onDelete with ID (despite error):', id);
-            onDelete(id);
-          }
-        } else {
-          console.error('Error response data:', error.response.data);
-          console.error('Error response status:', error.response.status);
-        }
-      }
+      setIsDeleting(false)
+    } catch (error) {
+      console.error('Error deleting quiz:', error)
       setIsDeleting(false)
     }
     setShowDeleteConfirm(false)
