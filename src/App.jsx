@@ -1,5 +1,5 @@
 import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom'
-import { useState, useEffect, lazy, Suspense } from 'react'
+import { useState, useEffect, lazy, Suspense, useRef } from 'react'
 
 // Feature icons
 import BoltIcon from '@mui/icons-material/Bolt'
@@ -23,6 +23,7 @@ import ProtectedRoute from './auth/ProtectedRoute'
 import Todo from './components/Todo'
 import FeatureDetailModal from './components/FeatureDetailModal'
 import Header from './Header'
+import DemoModal from './components/DemoModal'
 
 // Lazy load page components
 // These components are only loaded when they are needed
@@ -45,6 +46,7 @@ import OnboardingGuard from './components/OnboardingGuard'
 
 // Assets
 import logoWhite from './assets/MemorixLogoWhite.png'
+import logoGreen from './assets/MemorixLogoGreen.png'
 
 // Services
 import { flashcardService } from './services/api'
@@ -129,7 +131,68 @@ function AnimatedHeading() {
   )
 }
 
+// StickyNav component for smooth section navigation
+function StickyNav({ activeSection }) {
+  const scrollToSection = (sectionId) => {
+    const element = document.getElementById(sectionId);
+    if (element) {
+      element.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    }
+  };
+
+  return (
+    <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 bg-[#18092a]/80 backdrop-blur-md px-4 py-2 rounded-full border border-gray-800/30 shadow-xl hidden md:flex">
+      <div className="flex items-center space-x-6">
+        <button 
+          onClick={() => scrollToSection('features')} 
+          className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${activeSection === 'features' ? 'bg-[#00ff94]/20 text-[#00ff94]' : 'text-white/70 hover:text-white'}`}
+        >
+          Features
+        </button>
+        <button 
+          onClick={() => scrollToSection('pricing')} 
+          className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${activeSection === 'pricing' ? 'bg-[#00ff94]/20 text-[#00ff94]' : 'text-white/70 hover:text-white'}`}
+        >
+          Pricing
+        </button>
+        <button 
+          onClick={() => scrollToSection('testimonials')} 
+          className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${activeSection === 'testimonials' ? 'bg-[#00ff94]/20 text-[#00ff94]' : 'text-white/70 hover:text-white'}`}
+        >
+          Testimonials
+        </button>
+        <button 
+          onClick={() => scrollToSection('faq')} 
+          className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${activeSection === 'faq' ? 'bg-[#00ff94]/20 text-[#00ff94]' : 'text-white/70 hover:text-white'}`}
+        >
+          FAQ
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function Hero() {
+  const [isDemoModalOpen, setIsDemoModalOpen] = useState(false);
+
+  const openDemoModal = () => {
+    setIsDemoModalOpen(true);
+  };
+
+  const closeDemoModal = () => {
+    setIsDemoModalOpen(false);
+  };
+
+  const scrollToFeatures = () => {
+    const featuresSection = document.getElementById('features');
+    if (featuresSection) {
+      featuresSection.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   return (
     <div className="container mx-auto px-4 flex flex-col items-center text-white">
       {/* Top spacer */}
@@ -139,13 +202,43 @@ function Hero() {
       <div className="min-h-[150px] py-4 flex flex-col items-center justify-center">
         <AnimatedHeading />
         
-        <p className="text-sm sm:text-base text-white/80 mt-2 max-w-xl text-center px-2">
+        <p className="text-sm sm:text-base md:text-lg text-white/80 mt-2 max-w-xl text-center px-2">
           Notes to flashcards in seconds, with your personal AI tutor
         </p>
+
+        <div className="flex flex-col sm:flex-row items-center gap-4 mt-12 sm:mt-16">
+          <button
+            onClick={openDemoModal}
+            className="relative group bg-[#00ff94] text-[#18092a] px-8 py-3 rounded-lg font-medium hover:bg-[#00ff94]/90 transition-all transform hover:scale-105 shadow-lg hover:shadow-[#00ff94]/20 flex items-center"
+          >
+            <span className="mr-2">Watch Demo</span>
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+            </svg>
+            <span className="absolute -top-9 left-1/2 transform -translate-x-1/2 bg-[#00ff94] text-[#18092a] text-[10px] py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">
+              Watch our platform tutorial
+            </span>
+          </button>
+          
+          <button 
+            onClick={scrollToFeatures}
+            className="bg-transparent text-white hover:text-[#00ff94] border border-white/30 hover:border-[#00ff94]/50 px-6 py-3 rounded-lg font-medium transition-all transform hover:scale-105 flex items-center"
+          >
+            <span className="mr-2">Explore Features</span>
+            <ArrowForwardIcon fontSize="small" />
+          </button>
+        </div>
+        
+        <div className="mt-16 animate-pulse opacity-75">
+          <ExpandMoreIcon onClick={scrollToFeatures} className="text-[#00ff94] cursor-pointer text-3xl" />
+        </div>
       </div>
       
-      {/* Responsive spacer */}
-      <div className="h-[80px] sm:h-[120px]"></div>
+      {/* Responsive spacer - reduced height */}
+      <div className="h-[40px] sm:h-[60px]"></div>
+
+      {/* Demo Modal */}
+      <DemoModal isOpen={isDemoModalOpen} onClose={closeDemoModal} />
     </div>
   )
 }
@@ -213,161 +306,35 @@ function Features() {
   };
   
   return (
-    <div className="py-16">
-      <h2 className="text-3xl font-bold text-center mb-16">Features</h2>
+    <div className="py-16 relative">
+      {/* Section Title with decorative elements */}
+      <div className="flex flex-col items-center mb-16 relative">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 bg-[#00ff94]/10 rounded-full blur-2xl"></div>
+        <h2 className="text-3xl font-bold text-center relative z-10">Features</h2>
+        <div className="w-20 h-0.5 bg-gradient-to-r from-transparent via-[#00ff94] to-transparent mt-4"></div>
+      </div>
       
-      <div className="space-y-20">
-        {/* First row */}
-        <div className="flex flex-col lg:flex-row">
-          <div className="w-full lg:w-1/2 px-4 mb-10 lg:mb-0">
-            <div 
-              className="bg-[#15052a]/60 rounded-2xl shadow-xl p-8 text-white border border-gray-800/50 hover:border-[#00ff94]/30 hover:shadow-[0_0_15px_rgba(0,255,148,0.15)] transition-all h-full flex flex-col"
-            >
-              <div className={`${features[0].color} w-16 h-16 rounded-full flex items-center justify-center mb-6 border border-gray-800/30`}>
-                {features[0].icon}
-              </div>
-              <h3 className="text-2xl font-bold mb-4">{features[0].title}</h3>
-              <p className="text-white/70 mb-6 flex-grow">{features[0].desc}</p>
-              <button 
-                className="text-[#00ff94] py-2 px-5 rounded-lg font-semibold hover:bg-[#00ff94]/10 transition-colors w-fit mt-auto"
-                onClick={() => openFeatureModal(features[0].title)}
-              >
-                Learn more
-              </button>
+      {/* Features grid - reorganized into a cleaner grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {features.map((feature, index) => (
+          <div 
+            key={index}
+            className="bg-[#15052a]/60 rounded-2xl shadow-xl p-6 text-white border border-gray-800/50 hover:border-[#00ff94]/30 hover:shadow-[0_0_15px_rgba(0,255,148,0.15)] transition-all h-full flex flex-col group"
+          >
+            <div className={`${feature.color} w-14 h-14 rounded-full flex items-center justify-center mb-5 border border-gray-800/30 group-hover:scale-110 transition-transform duration-300 shadow-lg`}>
+              {feature.icon}
             </div>
-          </div>
-          <div className="lg:mt-24 w-full lg:w-1/2 px-4">
-            <div 
-              className="bg-[#15052a]/60 rounded-2xl shadow-xl p-8 text-white border border-gray-800/50 hover:border-[#00ff94]/30 hover:shadow-[0_0_15px_rgba(0,255,148,0.15)] transition-all h-full flex flex-col"
+            <h3 className="text-xl font-bold mb-3">{feature.title}</h3>
+            <p className="text-white/70 mb-5 flex-grow text-sm">{feature.desc}</p>
+            <button 
+              className="text-[#00ff94] py-2 px-4 rounded-lg font-semibold hover:bg-[#00ff94]/10 transition-colors w-fit mt-auto flex items-center gap-2 text-sm group-hover:bg-[#00ff94]/10"
+              onClick={() => openFeatureModal(feature.title)}
             >
-              <div className={`${features[1].color} w-16 h-16 rounded-full flex items-center justify-center mb-6 border border-gray-800/30`}>
-                {features[1].icon}
-              </div>
-              <h3 className="text-2xl font-bold mb-4">{features[1].title}</h3>
-              <p className="text-white/70 mb-6 flex-grow">{features[1].desc}</p>
-              <button 
-                className="text-[#00ff94] py-2 px-5 rounded-lg font-semibold hover:bg-[#00ff94]/10 transition-colors w-fit mt-auto"
-                onClick={() => openFeatureModal(features[1].title)}
-              >
-                Learn more
-              </button>
-            </div>
+              <span>Learn more</span>
+              <ArrowForwardIcon fontSize="small" className="group-hover:translate-x-1 transition-transform" />
+            </button>
           </div>
-        </div>
-        
-        {/* Second row */}
-        <div className="flex flex-col lg:flex-row">
-          <div className="w-full lg:w-1/2 px-4 mb-10 lg:mb-0 lg:mt-24">
-            <div 
-              className="bg-[#15052a]/60 rounded-2xl shadow-xl p-8 text-white border border-gray-800/50 hover:border-[#00ff94]/30 hover:shadow-[0_0_15px_rgba(0,255,148,0.15)] transition-all h-full flex flex-col"
-            >
-              <div className={`${features[2].color} w-16 h-16 rounded-full flex items-center justify-center mb-6 border border-gray-800/30`}>
-                {features[2].icon}
-              </div>
-              <h3 className="text-2xl font-bold mb-4">{features[2].title}</h3>
-              <p className="text-white/70 mb-6 flex-grow">{features[2].desc}</p>
-              <button 
-                className="text-[#00ff94] py-2 px-5 rounded-lg font-semibold hover:bg-[#00ff94]/10 transition-colors w-fit mt-auto"
-                onClick={() => openFeatureModal(features[2].title)}
-              >
-                Learn more
-              </button>
-            </div>
-          </div>
-          <div className="w-full lg:w-1/2 px-4">
-            <div 
-              className="bg-[#15052a]/60 rounded-2xl shadow-xl p-8 text-white border border-gray-800/50 hover:border-[#00ff94]/30 hover:shadow-[0_0_15px_rgba(0,255,148,0.15)] transition-all h-full flex flex-col"
-            >
-              <div className={`${features[3].color} w-16 h-16 rounded-full flex items-center justify-center mb-6 border border-gray-800/30`}>
-                {features[3].icon}
-              </div>
-              <h3 className="text-2xl font-bold mb-4">{features[3].title}</h3>
-              <p className="text-white/70 mb-6 flex-grow">{features[3].desc}</p>
-              <button 
-                className="text-[#00ff94] py-2 px-5 rounded-lg font-semibold hover:bg-[#00ff94]/10 transition-colors w-fit mt-auto"
-                onClick={() => openFeatureModal(features[3].title)}
-              >
-                Learn more
-              </button>
-            </div>
-          </div>
-        </div>
-        
-        {/* Third row */}
-        <div className="flex flex-col lg:flex-row">
-          <div className="w-full lg:w-1/2 px-4 mb-10 lg:mb-0">
-            <div 
-              className="bg-[#15052a]/60 rounded-2xl shadow-xl p-8 text-white border border-gray-800/50 hover:border-[#00ff94]/30 hover:shadow-[0_0_15px_rgba(0,255,148,0.15)] transition-all h-full flex flex-col"
-            >
-              <div className={`${features[4].color} w-16 h-16 rounded-full flex items-center justify-center mb-6 border border-gray-800/30`}>
-                {features[4].icon}
-              </div>
-              <h3 className="text-2xl font-bold mb-4">{features[4].title}</h3>
-              <p className="text-white/70 mb-6 flex-grow">{features[4].desc}</p>
-              <button 
-                className="text-[#00ff94] py-2 px-5 rounded-lg font-semibold hover:bg-[#00ff94]/10 transition-colors w-fit mt-auto"
-                onClick={() => openFeatureModal(features[4].title)}
-              >
-                Learn more
-              </button>
-            </div>
-          </div>
-          <div className="lg:mt-24 w-full lg:w-1/2 px-4">
-            <div 
-              className="bg-[#15052a]/60 rounded-2xl shadow-xl p-8 text-white border border-gray-800/50 hover:border-[#00ff94]/30 hover:shadow-[0_0_15px_rgba(0,255,148,0.15)] transition-all h-full flex flex-col"
-            >
-              <div className={`${features[5].color} w-16 h-16 rounded-full flex items-center justify-center mb-6 border border-gray-800/30`}>
-                {features[5].icon}
-              </div>
-              <h3 className="text-2xl font-bold mb-4">{features[5].title}</h3>
-              <p className="text-white/70 mb-6 flex-grow">{features[5].desc}</p>
-              <button 
-                className="text-[#00ff94] py-2 px-5 rounded-lg font-semibold hover:bg-[#00ff94]/10 transition-colors w-fit mt-auto"
-                onClick={() => openFeatureModal(features[5].title)}
-              >
-                Learn more
-              </button>
-            </div>
-          </div>
-        </div>
-        
-        {/* Fourth row */}
-        <div className="flex flex-col lg:flex-row">
-          <div className="w-full lg:w-1/2 px-4 mb-10 lg:mb-0 lg:mt-24">
-            <div 
-              className="bg-[#15052a]/60 rounded-2xl shadow-xl p-8 text-white border border-gray-800/50 hover:border-[#00ff94]/30 hover:shadow-[0_0_15px_rgba(0,255,148,0.15)] transition-all h-full flex flex-col"
-            >
-              <div className={`${features[6].color} w-16 h-16 rounded-full flex items-center justify-center mb-6 border border-gray-800/30`}>
-                {features[6].icon}
-              </div>
-              <h3 className="text-2xl font-bold mb-4">{features[6].title}</h3>
-              <p className="text-white/70 mb-6 flex-grow">{features[6].desc}</p>
-              <button 
-                className="text-[#00ff94] py-2 px-5 rounded-lg font-semibold hover:bg-[#00ff94]/10 transition-colors w-fit mt-auto"
-                onClick={() => openFeatureModal(features[6].title)}
-              >
-                Learn more
-              </button>
-            </div>
-          </div>
-          <div className="w-full lg:w-1/2 px-4">
-            <div 
-              className="bg-[#15052a]/60 rounded-2xl shadow-xl p-8 text-white border border-gray-800/50 hover:border-[#00ff94]/30 hover:shadow-[0_0_15px_rgba(0,255,148,0.15)] transition-all h-full flex flex-col"
-            >
-              <div className={`${features[7].color} w-16 h-16 rounded-full flex items-center justify-center mb-6 border border-gray-800/30`}>
-                {features[7].icon}
-              </div>
-              <h3 className="text-2xl font-bold mb-4">{features[7].title}</h3>
-              <p className="text-white/70 mb-6 flex-grow">{features[7].desc}</p>
-              <button 
-                className="text-[#00ff94] py-2 px-5 rounded-lg font-semibold hover:bg-[#00ff94]/10 transition-colors w-fit mt-auto"
-                onClick={() => openFeatureModal(features[7].title)}
-              >
-                Learn more
-              </button>
-            </div>
-          </div>
-        </div>
+        ))}
       </div>
       
       {/* Feature Detail Modal */}
@@ -462,20 +429,26 @@ function PricingSection() {
   }, []);
 
   return (
-    <div className="py-16">
-      <h2 className="text-3xl font-bold text-center mb-4">Pricing</h2>
-      <p className="text-white/70 text-center mb-10 max-w-xl mx-auto">
+    <div className="py-16 relative">
+      {/* Section Title with decorative elements */}
+      <div className="flex flex-col items-center mb-8 relative">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 bg-[#a259ff]/10 rounded-full blur-2xl"></div>
+        <h2 className="text-3xl font-bold text-center relative z-10">Pricing</h2>
+        <div className="w-20 h-0.5 bg-gradient-to-r from-transparent via-[#a259ff] to-transparent mt-4"></div>
+      </div>
+      
+      <p className="text-white/70 text-center mb-10 max-w-xl mx-auto text-sm md:text-base">
         Choose the plan that fits your needs. All plans include core features and regular updates.
       </p>
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-        {pricingPlans.map((plan) => (
+      <div className="flex flex-col md:flex-row gap-8 max-w-5xl mx-auto justify-center">
+        {pricingPlans.map((plan, index) => (
           <div 
             key={plan.name} 
-            className={`${plan.bgColor} rounded-2xl p-8 border ${plan.popular ? 'border-[#00ff94]/30 shadow-[0_0_20px_rgba(0,255,148,0.15)]' : 'border-gray-800/50'} relative flex flex-col h-full`}
+            className={`${plan.bgColor} rounded-2xl p-8 border ${plan.popular ? 'border-[#00ff94]/30 shadow-[0_0_20px_rgba(0,255,148,0.15)] md:scale-105 md:-translate-y-3' : 'border-gray-800/50'} relative flex flex-col h-full flex-1 max-w-md mx-auto md:mx-0 transition-all duration-300 hover:shadow-lg ${plan.popular ? 'hover:shadow-[#00ff94]/20' : 'hover:shadow-white/5'}`}
           >
             {plan.popular && (
-              <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-[#00ff94] text-black text-xs font-bold py-1 px-4 rounded-full">
+              <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-[#00ff94] text-black text-xs font-bold py-1 px-4 rounded-full shadow-md">
                 Most Popular
               </div>
             )}
@@ -542,53 +515,11 @@ const faqs = [
   },
 ]
 
-function FAQSection() {
-  const [openIndex, setOpenIndex] = useState(null)
-
-  const toggleFaq = (index) => {
-    setOpenIndex(openIndex === index ? null : index)
-  }
-
-  return (
-    <div className="py-16">
-      <h2 className="text-3xl font-extrabold text-center text-white mb-10">
-        Frequently Asked Questions
-      </h2>
-      <div className="max-w-3xl mx-auto">
-        {faqs.map((faq, index) => (
-          <div 
-            key={faq.q} 
-            className="bg-[#15052a]/60 rounded-xl mb-4 overflow-hidden border border-gray-800/50 shadow-lg hover:border-gray-700/70 transition-colors"
-          >
-            <button
-              className="w-full px-6 py-4 text-left font-bold text-white flex justify-between items-center"
-              onClick={() => toggleFaq(index)}
-            >
-              {faq.q}
-              <ExpandMoreIcon className={`text-[#00ff94] transition-transform ${openIndex === index ? 'rotate-180' : ''}`} />
-            </button>
-            {openIndex === index && (
-              <div className="px-6 py-4 text-white/80 text-sm">
-                {faq.a}
-              </div>
-            )}
-          </div>
-        ))}
-        <div className="flex justify-center mt-10">
-          <button className="text-[#00ff94] border-2 border-[#00ff94] px-8 py-3 rounded-xl font-bold text-lg hover:bg-[#00ff94]/10 transition-colors shadow-md shadow-[#00ff94]/20">
-            Get started free
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
-
 function TestimonialCard({ quote, author, role, avatar }) {
   return (
-    <div className="bg-[#15052a]/60 rounded-xl p-6 border border-gray-800/30 shadow-lg">
+    <div className="bg-[#15052a]/60 rounded-xl p-6 border border-gray-800/30 shadow-lg hover:border-[#00ff94]/10 transition-all group">
       <div className="flex items-center gap-4 mb-4">
-        <div className="w-12 h-12 bg-gradient-to-br from-[#00ff94] to-[#a259ff] rounded-full flex items-center justify-center text-white font-bold">
+        <div className="w-12 h-12 bg-gradient-to-br from-[#00ff94] to-[#a259ff] rounded-full flex items-center justify-center text-white font-bold shadow-md group-hover:scale-105 transition-transform duration-300">
           {avatar}
         </div>
         <div>
@@ -596,16 +527,22 @@ function TestimonialCard({ quote, author, role, avatar }) {
           <p className="text-white/60 text-sm">{role}</p>
         </div>
       </div>
-      <p className="text-white/80 italic">"{quote}"</p>
+      <p className="text-white/80 italic">{quote}</p>
     </div>
   )
 }
 
 function Testimonials() {
   return (
-    <div className="py-16">
-      <h2 className="text-3xl font-bold text-center mb-10">What Our Users Say</h2>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div className="py-16 relative">
+      {/* Section Title with decorative elements */}
+      <div className="flex flex-col items-center mb-12 relative">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 bg-[#3ec1ff]/10 rounded-full blur-2xl"></div>
+        <h2 className="text-3xl font-bold text-center relative z-10">What Our Users Say</h2>
+        <div className="w-20 h-0.5 bg-gradient-to-r from-transparent via-[#3ec1ff] to-transparent mt-4"></div>
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
         <TestimonialCard 
           quote="Memorix transformed how I study for med school. I've cut my study time in half while retaining more information."
           author="Sarah J."
@@ -629,15 +566,93 @@ function Testimonials() {
   )
 }
 
+function FAQSection() {
+  const [openIndex, setOpenIndex] = useState(null)
+
+  const toggleFaq = (index) => {
+    setOpenIndex(openIndex === index ? null : index)
+  }
+
+  return (
+    <div className="py-16 relative">
+      {/* Section Title with decorative elements */}
+      <div className="flex flex-col items-center mb-12 relative">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 bg-[#ff7262]/10 rounded-full blur-2xl"></div>
+        <h2 className="text-3xl font-bold text-center relative z-10">Frequently Asked Questions</h2>
+        <div className="w-20 h-0.5 bg-gradient-to-r from-transparent via-[#ff7262] to-transparent mt-4"></div>
+      </div>
+      
+      <div className="max-w-3xl mx-auto">
+        {faqs.map((faq, index) => (
+          <div 
+            key={faq.q} 
+            className={`bg-[#15052a]/60 rounded-xl mb-4 overflow-hidden border transition-all duration-300 ${openIndex === index ? 'border-[#00ff94]/30 shadow-[0_0_15px_rgba(0,255,148,0.08)]' : 'border-gray-800/50 shadow-lg hover:border-gray-700/70'}`}
+          >
+            <button
+              className="w-full px-6 py-4 text-left font-bold text-white flex justify-between items-center"
+              onClick={() => toggleFaq(index)}
+              aria-expanded={openIndex === index}
+            >
+              {faq.q}
+              <ExpandMoreIcon className={`text-[#00ff94] transition-transform duration-300 ${openIndex === index ? 'rotate-180' : ''}`} />
+            </button>
+            <div 
+              className={`px-6 overflow-hidden transition-all duration-300 ${openIndex === index ? 'max-h-96 py-4' : 'max-h-0'}`}
+            >
+              <p className="text-white/80 text-sm">{faq.a}</p>
+            </div>
+          </div>
+        ))}
+        <div className="flex justify-center mt-10">
+          <button className="text-white border-2 border-[#00ff94] px-8 py-3 rounded-xl font-bold text-lg hover:bg-[#00ff94] hover:text-[#18092a] transition-all duration-300 shadow-md shadow-[#00ff94]/10 hover:shadow-[#00ff94]/20">
+            Get started free
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function Footer() {
   const currentYear = new Date().getFullYear();
   
+  const scrollToTop = () => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+  };
+  
   return (
-    <footer className="py-6 border-t border-gray-800/30">
-      <div className="container mx-auto px-4 text-center">
-        <p className="text-white/50 text-sm">
-          © {currentYear} Readler Ltd. All rights reserved.
-        </p>
+    <footer className="py-8 border-t border-gray-800/30 relative">
+      <div className="container mx-auto px-4">
+        <div className="flex flex-col md:flex-row items-center justify-between mb-6">
+          <div className="flex items-center mb-4 md:mb-0">
+            <img src={logoGreen} alt="Memorix" className="h-8 w-auto" />
+          </div>
+          
+          <div className="flex space-x-8">
+            <a href="#features" className="text-white/70 hover:text-[#00ff94] transition-colors text-sm">Features</a>
+            <a href="#pricing" className="text-white/70 hover:text-[#00ff94] transition-colors text-sm">Pricing</a>
+            <a href="#testimonials" className="text-white/70 hover:text-[#00ff94] transition-colors text-sm">Testimonials</a>
+            <a href="#faq" className="text-white/70 hover:text-[#00ff94] transition-colors text-sm">FAQ</a>
+          </div>
+          
+          <button 
+            onClick={scrollToTop}
+            className="bg-[#00ff94]/10 text-[#00ff94] p-2 rounded-full hover:bg-[#00ff94]/20 transition-colors border border-[#00ff94]/30"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clipRule="evenodd" />
+            </svg>
+          </button>
+        </div>
+        
+        <div className="border-t border-gray-800/30 pt-6 text-center">
+          <p className="text-white/50 text-sm">
+            © {currentYear} Readler Ltd. All rights reserved.
+          </p>
+        </div>
       </div>
     </footer>
   );
@@ -658,6 +673,37 @@ function LoadingScreen() {
 function App() {
   const location = useLocation();
   const navigate = useNavigate();
+  const [activeSection, setActiveSection] = useState(null);
+  
+  // Function to handle scroll and update active section
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollPosition = window.scrollY + 300;
+      
+      const featuresSection = document.getElementById('features');
+      const pricingSection = document.getElementById('pricing');
+      const testimonialsSection = document.getElementById('testimonials');
+      const faqSection = document.getElementById('faq');
+      
+      if (featuresSection && scrollPosition >= featuresSection.offsetTop && 
+          pricingSection && scrollPosition < pricingSection.offsetTop) {
+        setActiveSection('features');
+      } else if (pricingSection && scrollPosition >= pricingSection.offsetTop && 
+                testimonialsSection && scrollPosition < testimonialsSection.offsetTop) {
+        setActiveSection('pricing');
+      } else if (testimonialsSection && scrollPosition >= testimonialsSection.offsetTop && 
+                faqSection && scrollPosition < faqSection.offsetTop) {
+        setActiveSection('testimonials');
+      } else if (faqSection && scrollPosition >= faqSection.offsetTop) {
+        setActiveSection('faq');
+      } else {
+        setActiveSection(null);
+      }
+    };
+    
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
   
   // Cancel all pending API requests when navigating between routes
   useEffect(() => {
@@ -734,15 +780,22 @@ function App() {
         <Route path="/flashcard-study-example" element={<FlashcardStudyExample />} />
         <Route path="/flashcard-study-example/:id" element={<FlashcardStudyExample />} />
         <Route path="/" element={
-          <div className="min-h-screen bg-gradient-to-b from-[#2E0033] via-[#260041] to-[#1b1b2f] text-white">
+          <div className="min-h-screen bg-gradient-to-b from-[#2E0033] via-[#260041] to-[#1b1b2f] text-white relative overflow-x-hidden">
+            <div className="absolute top-0 left-0 w-full h-full bg-[url('/src/assets/noise-pattern.png')] opacity-[0.02] pointer-events-none mix-blend-overlay"></div>
+            
+            {/* Decorative elements */}
+            <div className="absolute top-[20%] left-[5%] w-72 h-72 bg-[#00ff94]/5 rounded-full blur-[120px] pointer-events-none"></div>
+            <div className="absolute top-[60%] right-[10%] w-96 h-96 bg-[#a259ff]/5 rounded-full blur-[150px] pointer-events-none"></div>
+            
             <Header />
+            <StickyNav activeSection={activeSection} />
             <main>
               <Hero />
               <div className="container mx-auto px-4 pb-16">
-                <Features />
-                <PricingSection />
-                <Testimonials />
-                <FAQSection />
+                <div id="features" className="scroll-mt-16 border-b border-gray-800/20"><Features /></div>
+                <div id="pricing" className="scroll-mt-16 border-b border-gray-800/20"><PricingSection /></div>
+                <div id="testimonials" className="scroll-mt-16 border-b border-gray-800/20"><Testimonials /></div>
+                <div id="faq" className="scroll-mt-16"><FAQSection /></div>
               </div>
             </main>
             <Footer />
