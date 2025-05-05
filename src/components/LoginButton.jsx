@@ -5,7 +5,7 @@ import { useAuth } from '../auth/useAuth';
  * A button component that handles login/logout functionality
  */
 const LoginButton = () => {
-  const { isAuthenticated, user, login, logout, isLoading, error } = useAuth();
+  const { isAuthenticated, user, login, signup, logout, isLoading, error } = useAuth();
 
   // Show loading state
   if (isLoading) {
@@ -61,12 +61,20 @@ const LoginButton = () => {
       </button>
     </div>
   ) : (
-    <button
-      onClick={() => login()}
-      className="bg-[#00ff94] text-[#18092a] font-medium py-2 px-6 rounded-lg hover:bg-[#00ff94]/90 transition-colors"
-    >
-      Log In
-    </button>
+    <div className="flex gap-2">
+      <button
+        onClick={() => login()}
+        className="text-[#00ff94] border border-[#00ff94] py-2 px-4 rounded-lg hover:bg-[#00ff94]/10 transition-colors font-medium"
+      >
+        Log In
+      </button>
+      <button
+        onClick={() => signup()}
+        className="bg-[#00ff94] text-[#18092a] font-medium py-2 px-4 rounded-lg hover:bg-[#00ff94]/90 transition-colors"
+      >
+        Sign Up
+      </button>
+    </div>
   );
 };
 

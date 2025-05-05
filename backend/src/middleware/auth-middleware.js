@@ -2,6 +2,7 @@ import { expressjwt } from 'express-jwt';
 import jwksRsa from 'jwks-rsa';
 import dotenv from 'dotenv';
 import axios from 'axios';
+import User from '../models/user-model.js';
 
 dotenv.config();
 
@@ -150,4 +151,63 @@ export const getUserFromToken = (req, res, next) => {
   // NOTE: At this point, req.user.id is null. It should be set by a subsequent middleware
   // that looks up the MongoDB user by auth0Id and sets the correct MongoDB _id
   next();
+};
+
+/**
+ * Middleware to enforce onboarding completion
+ * This middleware should be applied to routes that require completed onboarding
+ */
+export const requireCompletedOnboarding = async (req, res, next) => {
+  try {
+    // Skip for certain paths that should be accessible during onboarding
+    const bypassPaths = [
+      '/users/me',
+      '/users/me/onboarding'
+    ];
+    
+    // Check if the current path should bypass onboarding check
+    if (bypassPaths.some(path => req.path.includes(path))) {
+      console.log(`🔄 Bypassing onboarding check for path: ${req.path}`);
+      return next();
+    }
+    
+    console.log(`🔍 Checking onboarding status for route: ${req.path}`);
+    
+    // Ensure user is authenticated and we have user info
+    if (!req.user || !req.user.auth0Id) {
+      console.error('❌ Cannot check onboarding: No authenticated user');
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    
+    // Find the user - using the imported User model
+    const user = await User.findOne({ auth0Id: req.user.auth0Id });
+    
+    if (!user) {
+      console.error(`❌ User not found for auth0Id: ${req.user.auth0Id}`);
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    // Check if onboarding is completed
+    const onboardingCompleted = 
+      user.profile?.profileCompleted === true || 
+      user.profile?.onboardingStage === 'completed';
+    
+    console.log(`👤 User ${user._id} onboarding status: ${onboardingCompleted ? 'Completed' : 'Incomplete'}`);
+    
+    if (!onboardingCompleted) {
+      console.log(`🚫 Blocking access to ${req.path} - onboarding incomplete`);
+      return res.status(403).json({ 
+        error: 'Onboarding required',
+        message: 'You must complete onboarding before accessing this resource',
+        requiresOnboarding: true,
+        redirectTo: '/onboarding'
+      });
+    }
+    
+    console.log(`✅ Onboarding check passed for ${req.path}`);
+    next();
+  } catch (error) {
+    console.error('❌ Error in onboarding middleware:', error);
+    next(error);
+  }
 }; 

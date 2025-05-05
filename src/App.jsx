@@ -38,6 +38,10 @@ const StudyDeck = lazy(() => import('./pages/StudyDeck'))
 const EditDeck = lazy(() => import('./pages/EditDeck'))
 const EditQuiz = lazy(() => import('./pages/EditQuiz'))
 const FlashcardStudyExample = lazy(() => import('./pages/FlashcardStudyExample'))
+const OnboardingForm = lazy(() => import('./components/onboarding/OnboardingForm'))
+
+// Auth components
+import OnboardingGuard from './components/OnboardingGuard'
 
 // Assets
 import logoWhite from './assets/MemorixLogoWhite.png'
@@ -715,15 +719,16 @@ function App() {
   return (
     <Suspense fallback={<LoadingScreen />}>
       <Routes>
-        <Route path="/dashboard" element={<ProtectedRoute element={<Dashboard />} />} />
-        <Route path="/flashcards" element={<ProtectedRoute element={<Flashcards />} />} />
-        <Route path="/progress" element={<ProtectedRoute element={<ComingSoon />} />} />
-        <Route path="/favorites" element={<ProtectedRoute element={<Favorites />} />} />
-        <Route path="/quizzes" element={<ProtectedRoute element={<Quizzes />} />} />
-        <Route path="/settings" element={<ProtectedRoute element={<Settings />} />} />
-        <Route path="/study/:id" element={<ProtectedRoute element={<StudyDeck />} />} />
-        <Route path="/edit/:id" element={<ProtectedRoute element={<EditDeck />} />} />
-        <Route path="/edit-quiz/:id" element={<ProtectedRoute element={<EditQuiz />} />} />
+        <Route path="/onboarding" element={<ProtectedRoute element={<OnboardingForm />} />} />
+        <Route path="/dashboard" element={<ProtectedRoute element={<OnboardingGuard><Dashboard /></OnboardingGuard>} />} />
+        <Route path="/flashcards" element={<ProtectedRoute element={<OnboardingGuard><Flashcards /></OnboardingGuard>} />} />
+        <Route path="/progress" element={<ProtectedRoute element={<OnboardingGuard><ComingSoon /></OnboardingGuard>} />} />
+        <Route path="/favorites" element={<ProtectedRoute element={<OnboardingGuard><Favorites /></OnboardingGuard>} />} />
+        <Route path="/quizzes" element={<ProtectedRoute element={<OnboardingGuard><Quizzes /></OnboardingGuard>} />} />
+        <Route path="/settings" element={<ProtectedRoute element={<OnboardingGuard><Settings /></OnboardingGuard>} />} />
+        <Route path="/study/:id" element={<ProtectedRoute element={<OnboardingGuard><StudyDeck /></OnboardingGuard>} />} />
+        <Route path="/edit/:id" element={<ProtectedRoute element={<OnboardingGuard><EditDeck /></OnboardingGuard>} />} />
+        <Route path="/edit-quiz/:id" element={<ProtectedRoute element={<OnboardingGuard><EditQuiz /></OnboardingGuard>} />} />
         <Route path="/share/:type/:id" element={<SharedItem />} />
         <Route path="/share" element={<ShareFeature />} />
         <Route path="/flashcard-study-example" element={<FlashcardStudyExample />} />

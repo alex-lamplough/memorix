@@ -100,6 +100,16 @@ apiClient.interceptors.response.use(
         data: error.response.data
       });
       
+      // Check for onboarding required errors (403 with requiresOnboarding flag)
+      if (error.response.status === 403 && error.response.data?.requiresOnboarding) {
+        console.error('Onboarding required error from API:', error.response.data);
+        
+        // Dispatch a custom event that can be caught by the onboarding guard
+        window.dispatchEvent(new CustomEvent('axios-error', { 
+          detail: error 
+        }));
+      }
+      
       // Handle 401 Unauthorized errors (expired token)
       if (error.response.status === 401) {
         console.warn('Unauthorized request - token may be expired');
