@@ -97,6 +97,17 @@ function Sidebar({ activePage = 'dashboard', transparentBg = false }) {
                 <div className="text-white/50 text-xs truncate" title={user.email}>{user.email}</div>
               </div>
             </div>
+            
+            {/* Show logout button in profile section on mobile */}
+            {isMobile && (
+              <button 
+                onClick={logout}
+                className="mt-3 w-full flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-[#00ff94]/10 text-[#00ff94] hover:bg-[#00ff94]/20 cursor-pointer transition-colors text-sm border border-[#00ff94]/30"
+              >
+                <LogoutIcon fontSize="small" />
+                <span className="font-medium">Log Out</span>
+              </button>
+            )}
           </div>
         )}
         
@@ -144,14 +155,16 @@ function Sidebar({ activePage = 'dashboard', transparentBg = false }) {
         </div>
       </div>
       
-      {/* Fixed footer with logout button */}
-      <div className={`flex-shrink-0 p-4 border-t border-gray-800/30 ${!transparentBg ? 'bg-[#1b1b2f]' : 'bg-transparent'} mt-auto`}>
-        <SidebarItem 
-          icon={<LogoutIcon fontSize="small" />} 
-          label="Log Out" 
-          onClick={logout}
-        />
-      </div>
+      {/* Fixed footer with logout button - show only on desktop */}
+      {!isMobile && (
+        <div className={`flex-shrink-0 p-4 border-t border-gray-800/30 ${!transparentBg ? 'bg-[#1b1b2f]' : 'bg-transparent'} mt-auto`}>
+          <SidebarItem 
+            icon={<LogoutIcon fontSize="small" />} 
+            label="Log Out" 
+            onClick={logout}
+          />
+        </div>
+      )}
     </div>
   )
 }
