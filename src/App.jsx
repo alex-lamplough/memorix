@@ -118,11 +118,11 @@ function AnimatedHeading() {
   }, [currentPhrase, phrases])
   
   return (
-    <div className="text-center mb-8 w-full overflow-hidden px-2">
+    <div className="text-center mb-4 sm:mb-8 w-full overflow-hidden px-2">
       <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold flex flex-wrap items-center justify-center gap-x-1">
         <span className="text-[#00ff94] drop-shadow-[0_0_12px_rgba(0,255,148,0.8)]">M/</span>
         <span>aster</span>
-        <span className={`transition-all duration-500 mx-1 ${isChanging ? 'opacity-0 -translate-y-2' : 'opacity-100 translate-y-0'}`}>
+        <span className={`transition-all duration-500 mx-1 min-h-[1.5em] inline-flex items-center ${isChanging ? 'opacity-0 -translate-y-2' : 'opacity-100 translate-y-0'}`}>
           {currentPhrase}
         </span>
         <span className="whitespace-nowrap">with Memorix</span>
