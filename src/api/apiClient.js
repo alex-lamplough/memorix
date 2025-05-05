@@ -11,6 +11,14 @@ const apiClient = axios.create({
   }
 });
 
+// Create a separate client for public endpoints that don't require authentication
+export const publicApiClient = axios.create({
+  baseURL: API_URL,
+  headers: {
+    'Content-Type': 'application/json'
+  }
+});
+
 // This function will be set by the AuthTokenProvider when the app initializes
 let getAccessToken = async () => null;
 let currentToken = null;
@@ -65,6 +73,19 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+// Log public API requests but don't add auth tokens
+publicApiClient.interceptors.request.use(
+  async (config) => {
+    // Log the request for debugging
+    console.log(`Public API Request: ${config.method.toUpperCase()} ${config.url}`, {
+      headers: config.headers,
+      data: config.data
+    });
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
 // Add response interceptor to log all responses and handle auth errors
 apiClient.interceptors.response.use(
   (response) => {
@@ -101,5 +122,40 @@ apiClient.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+// Add response interceptor for public API client
+publicApiClient.interceptors.response.use(
+  (response) => {
+    console.log(`Public API Response: ${response.status} ${response.config.method.toUpperCase()} ${response.config.url}`, {
+      data: response.data
+    });
+    return response;
+  },
+  (error) => {
+    if (error.response) {
+      console.error(`Public API Error: ${error.response.status} ${error.config?.method?.toUpperCase()} ${error.config?.url}`, {
+        data: error.response.data
+      });
+    } else {
+      console.error('Public API request failed:', error.message);
+    }
+    return Promise.reject(error);
+  }
+);
+
+// Helper method for making public requests that don't require authentication
+apiClient.publicRequest = (method, url, data, config = {}) => {
+  return publicApiClient({
+    method,
+    url,
+    data,
+    ...config
+  });
+};
+
+// Helper method specifically for GET requests to public endpoints
+apiClient.getPublic = (url, config = {}) => {
+  return publicApiClient.get(url, config);
+};
 
 export default apiClient; 

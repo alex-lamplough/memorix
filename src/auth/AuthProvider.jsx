@@ -3,6 +3,23 @@ import { Auth0Provider, useAuth0 } from '@auth0/auth0-react';
 import { auth0Config } from './auth0-config';
 
 /**
+ * Custom hook that wraps useAuth0 to provide authentication functionality
+ */
+export const useAuth = () => {
+  const auth0 = useAuth0();
+  
+  return {
+    isAuthenticated: auth0.isAuthenticated,
+    user: auth0.user,
+    loading: auth0.isLoading,
+    login: auth0.loginWithRedirect,
+    logout: auth0.logout,
+    getAccessToken: auth0.getAccessTokenSilently,
+    error: auth0.error
+  };
+};
+
+/**
  * User synchronization component that ensures the user exists in our database
  */
 const UserSync = ({ children }) => {

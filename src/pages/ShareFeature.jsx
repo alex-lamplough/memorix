@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import axios from 'axios';
 
 // Icons
 import SearchIcon from '@mui/icons-material/Search';
@@ -12,8 +14,82 @@ import QuizIcon from '@mui/icons-material/Quiz';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import HomeIcon from '@mui/icons-material/Home';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import RefreshIcon from '@mui/icons-material/Refresh';
 
-// Mock data for demonstration - replace with actual API calls
+// API client
+import apiClient, { publicApiClient } from '../api/apiClient';
+import { useAuth } from '../auth/AuthProvider';
+
+// Query keys
+const QUERY_KEYS = {
+  SHARED_CONTENT: 'shared-content',
+};
+
+// API function to fetch shared content
+const fetchSharedContent = async () => {
+  // Check if we're in development mode
+  const isDevMode = process.env.NODE_ENV === 'development';
+  
+  try {
+    // Try to fetch from API first using the public client
+    // This doesn't require authentication
+    const [flashcardsResponse, quizzesResponse] = await Promise.all([
+      publicApiClient.get('/public/flashcards').catch(err => {
+        console.log('Error fetching public flashcards:', err);
+        return { data: [] };
+      }),
+      publicApiClient.get('/public/quizzes').catch(err => {
+        console.log('Error fetching public quizzes:', err);
+        return { data: [] };
+      })
+    ]);
+    
+    // Process flashcards
+    const publicFlashcards = (flashcardsResponse.data || []).map(set => ({
+      ...set,
+      id: set._id || set.id,
+      type: 'flashcards',
+      cardCount: set.cardCount || (set.cards ? set.cards.length : 0),
+      views: set.views || 0,
+      favorites: set.favoriteCount || 0,
+      dateShared: set.updatedAt || set.createdAt || new Date().toISOString(),
+      tags: set.tags || []
+    }));
+    
+    // Process quizzes
+    const publicQuizzes = (quizzesResponse.data || []).map(quiz => ({
+      ...quiz,
+      id: quiz._id || quiz.id,
+      type: 'quiz',
+      questionCount: quiz.questionCount || quiz.totalQuestions || 0,
+      views: quiz.views || 0, 
+      favorites: quiz.favoriteCount || 0,
+      dateShared: quiz.updatedAt || quiz.createdAt || new Date().toISOString(),
+      tags: quiz.tags || []
+    }));
+    
+    // Combine and return all public items
+    const combinedResults = [...publicFlashcards, ...publicQuizzes];
+    
+    console.log('Public shared content:', combinedResults);
+    
+    if (combinedResults.length > 0) {
+      return combinedResults;
+    }
+    
+    // If no public items found or we're in development, use mock data
+    console.log('No public items found, using mock data for shared content');
+    return mockSharedContent;
+  } catch (error) {
+    console.error('Error fetching shared content:', error);
+    
+    // Always fallback to mock data for this public page
+    console.log('Using mock data for shared content');
+    return mockSharedContent;
+  }
+};
+
+// Mock data for fallback or development
 const mockSharedContent = [
   {
     id: '1',
@@ -69,55 +145,43 @@ const ShareFeature = () => {
   const [activeTab, setActiveTab] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [favoriteItems, setFavoriteItems] = useState({});
-  const [filteredContent, setFilteredContent] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const navigate = useNavigate();
+  const auth = useAuth();
+  const isAuthenticated = auth?.isAuthenticated || false;
 
-  useEffect(() => {
-    // Simulate API call
-    const fetchSharedContent = async () => {
-      setLoading(true);
-      try {
-        // Replace with actual API call
-        setTimeout(() => {
-          setFilteredContent(mockSharedContent);
-          setLoading(false);
-        }, 1000);
-      } catch (error) {
-        console.error('Failed to fetch shared content:', error);
-        setError('Failed to load shared content. Please try again later.');
-        setLoading(false);
-      }
-    };
+  // Use React Query to fetch shared content
+  const { 
+    data: sharedContent = [], 
+    isLoading, 
+    error,
+    refetch,
+    isRefetching
+  } = useQuery({
+    queryKey: [QUERY_KEYS.SHARED_CONTENT],
+    queryFn: fetchSharedContent,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    refetchOnWindowFocus: false,
+  });
 
-    fetchSharedContent();
-  }, []);
-
-  useEffect(() => {
-    if (!loading) {
-      const filtered = mockSharedContent.filter(item => {
-        // Filter based on tab (All, Flashcards, Quizzes)
-        if (activeTab === 'flashcards' && item.type !== 'flashcards') return false;
-        if (activeTab === 'quizzes' && item.type !== 'quiz') return false;
-        
-        // Filter based on search query
-        if (searchQuery) {
-          const query = searchQuery.toLowerCase();
-          return (
-            item.title.toLowerCase().includes(query) ||
-            item.description.toLowerCase().includes(query) ||
-            item.author.toLowerCase().includes(query) ||
-            item.tags.some(tag => tag.toLowerCase().includes(query))
-          );
-        }
-        
-        return true;
-      });
-      
-      setFilteredContent(filtered);
+  // Filter content based on active tab and search query
+  const filteredContent = sharedContent.filter(item => {
+    // Filter based on tab (All, Flashcards, Quizzes)
+    if (activeTab === 'flashcards' && item.type !== 'flashcards') return false;
+    if (activeTab === 'quizzes' && item.type !== 'quiz') return false;
+    
+    // Filter based on search query
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      return (
+        item.title.toLowerCase().includes(query) ||
+        item.description.toLowerCase().includes(query) ||
+        item.author.toLowerCase().includes(query) ||
+        item.tags.some(tag => tag.toLowerCase().includes(query))
+      );
     }
-  }, [activeTab, searchQuery, loading]);
+    
+    return true;
+  });
 
   const handleTabChange = (tab) => {
     setActiveTab(tab);
@@ -128,6 +192,10 @@ const ShareFeature = () => {
       ...prev,
       [itemId]: !prev[itemId]
     }));
+    
+    // In a real application, you would use a mutation here to update the server
+    // Example:
+    // favoriteItemMutation.mutate({ id: itemId, isFavorite: !favoriteItems[itemId] });
   };
 
   const handleCopyShareLink = (item) => {
@@ -146,7 +214,7 @@ const ShareFeature = () => {
   };
 
   const renderContent = () => {
-    if (loading) {
+    if (isLoading) {
       return (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {[1, 2, 3, 4].map((item) => (
@@ -170,8 +238,15 @@ const ShareFeature = () => {
 
     if (error) {
       return (
-        <div className="bg-red-500/10 text-red-400 p-4 rounded-lg border border-red-500/30">
-          {error}
+        <div className="bg-red-500/10 text-red-400 p-6 rounded-lg border border-red-500/30 flex flex-col items-center">
+          <p className="mb-4">Failed to load shared content. Please try again later.</p>
+          <button 
+            onClick={() => refetch()}
+            className="bg-red-500/20 text-red-400 px-4 py-2 rounded-lg hover:bg-red-500/30 transition-colors flex items-center gap-2"
+          >
+            <RefreshIcon fontSize="small" />
+            <span>Try Again</span>
+          </button>
         </div>
       );
     }
@@ -300,6 +375,14 @@ const ShareFeature = () => {
                 />
                 <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-white/50" fontSize="small" />
               </div>
+              <button 
+                className={`bg-[#18092a]/60 text-white p-2 rounded-lg border border-gray-800/30 hover:bg-[#18092a] transition-colors ${isRefetching ? 'animate-spin text-[#00ff94]' : ''}`}
+                onClick={() => refetch()}
+                title="Refresh"
+                disabled={isRefetching}
+              >
+                <RefreshIcon fontSize="small" />
+              </button>
               <button className="bg-[#18092a]/60 text-white p-2 rounded-lg border border-gray-800/30 hover:bg-[#18092a] transition-colors">
                 <FilterListIcon fontSize="small" />
               </button>

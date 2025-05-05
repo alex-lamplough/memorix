@@ -12,6 +12,7 @@ import aiRoutes from './routes/ai-routes.js';
 import flashcardGeneratorRoutes from './routes/flashcard-generator-routes.js';
 import todoRoutes from './routes/todo-routes.js';
 import quizRoutes from './routes/quiz-routes.js';
+import publicRoutes from './routes/public-routes.js';
 import { errorHandler } from './middleware/error-middleware.js';
 import { connectToMongoDB } from './db/mongodb.js';
 
@@ -52,7 +53,10 @@ app.use(express.json()); // Parse JSON request body
 
 // Function to set up and start the server
 const setupServer = () => {
-  // API routes
+  // Public API routes that don't require authentication
+  app.use('/api/public', publicRoutes);
+  
+  // API routes that require authentication
   app.use('/api/flashcards', flashcardRoutes);
   app.use('/api/users', userRoutes);
   app.use('/api/ai', aiRoutes);
