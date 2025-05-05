@@ -149,7 +149,7 @@ router.get('/me', async (req, res, next) => {
 // Update user profile
 router.put('/me', async (req, res, next) => {
   try {
-    const { name, nickname, preferences } = req.body;
+    const { name, nickname, preferences, profile } = req.body;
     
     let user = await User.findOne({ auth0Id: req.user.auth0Id });
     
@@ -164,6 +164,12 @@ router.put('/me', async (req, res, next) => {
       user.preferences = {
         ...user.preferences,
         ...preferences
+      };
+    }
+    if (profile) {
+      user.profile = {
+        ...user.profile || {},
+        ...profile
       };
     }
     
@@ -204,6 +210,109 @@ router.get('/me/stats', async (req, res, next) => {
     
     res.json(stats);
   } catch (error) {
+    next(error);
+  }
+});
+
+// Update onboarding stage
+router.put('/me/onboarding', async (req, res, next) => {
+  try {
+    const { stage, profileData } = req.body;
+    
+    if (!['basic_info', 'interests', 'completed'].includes(stage)) {
+      return res.status(400).json({ error: 'Invalid onboarding stage' });
+    }
+    
+    let user = await User.findOne({ auth0Id: req.user.auth0Id });
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    // Initialize profile if it doesn't exist
+    if (!user.profile) {
+      user.profile = {
+        onboardingStage: 'not_started',
+        profileCompleted: false
+      };
+    }
+    
+    // Update onboarding stage
+    user.profile.onboardingStage = stage;
+    
+    // If this is the final stage, mark profile as completed
+    if (stage === 'completed') {
+      user.profile.profileCompleted = true;
+    }
+    
+    // Update profile data if provided
+    if (profileData) {
+      user.profile = {
+        ...user.profile,
+        ...profileData
+      };
+      
+      // If profileData contains preferences, update them separately
+      if (profileData.preferences) {
+        user.preferences = {
+          ...user.preferences,
+          ...profileData.preferences
+        };
+        
+        // Remove preferences from profile to avoid duplication
+        delete user.profile.preferences;
+      }
+    }
+    
+    user.updatedAt = Date.now();
+    await user.save();
+    
+    res.json({
+      success: true,
+      user,
+      message: stage === 'completed' 
+        ? 'Onboarding completed successfully' 
+        : `Onboarding stage updated to ${stage}`
+    });
+  } catch (error) {
+    console.error('Error updating onboarding stage:', error);
+    next(error);
+  }
+});
+
+// Check onboarding status
+router.get('/me/onboarding', async (req, res, next) => {
+  try {
+    const user = await User.findOne({ auth0Id: req.user.auth0Id });
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    // Default status if profile doesn't exist yet
+    let status = {
+      stage: 'not_started',
+      completed: false,
+      requiresOnboarding: true
+    };
+    
+    if (user.profile) {
+      // Only consider onboarding complete if explicitly marked complete or stage is 'completed'
+      const isCompleted = user.profile.profileCompleted === true || user.profile.onboardingStage === 'completed';
+      
+      status = {
+        stage: user.profile.onboardingStage || 'not_started',
+        completed: isCompleted,
+        requiresOnboarding: !isCompleted
+      };
+      
+      // Log the onboarding status for debugging
+      console.log(`Onboarding status for user ${user._id}: ${JSON.stringify(status)}`);
+    }
+    
+    res.json(status);
+  } catch (error) {
+    console.error('Error checking onboarding status:', error);
     next(error);
   }
 });

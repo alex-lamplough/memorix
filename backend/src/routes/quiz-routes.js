@@ -1,10 +1,11 @@
 import express from 'express';
-import { checkJwt, getUserFromToken } from '../middleware/auth-middleware.js';
+import { checkJwt, getUserFromToken, requireCompletedOnboarding } from '../middleware/auth-middleware.js';
 import { lookupMongoUser } from '../middleware/user-middleware.js';
 import quizController from '../controllers/quiz-controller.js';
 import mongoose from 'mongoose';
 import { authenticate } from '../middleware/auth-middleware.js';
 import Quiz from '../models/quiz-model.js';
+import User from '../models/user-model.js';
 
 const router = express.Router();
 
@@ -12,6 +13,7 @@ const router = express.Router();
 router.use(checkJwt);
 router.use(getUserFromToken);
 router.use(lookupMongoUser);
+router.use(requireCompletedOnboarding);
 
 // Get all favorites for current user
 router.get('/favorites', authenticate(), lookupMongoUser, async (req, res, next) => {

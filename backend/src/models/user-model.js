@@ -21,6 +21,25 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default: Date.now
   },
+  profile: {
+    displayName: String,
+    bio: String,
+    userType: {
+      type: String,
+      enum: ['Student', 'Educator', 'Creator', 'General User'],
+    },
+    interests: [String],
+    learningGoals: [String],
+    profileCompleted: {
+      type: Boolean,
+      default: false
+    },
+    onboardingStage: {
+      type: String,
+      enum: ['not_started', 'basic_info', 'interests', 'completed'],
+      default: 'not_started'
+    }
+  },
   preferences: {
     theme: {
       type: String,
@@ -30,6 +49,14 @@ const userSchema = new mongoose.Schema({
     emailNotifications: {
       type: Boolean,
       default: true
+    },
+    studyReminders: {
+      type: Boolean,
+      default: true
+    },
+    defaultStudyTime: {
+      type: Number,
+      default: 20 // minutes
     }
   },
   createdAt: {

@@ -1,5 +1,5 @@
 import express from 'express';
-import { auth } from '../middleware/auth.js';
+import { checkJwt, getUserFromToken, requireCompletedOnboarding } from '../middleware/auth-middleware.js';
 import { validateRequest } from '../middleware/validation.js';
 import { lookupMongoUser } from '../middleware/user-middleware.js';
 import {
@@ -16,10 +16,12 @@ import {
 const router = express.Router();
 
 // Apply auth middleware to all routes
-router.use(auth);
-
-// Add MongoDB user lookup middleware
+router.use(checkJwt);
+router.use(getUserFromToken);
+// Add the MongoDB user lookup middleware to get proper user._id
 router.use(lookupMongoUser);
+// Enforce onboarding completion for all todo routes
+router.use(requireCompletedOnboarding);
 
 /**
  * @route GET /api/todos

@@ -23,6 +23,19 @@ export function useAuth() {
     });
   };
 
+  const signup = () => {
+    // First, set a flag to indicate this is a new registration
+    localStorage.setItem('isNewRegistration', 'true');
+    
+    // Then direct the user to the Auth0 signup screen
+    loginWithRedirect({
+      authorizationParams: {
+        screen_hint: 'signup'
+      },
+      appState: { returnTo: '/onboarding' }
+    });
+  };
+
   const logoutUser = () => {
     logout({ 
       logoutParams: {
@@ -48,6 +61,7 @@ export function useAuth() {
     error,
     user,
     login,
+    signup,
     logout: logoutUser,
     getToken
   };

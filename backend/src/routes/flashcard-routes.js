@@ -1,6 +1,6 @@
 import express from 'express';
 import mongoose from 'mongoose';
-import { checkJwt, getUserFromToken } from '../middleware/auth-middleware.js';
+import { checkJwt, getUserFromToken, requireCompletedOnboarding } from '../middleware/auth-middleware.js';
 import { lookupMongoUser } from '../middleware/user-middleware.js';
 import FlashcardSet from '../models/flashcard-set-model.js';
 import User from '../models/user-model.js';
@@ -14,6 +14,8 @@ router.use(checkJwt);
 router.use(getUserFromToken);
 // Add the MongoDB user lookup middleware to get proper user._id
 router.use(lookupMongoUser);
+// Enforce onboarding completion for all flashcard routes
+router.use(requireCompletedOnboarding);
 
 // Get all favorites for current user
 router.get('/favorites', authenticate(), lookupMongoUser, async (req, res, next) => {

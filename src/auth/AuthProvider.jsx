@@ -105,7 +105,29 @@ const AuthProvider = ({ children }) => {
   
   const onRedirectCallback = (appState) => {
     console.log('🔄 Auth0 redirect callback triggered', appState);
-    // After authentication, redirect to the dashboard page
+    
+    // Check if the user is newly registered (needs onboarding)
+    // We'll determine this by seeing if they have just been created
+    // in Auth0 and need to be redirected to onboarding
+    const isNewUser = localStorage.getItem('isNewRegistration') === 'true';
+    
+    if (isNewUser) {
+      console.log('🆕 New user detected, redirecting to onboarding');
+      localStorage.removeItem('isNewRegistration');
+      
+      // After authentication, redirect to the onboarding page
+      window.history.replaceState(
+        {},
+        document.title,
+        '/onboarding'
+      );
+      
+      // Navigate to the onboarding page
+      window.location.pathname = '/onboarding';
+      return;
+    }
+    
+    // For existing users, redirect to the dashboard page
     window.history.replaceState(
       {},
       document.title,
