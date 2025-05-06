@@ -208,12 +208,11 @@ class EmailService {
             </div>
             
             <div class="footer">
-              <p>© ${new Date().getFullYear()} Memorix. All rights reserved.</p>
+              <p>© ${new Date().getFullYear()} Readler Ltd. All rights reserved.</p>
               <p>
                 <a href="${appUrl}/privacy" style="color: rgba(255, 255, 255, 0.5); margin-right: 10px;">Privacy Policy</a>
                 <a href="${appUrl}/terms" style="color: rgba(255, 255, 255, 0.5);">Terms of Service</a>
               </p>
-              <p>If you prefer not to receive these emails, you can <a href="${appUrl}/unsubscribe?email=${encodeURIComponent(email)}" style="color: rgba(255, 255, 255, 0.5);">unsubscribe</a></p>
             </div>
           </div>
         </body>
