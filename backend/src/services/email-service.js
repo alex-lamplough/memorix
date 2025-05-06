@@ -91,7 +91,7 @@ class EmailService {
   getLogoBase64() {
     try {
       // Path to the logo image
-      const logoPath = path.resolve(process.cwd(), '../src/assets/MemorixLogoImage.png');
+      const logoPath = path.resolve(process.cwd(), `${appUrl}/src/assets/MemorixLogoImage.png`);
       // Read the file and convert to base64
       const logoBuffer = fs.readFileSync(logoPath);
       return logoBuffer.toString('base64');
@@ -113,9 +113,9 @@ class EmailService {
     const appUrl = process.env.APP_URL || 'https://getmemorix.app';
     
     // Using inline logo with Content-ID reference
-    const twitterIconUrl = 'https://cdn4.iconfinder.com/data/icons/social-media-black-white-2/1227/X-512.png'; // Replace with your actual Twitter icon URL
-    const instagramIconUrl = 'https://cdn0.iconfinder.com/data/icons/social-media-circle-6/1024/instagram-1024.png'; // Replace with your actual Instagram icon URL
-    const facebookIconUrl = 'https://cdn3.iconfinder.com/data/icons/2018-social-media-logotypes/1000/2018_social_media_popular_app_logo_facebook-1024.png'; // Replace with your actual Facebook icon URL
+    const twitterIconUrl = `${appUrl}/src/assets/xLogo.png`; // Replace with your actual Twitter icon URL
+    const instagramIconUrl = `${appUrl}/src/assets/instagramLogo.png`; // Replace with your actual Instagram icon URL
+    const facebookIconUrl = `${appUrl}/src/assets/facebookLogo.png`; // Replace with your actual Facebook icon URL
     
     return `
       <!DOCTYPE html>

@@ -49,6 +49,9 @@ import OnboardingGuard from './components/OnboardingGuard'
 // Assets
 import logoWhite from './assets/MemorixLogoWhite.png'
 import logoGreen from './assets/MemorixLogoGreen.png'
+import facebookLogo from './assets/facebookLogo.png'
+import instagramLogo from './assets/instagramLogo.png'
+import xLogo from './assets/xLogo.png'
 
 // Services
 import { flashcardService } from './services/api'
@@ -629,8 +632,22 @@ function Footer() {
     <footer className="py-8 border-t border-gray-800/30 relative">
       <div className="container mx-auto px-4">
         <div className="flex flex-col md:flex-row items-center justify-between mb-6">
-          <div className="flex items-center mb-4 md:mb-0">
+          <div className="flex items-center mb-4 md:mb-0 gap-6">
             <img src={logoGreen} alt="Memorix" className="h-8 w-auto" />
+            <div className="flex items-center gap-3">
+              <a href="https://facebook.com/memorixapp" target="_blank" rel="noopener noreferrer" 
+                className="hover:opacity-80 transition-opacity">
+                <img src={facebookLogo} alt="Facebook" className="h-5 w-auto" />
+              </a>
+              <a href="https://instagram.com/memorixapp" target="_blank" rel="noopener noreferrer"
+                className="hover:opacity-80 transition-opacity">
+                <img src={instagramLogo} alt="Instagram" className="h-5 w-auto" />
+              </a>
+              <a href="https://x.com/memorixapp" target="_blank" rel="noopener noreferrer"
+                className="hover:opacity-80 transition-opacity">
+                <img src={xLogo} alt="X" className="h-5 w-auto" />
+              </a>
+            </div>
           </div>
           
           <div className="flex space-x-8">
@@ -638,6 +655,8 @@ function Footer() {
             <a href="#pricing" className="text-white/70 hover:text-[#00ff94] transition-colors text-sm">Pricing</a>
             <a href="#testimonials" className="text-white/70 hover:text-[#00ff94] transition-colors text-sm">Testimonials</a>
             <a href="#faq" className="text-white/70 hover:text-[#00ff94] transition-colors text-sm">FAQ</a>
+            <Link to="/privacy" target="_blank" rel="noopener noreferrer" className="text-white/70 hover:text-[#00ff94] transition-colors text-sm">Privacy</Link>
+            <Link to="/terms" target="_blank" rel="noopener noreferrer" className="text-white/70 hover:text-[#00ff94] transition-colors text-sm">Terms</Link>
           </div>
           
           <button 
@@ -651,10 +670,6 @@ function Footer() {
         </div>
         
         <div className="border-t border-gray-800/30 pt-6 text-center">
-          <div className="flex justify-center space-x-6 mb-4">
-            <Link to="/privacy" target="_blank" rel="noopener noreferrer" className="text-white/70 hover:text-[#00ff94] transition-colors text-sm">Privacy Policy</Link>
-            <Link to="/terms" target="_blank" rel="noopener noreferrer" className="text-white/70 hover:text-[#00ff94] transition-colors text-sm">Terms of Service</Link>
-          </div>
           <p className="text-white/50 text-sm">
             © {currentYear} Readler Ltd. All rights reserved.
           </p>
