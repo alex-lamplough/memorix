@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useMediaQuery } from '@mui/material'
 import { Menu as MenuIcon } from '@mui/icons-material'
 
@@ -9,15 +9,14 @@ import Layout from '../components/Layout'
 
 // Icons
 import NotificationsIcon from '@mui/icons-material/Notifications'
-import DarkModeIcon from '@mui/icons-material/DarkMode'
-import LanguageIcon from '@mui/icons-material/Language'
-import SecurityIcon from '@mui/icons-material/Security'
 import AccountCircleIcon from '@mui/icons-material/AccountCircle'
-import CloudSyncIcon from '@mui/icons-material/CloudSync'
-import DeleteIcon from '@mui/icons-material/Delete'
 import HelpIcon from '@mui/icons-material/Help'
 import CheckIcon from '@mui/icons-material/Check'
 import KeyboardArrowLeftIcon from '@mui/icons-material/KeyboardArrowLeft'
+import EmailIcon from '@mui/icons-material/Email'
+
+// API hooks
+import { useUserProfile, useUpdateUserProfile, useUpdateUserPreferences } from '../api/queries/users'
 
 function SettingsNavItem({ icon, label, active, onClick }) {
   return (
@@ -35,12 +34,7 @@ function SettingsNavItem({ icon, label, active, onClick }) {
 function SettingsNav({ activeSection, setActiveSection }) {
   const sections = [
     { id: 'account', label: 'Account', icon: <AccountCircleIcon fontSize="small" /> },
-    { id: 'appearance', label: 'Appearance', icon: <DarkModeIcon fontSize="small" /> },
     { id: 'notifications', label: 'Notifications', icon: <NotificationsIcon fontSize="small" /> },
-    { id: 'language', label: 'Language', icon: <LanguageIcon fontSize="small" /> },
-    { id: 'security', label: 'Security & Privacy', icon: <SecurityIcon fontSize="small" /> },
-    { id: 'sync', label: 'Data & Sync', icon: <CloudSyncIcon fontSize="small" /> },
-    { id: 'data', label: 'Data Management', icon: <DeleteIcon fontSize="small" /> },
     { id: 'help', label: 'Help & Support', icon: <HelpIcon fontSize="small" /> },
   ];
   
@@ -63,6 +57,52 @@ function SettingsNav({ activeSection, setActiveSection }) {
 }
 
 function AccountSettings() {
+  // Get user profile data and update mutation
+  const { data: user, isLoading: isLoadingUser } = useUserProfile();
+  const updateProfile = useUpdateUserProfile();
+  
+  const [displayName, setDisplayName] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Initialize display name when user data is loaded
+  useEffect(() => {
+    if (user) {
+      console.log('Loading user profile:', user);
+      setDisplayName(user.name || '');
+    }
+  }, [user]);
+
+  // Debug logging when display name changes
+  useEffect(() => {
+    console.log('Current display name state:', displayName);
+  }, [displayName]);
+
+  const handleSaveChanges = async () => {
+    if (!displayName.trim()) {
+      // Prevent saving empty display name
+      return;
+    }
+    
+    setIsSaving(true);
+    try {
+      console.log('Saving profile update:', { name: displayName });
+      await updateProfile.mutateAsync({ name: displayName });
+      // Success is handled by the mutation
+    } catch (error) {
+      console.error('Error saving profile changes:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  if (isLoadingUser) {
+    return (
+      <div className="bg-[#18092a]/60 rounded-xl p-6 border border-gray-800/30 shadow-lg text-white">
+        <p className="text-white/70">Loading user data...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-[#18092a]/60 rounded-xl p-6 border border-gray-800/30 shadow-lg text-white">
       <h2 className="text-xl font-bold mb-6">Account Settings</h2>
@@ -73,7 +113,7 @@ function AccountSettings() {
             <AccountCircleIcon style={{ fontSize: '2rem' }} className="text-[#a259ff]" />
           </div>
           <div>
-            <h3 className="font-bold text-lg">Alex Lamplough</h3>
+            <h3 className="font-bold text-lg">{user?.name || displayName}</h3>
             <p className="text-white/70 text-sm">Free Plan</p>
           </div>
           <button className="sm:ml-auto bg-[#00ff94]/10 text-[#00ff94] px-4 py-2 rounded-lg hover:bg-[#00ff94]/20 transition-colors border border-[#00ff94]/30">
@@ -84,25 +124,31 @@ function AccountSettings() {
         <div className="space-y-6">
           <div>
             <label className="block text-white/70 text-sm mb-2">Email</label>
-            <input 
-              type="email" 
-              value="alex@example.com" 
-              className="w-full bg-[#18092a]/80 text-white rounded-lg px-4 py-3 border border-gray-800/50 focus:outline-none focus:border-[#00ff94]/50" 
-            />
+            <div className="flex items-center w-full bg-[#18092a]/80 text-white/80 rounded-lg px-4 py-3 border border-gray-800/50">
+              <EmailIcon className="text-white/50 mr-2" fontSize="small" />
+              <span>{user?.email || 'Loading...'}</span>
+            </div>
+            <p className="text-white/50 text-xs mt-1">Email cannot be changed</p>
           </div>
           
           <div>
             <label className="block text-white/70 text-sm mb-2">Display Name</label>
             <input 
               type="text" 
-              value="Alex Lamplough" 
+              value={displayName} 
+              onChange={(e) => setDisplayName(e.target.value)}
               className="w-full bg-[#18092a]/80 text-white rounded-lg px-4 py-3 border border-gray-800/50 focus:outline-none focus:border-[#00ff94]/50" 
+              placeholder="Enter your display name"
             />
           </div>
           
           <div className="pt-4">
-            <button className="bg-[#00ff94]/10 text-[#00ff94] px-6 py-2.5 rounded-lg hover:bg-[#00ff94]/20 transition-colors border border-[#00ff94]/30">
-              Save Changes
+            <button 
+              onClick={handleSaveChanges}
+              disabled={isSaving || updateProfile.isPending || !displayName.trim()}
+              className={`bg-[#00ff94]/10 text-[#00ff94] px-6 py-2.5 rounded-lg hover:bg-[#00ff94]/20 transition-colors border border-[#00ff94]/30 ${(isSaving || updateProfile.isPending || !displayName.trim()) ? 'opacity-70 cursor-not-allowed' : ''}`}
+            >
+              {isSaving || updateProfile.isPending ? 'Saving...' : 'Save Changes'}
             </button>
           </div>
         </div>
@@ -183,67 +229,86 @@ function AccountSettings() {
   );
 }
 
-function AppearanceSettings() {
-  return (
-    <div className="bg-[#18092a]/60 rounded-xl p-6 border border-gray-800/30 shadow-lg text-white">
-      <h2 className="text-xl font-bold mb-6">Appearance</h2>
-      
-      <div className="space-y-6">
-        <div>
-          <h3 className="font-bold mb-4">Theme</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="bg-[#18092a] border-2 border-[#00ff94] p-4 rounded-lg text-center cursor-pointer">
-              <div className="h-24 bg-gradient-to-b from-[#2E0033] via-[#260041] to-[#1b1b2f] rounded mb-2"></div>
-              <span className="text-sm font-medium">Dark</span>
-            </div>
-            <div className="bg-[#18092a] border border-gray-800/50 p-4 rounded-lg text-center cursor-pointer hover:border-white/30">
-              <div className="h-24 bg-gradient-to-b from-[#f1f5f9] to-[#e2e8f0] rounded mb-2"></div>
-              <span className="text-sm font-medium text-white/70">Light</span>
-            </div>
-            <div className="bg-[#18092a] border border-gray-800/50 p-4 rounded-lg text-center cursor-pointer hover:border-white/30">
-              <div className="h-24 bg-gradient-to-b from-[#111827] to-[#1f2937] rounded mb-2"></div>
-              <span className="text-sm font-medium text-white/70">System</span>
-            </div>
-          </div>
-        </div>
-        
-        <div>
-          <h3 className="font-bold mb-4">Accent Color</h3>
-          <div className="flex gap-3 flex-wrap">
-            <div className="w-10 h-10 rounded-full bg-[#00ff94] border-2 border-white cursor-pointer"></div>
-            <div className="w-10 h-10 rounded-full bg-[#a259ff] border border-gray-800/50 cursor-pointer"></div>
-            <div className="w-10 h-10 rounded-full bg-[#3ec1ff] border border-gray-800/50 cursor-pointer"></div>
-            <div className="w-10 h-10 rounded-full bg-[#ff7262] border border-gray-800/50 cursor-pointer"></div>
-            <div className="w-10 h-10 rounded-full bg-[#ffeb3b] border border-gray-800/50 cursor-pointer"></div>
-          </div>
-        </div>
-        
-        <div>
-          <h3 className="font-bold mb-4">Font Size</h3>
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-white/70">A</span>
-            <input 
-              type="range" 
-              min="1" 
-              max="3" 
-              defaultValue="2"
-              className="flex-1 accent-[#00ff94]" 
-            />
-            <span className="text-lg text-white/70">A</span>
-          </div>
-        </div>
-        
-        <div className="pt-4">
-          <button className="bg-[#00ff94]/10 text-[#00ff94] px-6 py-2.5 rounded-lg hover:bg-[#00ff94]/20 transition-colors border border-[#00ff94]/30">
-            Save Changes
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function NotificationSettings() {
+  // Get user profile data and preferences update mutation
+  const { data: user, isLoading: isLoadingUser } = useUserProfile();
+  const updatePreferences = useUpdateUserPreferences();
+  
+  // Initialize with null values instead of defaults to avoid overriding actual values
+  const [notifications, setNotifications] = useState({
+    emailNotifications: null,
+    studyReminders: null,
+    contentUpdates: null // Now properly supported in the schema
+  });
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Initialize notification settings when user data is loaded
+  useEffect(() => {
+    if (user && user.preferences) {
+      console.log('Loading user preferences:', user.preferences);
+      
+      // Extract values from user preferences, defaulting to true if not found
+      const userPrefs = {
+        emailNotifications: user.preferences.emailNotifications !== undefined 
+          ? user.preferences.emailNotifications 
+          : true,
+        studyReminders: user.preferences.studyReminders !== undefined 
+          ? user.preferences.studyReminders 
+          : true,
+        contentUpdates: user.preferences.contentUpdates !== undefined 
+          ? user.preferences.contentUpdates  // Now using actual field
+          : true
+      };
+      
+      console.log('Setting notification preferences from DB:', userPrefs);
+      setNotifications(userPrefs);
+    }
+  }, [user]);
+
+  // Debug log when notifications state changes
+  useEffect(() => {
+    console.log('Current notification state:', notifications);
+  }, [notifications]);
+
+  const handleToggle = (key) => {
+    setNotifications(prev => {
+      const newValue = !prev[key];
+      console.log(`Toggling ${key} from ${prev[key]} to ${newValue}`);
+      
+      return {
+        ...prev,
+        [key]: newValue
+      };
+    });
+  };
+
+  const handleSaveChanges = async () => {
+    setIsSaving(true);
+    try {
+      // Now sending all fields including contentUpdates
+      const preferencesToSave = {
+        emailNotifications: Boolean(notifications.emailNotifications),
+        studyReminders: Boolean(notifications.studyReminders),
+        contentUpdates: Boolean(notifications.contentUpdates)
+      };
+      
+      console.log('Saving notification preferences:', preferencesToSave);
+      await updatePreferences.mutateAsync(preferencesToSave);
+    } catch (error) {
+      console.error('Error saving notification preferences:', error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  if (isLoadingUser) {
+    return (
+      <div className="bg-[#18092a]/60 rounded-xl p-6 border border-gray-800/30 shadow-lg text-white">
+        <p className="text-white/70">Loading notification settings...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-[#18092a]/60 rounded-xl p-6 border border-gray-800/30 shadow-lg text-white">
       <h2 className="text-xl font-bold mb-6">Notification Settings</h2>
@@ -251,33 +316,32 @@ function NotificationSettings() {
       <div className="space-y-6">
         <div className="flex items-center justify-between pb-4 border-b border-gray-800/30">
           <div>
-            <h3 className="font-medium">Daily Study Reminder</h3>
-            <p className="text-white/70 text-sm">Receive a reminder to study your flashcards</p>
-          </div>
-          <label className="inline-flex items-center cursor-pointer">
-            <input type="checkbox" value="" className="sr-only peer" defaultChecked />
-            <div className="relative w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#00ff94]"></div>
-          </label>
-        </div>
-        
-        <div className="flex items-center justify-between pb-4 border-b border-gray-800/30">
-          <div>
-            <h3 className="font-medium">New Content Alerts</h3>
+            <h3 className="font-medium">Content Updates</h3>
             <p className="text-white/70 text-sm">Get notified about new features and content</p>
           </div>
           <label className="inline-flex items-center cursor-pointer">
-            <input type="checkbox" value="" className="sr-only peer" defaultChecked />
+            <input 
+              type="checkbox" 
+              checked={notifications.contentUpdates === true}
+              onChange={() => handleToggle('contentUpdates')}
+              className="sr-only peer" 
+            />
             <div className="relative w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#00ff94]"></div>
           </label>
         </div>
         
         <div className="flex items-center justify-between pb-4 border-b border-gray-800/30">
           <div>
-            <h3 className="font-medium">Weekly Progress Report</h3>
-            <p className="text-white/70 text-sm">Summary of your weekly learning activity</p>
+            <h3 className="font-medium">Study Reminders</h3>
+            <p className="text-white/70 text-sm">Get notified about your learning activities and progress</p>
           </div>
           <label className="inline-flex items-center cursor-pointer">
-            <input type="checkbox" value="" className="sr-only peer" />
+            <input 
+              type="checkbox" 
+              checked={notifications.studyReminders === true}
+              onChange={() => handleToggle('studyReminders')}
+              className="sr-only peer" 
+            />
             <div className="relative w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#00ff94]"></div>
           </label>
         </div>
@@ -285,32 +349,77 @@ function NotificationSettings() {
         <div className="flex items-center justify-between pb-4 border-b border-gray-800/30">
           <div>
             <h3 className="font-medium">Email Notifications</h3>
-            <p className="text-white/70 text-sm">Receive email notifications</p>
+            <p className="text-white/70 text-sm">Receive important updates and announcements via email</p>
           </div>
           <label className="inline-flex items-center cursor-pointer">
-            <input type="checkbox" value="" className="sr-only peer" />
+            <input 
+              type="checkbox" 
+              checked={notifications.emailNotifications === true}
+              onChange={() => handleToggle('emailNotifications')}
+              className="sr-only peer" 
+            />
             <div className="relative w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#00ff94]"></div>
           </label>
         </div>
         
+        <div className="pt-4">
+          <button 
+            onClick={handleSaveChanges}
+            disabled={isSaving || updatePreferences.isPending}
+            className={`bg-[#00ff94]/10 text-[#00ff94] px-6 py-2.5 rounded-lg hover:bg-[#00ff94]/20 transition-colors border border-[#00ff94]/30 ${isSaving || updatePreferences.isPending ? 'opacity-70 cursor-not-allowed' : ''}`}
+          >
+            {isSaving || updatePreferences.isPending ? 'Saving...' : 'Save Changes'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function HelpAndSupportSettings() {
+  return (
+    <div className="bg-[#18092a]/60 rounded-xl p-6 border border-gray-800/30 shadow-lg text-white">
+      <h2 className="text-xl font-bold mb-6">Help & Support</h2>
+      
+      <div className="space-y-8">
         <div>
-          <h3 className="font-medium mb-3">Daily Reminder Time</h3>
-          <div className="flex gap-3">
-            <input 
-              type="time" 
-              defaultValue="19:00"
-              className="bg-[#18092a]/80 text-white rounded-lg px-4 py-2 border border-gray-800/50 focus:outline-none focus:border-[#00ff94]/50" 
-            />
-            <button className="bg-[#00ff94]/10 text-[#00ff94] px-4 py-2 rounded-lg hover:bg-[#00ff94]/20 transition-colors border border-[#00ff94]/30">
-              Set
-            </button>
+          <h3 className="font-bold mb-4">Frequently Asked Questions</h3>
+          <div className="space-y-4">
+            <div className="bg-[#18092a]/80 rounded-lg p-4 border border-gray-800/50">
+              <h4 className="font-medium mb-2">How does Memorix work?</h4>
+              <p className="text-white/70 text-sm">Simply paste your notes or enter a concept you want to learn about. Our AI instantly turns this into flashcards optimized for learning. You can then study these cards using our spaced repetition system, take quizzes, and track your progress over time.</p>
+            </div>
+            
+            <div className="bg-[#18092a]/80 rounded-lg p-4 border border-gray-800/50">
+              <h4 className="font-medium mb-2">Is Memorix free to use?</h4>
+              <p className="text-white/70 text-sm">We offer a free tier with up to 50 cards per day and basic features. Our Premium subscription ($9.99/month) unlocks unlimited cards, advanced analytics, offline mode, and removes ads.</p>
+            </div>
+            
+            <div className="bg-[#18092a]/80 rounded-lg p-4 border border-gray-800/50">
+              <h4 className="font-medium mb-2">How accurate are the AI-generated flashcards?</h4>
+              <p className="text-white/70 text-sm">Our AI is trained on educational content and optimized for learning efficiency. While the AI is very accurate, you can always edit any card if needed. We continuously improve our AI based on user feedback.</p>
+            </div>
+            
+            <div className="bg-[#18092a]/80 rounded-lg p-4 border border-gray-800/50">
+              <h4 className="font-medium mb-2">How do I contact support?</h4>
+              <p className="text-white/70 text-sm">For any questions or issues, please email us at <a href="mailto:support@getmemorix.app" className="text-[#00ff94] hover:underline">support@getmemorix.app</a>. Our team typically responds within 24 hours.</p>
+            </div>
           </div>
         </div>
         
-        <div className="pt-4">
-          <button className="bg-[#00ff94]/10 text-[#00ff94] px-6 py-2.5 rounded-lg hover:bg-[#00ff94]/20 transition-colors border border-[#00ff94]/30">
-            Save Changes
-          </button>
+        <div>
+          <h3 className="font-bold mb-4">Contact Support</h3>
+          <div className="bg-[#18092a]/80 rounded-lg p-6 border border-gray-800/50 flex flex-col items-center text-center">
+            <EmailIcon style={{ fontSize: 48 }} className="text-[#00ff94] mb-3" />
+            <h4 className="font-medium mb-2">Email Support</h4>
+            <p className="text-white/70 text-sm mb-4">Our support team is ready to help with any questions or issues</p>
+            <a 
+              href="mailto:support@getmemorix.app" 
+              className="bg-[#00ff94]/10 text-[#00ff94] px-6 py-2.5 rounded-lg hover:bg-[#00ff94]/20 transition-colors border border-[#00ff94]/30 inline-block"
+            >
+              support@getmemorix.app
+            </a>
+          </div>
         </div>
       </div>
     </div>
@@ -322,40 +431,12 @@ function SettingsContent({ activeSection }) {
   switch (activeSection) {
     case 'account':
       return <AccountSettings />;
-    case 'appearance':
-      return <AppearanceSettings />;
     case 'notifications':
       return <NotificationSettings />;
-    case 'language':
-      return (
-        <div className="bg-[#18092a]/60 rounded-xl p-6 border border-gray-800/30 shadow-lg text-white">
-          <h2 className="text-xl font-bold mb-6">Language Settings</h2>
-          <div className="space-y-6">
-            <div>
-              <label className="block text-white/70 text-sm mb-2">Application Language</label>
-              <select className="w-full bg-[#18092a]/80 text-white rounded-lg px-4 py-3 border border-gray-800/50 focus:outline-none focus:border-[#00ff94]/50">
-                <option value="en">English</option>
-                <option value="es">Español</option>
-                <option value="fr">Français</option>
-                <option value="de">Deutsch</option>
-                <option value="ja">日本語</option>
-              </select>
-            </div>
-            <div className="pt-4">
-              <button className="bg-[#00ff94]/10 text-[#00ff94] px-6 py-2.5 rounded-lg hover:bg-[#00ff94]/20 transition-colors border border-[#00ff94]/30">
-                Save Changes
-              </button>
-            </div>
-          </div>
-        </div>
-      );
+    case 'help':
+      return <HelpAndSupportSettings />;
     default:
-      return (
-        <div className="bg-[#18092a]/60 rounded-xl p-6 border border-gray-800/30 shadow-lg text-white">
-          <h2 className="text-xl font-bold mb-6">{activeSection.charAt(0).toUpperCase() + activeSection.slice(1)} Settings</h2>
-          <p className="text-white/70">This settings section is under development.</p>
-        </div>
-      );
+      return <AccountSettings />;
   }
 }
 
