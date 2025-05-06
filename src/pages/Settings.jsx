@@ -69,7 +69,8 @@ function AccountSettings() {
   useEffect(() => {
     if (user) {
       console.log('Loading user profile:', user);
-      setDisplayName(user.name || '');
+      // Prioritize profile.displayName, fallback to name if not available
+      setDisplayName(user.profile?.displayName || user.name || '');
     }
   }, [user]);
 
@@ -86,8 +87,12 @@ function AccountSettings() {
     
     setIsSaving(true);
     try {
-      console.log('Saving profile update:', { name: displayName });
-      await updateProfile.mutateAsync({ name: displayName });
+      console.log('Saving profile update:', { profile: { displayName } });
+      await updateProfile.mutateAsync({ 
+        profile: { displayName },
+        // Also update the name field for backwards compatibility
+        name: displayName
+      });
       // Success is handled by the mutation
     } catch (error) {
       console.error('Error saving profile changes:', error);
@@ -114,7 +119,7 @@ function AccountSettings() {
             <AccountCircleIcon style={{ fontSize: '2rem' }} className="text-[#a259ff]" />
           </div>
           <div>
-            <h3 className="font-bold text-lg">{user?.name || displayName}</h3>
+            <h3 className="font-bold text-lg">{user?.profile?.displayName || displayName}</h3>
             <p className="text-white/70 text-sm">Free Plan</p>
           </div>
           <button className="sm:ml-auto bg-[#00ff94]/10 text-[#00ff94] px-4 py-2 rounded-lg hover:bg-[#00ff94]/20 transition-colors border border-[#00ff94]/30">

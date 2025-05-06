@@ -32,6 +32,12 @@ function PublicLayout({ children, title }) {
               Home
             </Link>
             <Link 
+              to="/partnerships" 
+              className="text-white/70 hover:text-white transition-colors"
+            >
+              Partnerships
+            </Link>
+            <Link 
               to="/privacy" 
               target="_blank"
               rel="noopener noreferrer"
@@ -84,6 +90,7 @@ function PublicLayout({ children, title }) {
             
             <div className="flex space-x-8">
               <Link to="/" className="text-white/70 hover:text-[#00ff94] transition-colors text-sm">Home</Link>
+              <Link to="/partnerships" className={`text-white/70 hover:text-[#00ff94] transition-colors text-sm ${title === 'Partnerships' ? 'text-[#00ff94]' : ''}`}>Partnerships</Link>
               <Link to="/privacy" className={`text-white/70 hover:text-[#00ff94] transition-colors text-sm ${title === 'Privacy Policy' ? 'text-[#00ff94]' : ''}`}>Privacy</Link>
               <Link to="/terms" className={`text-white/70 hover:text-[#00ff94] transition-colors text-sm ${title === 'Terms of Service' ? 'text-[#00ff94]' : ''}`}>Terms</Link>
             </div>

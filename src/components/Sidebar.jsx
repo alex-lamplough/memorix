@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
 import { useMediaQuery } from '@mui/material'
+import { useUserProfile } from '../api/queries/users'
 
 // Icons
 import CollectionsBookmarkIcon from '@mui/icons-material/CollectionsBookmark'
@@ -65,7 +66,14 @@ function SidebarItem({ icon, label, active, to, onClick, disabled, comingSoon })
 
 function Sidebar({ activePage = 'dashboard', transparentBg = false }) {
   const { user, logout } = useAuth();
+  const { data: userProfile } = useUserProfile();
   const isMobile = useMediaQuery('(max-width:768px)');
+  
+  // Get the display name from user profile data, with fallbacks
+  const displayName = userProfile?.profile?.displayName || userProfile?.name || user?.name || '';
+  
+  // Get the email from user profile data with fallback to Auth0 user email
+  const email = userProfile?.email || user?.email || '';
   
   return (
     <div className={`fixed top-0 left-0 bottom-0 w-64 flex flex-col h-screen ${!transparentBg ? 'bg-gradient-to-b from-[#2E0033] via-[#260041] to-[#1b1b2f]' : 'bg-transparent'} border-r border-gray-800/30 z-40`}>
@@ -86,15 +94,15 @@ function Sidebar({ activePage = 'dashboard', transparentBg = false }) {
             <div className="flex items-center gap-3 mb-2">
               <img 
                 src={user.picture} 
-                alt={user.name} 
+                alt={displayName || user.name} 
                 className="w-10 h-10 min-w-[2.5rem] rounded-full border-2 border-[#00ff94]"
                 onError={(e) => {
-                  e.target.src = `https://ui-avatars.com/api/?name=${user.name}&background=00ff94&color=18092a`;
+                  e.target.src = `https://ui-avatars.com/api/?name=${displayName || user.name}&background=00ff94&color=18092a`;
                 }}
               />
               <div className="overflow-hidden">
-                <div className="text-white font-medium truncate">{user.name}</div>
-                <div className="text-white/50 text-xs truncate" title={user.email}>{user.email}</div>
+                <div className="text-white font-medium truncate">{displayName || user.name}</div>
+                <div className="text-white/50 text-xs truncate" title={email}>{email}</div>
               </div>
             </div>
             

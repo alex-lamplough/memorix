@@ -1,11 +1,17 @@
 import React from 'react';
 import { useAuth } from '../auth/useAuth';
+import { useUserProfile } from '../api/queries/users';
 
 /**
  * A button component that handles login/logout functionality
  */
 const LoginButton = () => {
   const { isAuthenticated, user, login, signup, logout, isLoading, error } = useAuth();
+  const { data: userProfile } = useUserProfile();
+
+  // Get the display name and email from user profile data with fallbacks
+  const displayName = userProfile?.profile?.displayName || userProfile?.name || user?.name || '';
+  const email = userProfile?.email || user?.email || '';
 
   // Show loading state
   if (isLoading) {
@@ -43,14 +49,14 @@ const LoginButton = () => {
       <div className="hidden md:flex items-center gap-2 max-w-[200px]">
         <img 
           src={user?.picture} 
-          alt={user?.name} 
+          alt={displayName} 
           className="w-8 h-8 min-w-[2rem] rounded-full border-2 border-[#00ff94]"
           onError={(e) => {
-            e.target.src = `https://ui-avatars.com/api/?name=${user?.name}&background=00ff94&color=18092a`;
+            e.target.src = `https://ui-avatars.com/api/?name=${displayName}&background=00ff94&color=18092a`;
           }}
         />
         <div className="overflow-hidden">
-          <span className="text-white font-medium truncate block">{user?.name}</span>
+          <span className="text-white font-medium truncate block">{displayName}</span>
         </div>
       </div>
       <button

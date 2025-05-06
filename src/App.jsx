@@ -42,6 +42,7 @@ const FlashcardStudyExample = lazy(() => import('./pages/FlashcardStudyExample')
 const OnboardingForm = lazy(() => import('./components/onboarding/OnboardingForm'))
 const Privacy = lazy(() => import('./pages/Privacy'))
 const Terms = lazy(() => import('./pages/Terms'))
+const ContentCreators = lazy(() => import('./pages/ContentCreators'))
 
 // Auth components
 import OnboardingGuard from './components/OnboardingGuard'
@@ -93,12 +94,16 @@ function ComingSoon() {
 
 function AnimatedHeading() {
   const phrases = [
-    "Any Subject",
-    "Note Taking",
-    "Meeting Notes",
-    "Study Sessions",
-    "Language Learning",
-    "Math Problems"
+    "Language Vocab",
+    "Trivia Nights",
+    "Medical Terms",
+    "Coding Concepts",
+    "Recipe Collections",
+    "Workout Routines",
+    "Wine Tasting Notes",
+    "Travel Phrases",
+    "Team Building",
+    "Exam Preparation"
   ]
   
   const [currentPhrase, setCurrentPhrase] = useState(phrases[0])
@@ -655,6 +660,7 @@ function Footer() {
             <a href="#pricing" className="text-white/70 hover:text-[#00ff94] transition-colors text-sm">Pricing</a>
             <a href="#testimonials" className="text-white/70 hover:text-[#00ff94] transition-colors text-sm">Testimonials</a>
             <a href="#faq" className="text-white/70 hover:text-[#00ff94] transition-colors text-sm">FAQ</a>
+            <Link to="/partnerships" className="text-white/70 hover:text-[#00ff94] transition-colors text-sm">Partnerships</Link>
             <Link to="/privacy" target="_blank" rel="noopener noreferrer" className="text-white/70 hover:text-[#00ff94] transition-colors text-sm">Privacy</Link>
             <Link to="/terms" target="_blank" rel="noopener noreferrer" className="text-white/70 hover:text-[#00ff94] transition-colors text-sm">Terms</Link>
           </div>
@@ -800,6 +806,7 @@ function App() {
         <Route path="/share" element={<ShareFeature />} />
         <Route path="/privacy" element={<Privacy />} />
         <Route path="/terms" element={<Terms />} />
+        <Route path="/partnerships" element={<ContentCreators />} />
         <Route path="/flashcard-study-example" element={<FlashcardStudyExample />} />
         <Route path="/flashcard-study-example/:id" element={<FlashcardStudyExample />} />
         <Route path="/" element={

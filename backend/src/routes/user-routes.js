@@ -72,7 +72,10 @@ router.get('/me', async (req, res, next) => {
           auth0Id,
           email,
           name,
-          picture
+          picture,
+          profile: {
+            displayName: name
+          }
         });
         
         console.log(`✅ New user created in database: ${user._id}`);
@@ -81,7 +84,11 @@ router.get('/me', async (req, res, next) => {
         if (process.env.SENDGRID_API_KEY) {
           try {
             console.log(`📧 Sending welcome email to new user: ${email}`);
-            const emailResult = await emailService.sendWelcomeEmail(email, name);
+            const emailResult = await emailService.sendWelcomeEmail(
+              email, 
+              name, 
+              user.profile?.displayName
+            );
             console.log(`📧 Welcome email result:`, emailResult);
           } catch (emailError) {
             // Don't fail registration if email fails
@@ -122,7 +129,8 @@ router.get('/me', async (req, res, next) => {
               console.log(`📧 Sending welcome email to user with updated email: ${auth0Profile.email}`);
               await emailService.sendWelcomeEmail(
                 auth0Profile.email, 
-                user.name || auth0Profile.name || 'Memorix User'
+                user.name || auth0Profile.name || 'Memorix User',
+                user.profile?.displayName
               );
             } catch (emailError) {
               console.error(`❌ Error sending welcome email after profile update:`, emailError);

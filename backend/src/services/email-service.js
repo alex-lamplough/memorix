@@ -31,9 +31,10 @@ class EmailService {
    * Sends a welcome email to a newly registered user
    * @param {string} to - Recipient email address
    * @param {string} name - Recipient's name
+   * @param {string} displayName - Recipient's display name (optional)
    * @returns {Promise} - SendGrid API response
    */
-  async sendWelcomeEmail(to, name) {
+  async sendWelcomeEmail(to, name, displayName) {
     this.initialize();
 
     try {
@@ -45,6 +46,9 @@ class EmailService {
         return { skipped: true, reason: 'Placeholder email' };
       }
       
+      // Use displayName if provided, otherwise fall back to name
+      const recipientName = displayName || name;
+      
       // Create the email
       const msg = {
         to,
@@ -53,7 +57,7 @@ class EmailService {
           name: 'Memorix',
         },
         subject: 'Welcome to Memorix! 🎉',
-        html: this.getWelcomeEmailTemplate(name, to),
+        html: this.getWelcomeEmailTemplate(recipientName, to),
       };
 
       // Send the email

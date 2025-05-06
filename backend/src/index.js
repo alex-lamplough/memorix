@@ -13,6 +13,7 @@ import flashcardGeneratorRoutes from './routes/flashcard-generator-routes.js';
 import todoRoutes from './routes/todo-routes.js';
 import quizRoutes from './routes/quiz-routes.js';
 import publicRoutes from './routes/public-routes.js';
+import partnershipRoutes from './routes/partnership-routes.js';
 import { errorHandler } from './middleware/error-middleware.js';
 import { connectToMongoDB } from './db/mongodb.js';
 
@@ -55,6 +56,7 @@ app.use(express.json()); // Parse JSON request body
 const setupServer = () => {
   // Public API routes that don't require authentication
   app.use('/api/public', publicRoutes);
+  app.use('/api/partnerships', partnershipRoutes);
   
   // API routes that require authentication
   app.use('/api/flashcards', flashcardRoutes);

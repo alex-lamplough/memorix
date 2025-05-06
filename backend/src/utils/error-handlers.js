@@ -66,6 +66,19 @@ export const handleError = (res, error) => {
 };
 
 /**
+ * Wrapper for async route handlers to catch errors and pass them to the error middleware
+ * @param {Function} fn - Async route handler function
+ * @returns {Function} Express middleware function
+ */
+export const handleAsyncErrors = (fn) => {
+  return (req, res, next) => {
+    Promise.resolve(fn(req, res, next)).catch((error) => {
+      handleError(res, error);
+    });
+  };
+};
+
+/**
  * Format mongoose validation errors into a more usable structure
  * @param {ValidationError} error - Mongoose validation error
  * @returns {Object} Formatted error object
@@ -115,5 +128,6 @@ export const createApiError = (message, statusCode = 500, name = 'API Error', de
 
 export default {
   handleError,
-  createApiError
+  createApiError,
+  handleAsyncErrors
 }; 
