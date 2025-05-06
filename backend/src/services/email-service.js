@@ -1,6 +1,4 @@
 import sgMail from '@sendgrid/mail';
-import fs from 'fs';
-import path from 'path';
 
 /**
  * Email service for sending various types of emails via SendGrid
@@ -56,15 +54,6 @@ class EmailService {
         },
         subject: 'Welcome to Memorix! 🎉',
         html: this.getWelcomeEmailTemplate(name, to),
-        attachments: [
-          {
-            content: this.getLogoBase64(),
-            filename: 'MemorixLogoImage.png',
-            type: 'image/png',
-            disposition: 'inline',
-            content_id: 'memorix-logo'
-          }
-        ]
       };
 
       // Send the email
@@ -85,29 +74,6 @@ class EmailService {
   }
 
   /**
-   * Get the logo as base64 encoded string
-   * @returns {string} - Base64 encoded logo image
-   */
-  getLogoBase64() {
-    try {
-      // Path to the logo image - going up two directories from the current directory (backend/src)
-      // to reach the main project directory, then into src/assets
-      const logoPath = path.resolve(process.cwd(), '../../src/assets/MemorixLogoImage.png');
-      console.log('Attempting to load logo from path:', logoPath);
-      
-      // Read the file and convert to base64
-      const logoBuffer = fs.readFileSync(logoPath);
-      return logoBuffer.toString('base64');
-    } catch (error) {
-      console.error('Failed to load logo image:', error);
-      
-      // Fallback to a hardcoded base64 string of the Memorix logo
-      // This ensures we always have a logo even if file access fails
-      return 'iVBORw0KGgoAAAANSUhEUgAAAMgAAADICAYAAACtWK6eAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAALEwAACxMBAJqcGAAAAjFJREFUeJzt3cFqU1EYhuH/pBFBsHQldON0XZSuvBHvQAR7E+7ciQgiXoN7N4K0dNFNkVw6DaFJY5xJ55w5z7OEwaT5J+R9w0DISQ8AAAAAAAAAAAAAAGCWltYLeJ9Op9v9Vat+bZqmsV7LZTbXbXu3Wq/vrevYWS/gfev+/rN1DUlm/8xR0ni/Wt1a1jDbi5RkPNsLBJSDiAgRESIiRESIiAgRESIiRESIiBAR8eibdQFT6vu+8cw05iBERISICBERIiJERIiIEBEhIkJEhIgIEREiIkREiIgQESEiQkSEiAgRESIiRESIiBARI3PeyK5te9JYH9t2Pp/4N7s7OPicPbt9nA9H56tFMgxxsvtq8f7p4fvBuob1sXVcl3Vz65lprA/L5Wye+U8OD4fk+f7J6Oz50VHs7k7zed/0f6tXxdyscRAiIkREiIgQESEiQkSEiAgRESIiRESIiJCqNrLHdZNh83vnyeFJsrqxy//+PcZG9pj+ennvVoafN2czk/u7y+E4eZFnz/bG7ztF8/mIjrM+6n/fW03jYhzjc9vGnIcfc5NUERERIiJERIiIEBEhIkJEhIgIEREiIkREiIgQESEiQkSEiAgRESIiRESIiBARI1N+9upi3D37y48fydrK18udyZ7n5OJbG8PvbZ/R2ri4+G+r/8FBiIgQESEiQkSEiAgRESIiRESIiBAR0eR5nsfV1ZN1HUkSq9Xqr+et3Wdjo8MHISJCRISICBERIiJERIiIEBEhIkJEhIgIEQEAAAAAAAAAAAAAAAAAV+oP+dG7EE8OLCAAAAAASUVORK5CYII=';
-    }
-  }
-
-  /**
    * Returns HTML template for welcome email with Memorix branding
    * @param {string} name - User's name
    * @param {string} email - User's email address
@@ -117,11 +83,11 @@ class EmailService {
     // Get the app URL from environment variables or use default
     const appUrl = process.env.APP_URL || 'https://getmemorix.app';
     
-    // Use hosted URLs for social media icons instead of local paths
-    // These are publicly accessible URLs to common social media icons
-    const twitterIconUrl = 'https://cdn4.iconfinder.com/data/icons/social-media-black-white-2/600/X-512.png';
-    const instagramIconUrl = 'https://cdn4.iconfinder.com/data/icons/social-media-black-white-2/600/Instagram_glyph_svg-512.png';
-    const facebookIconUrl = 'https://cdn4.iconfinder.com/data/icons/social-media-black-white-2/600/Facebook_glyph_svg-512.png';
+    // Use publicly hosted images from our own website
+    const logoUrl = `${appUrl}/email-assets/MemorixLogoImage.png`;
+    const twitterIconUrl = `${appUrl}/email-assets/xLogo.png`;
+    const instagramIconUrl = `${appUrl}/email-assets/instagramLogo.png`;
+    const facebookIconUrl = `${appUrl}/email-assets/facebookLogo.png`;
     
     return `
       <!DOCTYPE html>
@@ -208,7 +174,7 @@ class EmailService {
         <body>
           <div class="container">
             <div class="header">
-              <img src="cid:memorix-logo" alt="Memorix Logo" width="150" height="auto">
+              <img src="${logoUrl}" alt="Memorix Logo" width="150" height="auto">
             </div>
             
             <div class="content">
