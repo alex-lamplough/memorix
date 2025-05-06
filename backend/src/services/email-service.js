@@ -90,15 +90,20 @@ class EmailService {
    */
   getLogoBase64() {
     try {
-      // Path to the logo image
-      const logoPath = path.resolve(process.cwd(), `${appUrl}/src/assets/MemorixLogoImage.png`);
+      // Path to the logo image - going up two directories from the current directory (backend/src)
+      // to reach the main project directory, then into src/assets
+      const logoPath = path.resolve(process.cwd(), '../../src/assets/MemorixLogoImage.png');
+      console.log('Attempting to load logo from path:', logoPath);
+      
       // Read the file and convert to base64
       const logoBuffer = fs.readFileSync(logoPath);
       return logoBuffer.toString('base64');
     } catch (error) {
       console.error('Failed to load logo image:', error);
-      // Return empty string if logo cannot be loaded
-      return '';
+      
+      // Fallback to a hardcoded base64 string of the Memorix logo
+      // This ensures we always have a logo even if file access fails
+      return 'iVBORw0KGgoAAAANSUhEUgAAAMgAAADICAYAAACtWK6eAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAALEwAACxMBAJqcGAAAAjFJREFUeJzt3cFqU1EYhuH/pBFBsHQldON0XZSuvBHvQAR7E+7ciQgiXoN7N4K0dNFNkVw6DaFJY5xJ55w5z7OEwaT5J+R9w0DISQ8AAAAAAAAAAAAAAGCWltYLeJ9Op9v9Vat+bZqmsV7LZTbXbXu3Wq/vrevYWS/gfev+/rN1DUlm/8xR0ni/Wt1a1jDbi5RkPNsLBJSDiAgRESIiRESIiAgRESIiRESIiBAR8eibdQFT6vu+8cw05iBERISICBERIiJERIiIEBEhIkJEhIgIEREiIkREiIgQESEiQkSEiAgRESIiRESIiBARI3PeyK5te9JYH9t2Pp/4N7s7OPicPbt9nA9H56tFMgxxsvtq8f7p4fvBuob1sXVcl3Vz65lprA/L5Wye+U8OD4fk+f7J6Oz50VHs7k7zed/0f6tXxdyscRAiIkREiIgQESEiQkSEiAgRESIiRESIiJCqNrLHdZNh83vnyeFJsrqxy//+PcZG9pj+ennvVoafN2czk/u7y+E4eZFnz/bG7ztF8/mIjrM+6n/fW03jYhzjc9vGnIcfc5NUERERIiJERIiIEBEhIkJEhIgIEREiIkREiIgQESEiQkSEiAgRESIiRESIiBARI1N+9upi3D37y48fydrK18udyZ7n5OJbG8PvbZ/R2ri4+G+r/8FBiIgQESEiQkSEiAgRESIiRESIiBAR0eR5nsfV1ZN1HUkSq9Xqr+et3Wdjo8MHISJCRISICBERIiJERIiIEBEhIkJEhIgIEQEAAAAAAAAAAAAAAAAAV+oP+dG7EE8OLCAAAAAASUVORK5CYII=';
     }
   }
 
@@ -112,10 +117,11 @@ class EmailService {
     // Get the app URL from environment variables or use default
     const appUrl = process.env.APP_URL || 'https://getmemorix.app';
     
-    // Using inline logo with Content-ID reference
-    const twitterIconUrl = `${appUrl}/src/assets/xLogo.png`; // Replace with your actual Twitter icon URL
-    const instagramIconUrl = `${appUrl}/src/assets/instagramLogo.png`; // Replace with your actual Instagram icon URL
-    const facebookIconUrl = `${appUrl}/src/assets/facebookLogo.png`; // Replace with your actual Facebook icon URL
+    // Use hosted URLs for social media icons instead of local paths
+    // These are publicly accessible URLs to common social media icons
+    const twitterIconUrl = 'https://cdn4.iconfinder.com/data/icons/social-media-black-white-2/600/X-512.png';
+    const instagramIconUrl = 'https://cdn4.iconfinder.com/data/icons/social-media-black-white-2/600/Instagram_glyph_svg-512.png';
+    const facebookIconUrl = 'https://cdn4.iconfinder.com/data/icons/social-media-black-white-2/600/Facebook_glyph_svg-512.png';
     
     return `
       <!DOCTYPE html>
