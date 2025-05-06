@@ -173,15 +173,15 @@ function AccountSettings() {
           <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-white/70">
             <div className="flex items-center gap-2">
               <CheckIcon fontSize="small" className="text-[#00ff94]" />
-              <span>50 cards per day</span>
+              <span>Access Community Cards</span>
             </div>
             <div className="flex items-center gap-2">
               <CheckIcon fontSize="small" className="text-[#00ff94]" />
-              <span>Basic analytics</span>
+              <span>Basic Analytics</span>
             </div>
             <div className="flex items-center gap-2">
               <CheckIcon fontSize="small" className="text-[#00ff94]" />
-              <span>Standard export</span>
+              <span>Standard Support</span>
             </div>
             <div className="flex items-center gap-2">
               <CheckIcon fontSize="small" className="text-[#00ff94]" />
@@ -193,41 +193,97 @@ function AccountSettings() {
         <div className="bg-gradient-to-r from-[#2E0033] to-[#1b1b2f] p-4 rounded-lg border border-[#00ff94]/30 mb-4">
           <div className="flex justify-between items-center">
             <div>
-              <h4 className="font-bold">Premium Plan</h4>
-              <p className="text-white/70 text-sm">Unlimited access to all features</p>
+              <h4 className="font-bold">Pro Plan</h4>
+              <p className="text-white/70 text-sm">Enhanced features for serious learners</p>
             </div>
             <span className="bg-[#00ff94]/10 px-3 py-1 rounded-full text-xs text-[#00ff94]">Recommended</span>
           </div>
           <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-white/70">
             <div className="flex items-center gap-2">
               <CheckIcon fontSize="small" className="text-[#00ff94]" />
-              <span>Unlimited cards</span>
+              <span>Everything in Free plan</span>
             </div>
             <div className="flex items-center gap-2">
               <CheckIcon fontSize="small" className="text-[#00ff94]" />
-              <span>Advanced analytics</span>
+              <span>Unlimited Flashcard & Quiz creation</span>
             </div>
             <div className="flex items-center gap-2">
               <CheckIcon fontSize="small" className="text-[#00ff94]" />
-              <span>Priority support</span>
+              <span>Advanced Analytics</span>
             </div>
             <div className="flex items-center gap-2">
               <CheckIcon fontSize="small" className="text-[#00ff94]" />
-              <span>Mobile access</span>
+              <span>Priority Support</span>
             </div>
             <div className="flex items-center gap-2">
               <CheckIcon fontSize="small" className="text-[#00ff94]" />
-              <span>No ads</span>
+              <span>Downloadable Content</span>
             </div>
             <div className="flex items-center gap-2">
               <CheckIcon fontSize="small" className="text-[#00ff94]" />
-              <span>Offline mode</span>
+              <span>Export Reports</span>
             </div>
           </div>
           <div className="mt-4">
             <button className="bg-[#00ff94] text-[#18092a] font-medium px-4 py-2 rounded-lg w-full hover:bg-[#00ff94]/90 transition-colors">
-              Upgrade to Premium - $9.99/month
+              Upgrade to Pro - $9.99/month
             </button>
+          </div>
+        </div>
+        
+        <div className="bg-[#18092a] p-4 rounded-lg border border-gray-800/30 mb-4">
+          <div className="flex justify-between items-center">
+            <div>
+              <h4 className="font-bold">Creator Plan</h4>
+              <p className="text-white/70 text-sm">For content creators and educators</p>
+            </div>
+            <span className="bg-[#a259ff]/20 px-3 py-1 rounded-full text-xs text-[#a259ff]">Coming Soon</span>
+          </div>
+          <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-white/70">
+            <div className="flex items-center gap-2">
+              <CheckIcon fontSize="small" className="text-[#00ff94]" />
+              <span>Everything in Pro plan</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <CheckIcon fontSize="small" className="text-[#00ff94]" />
+              <span>Custom Communities</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <CheckIcon fontSize="small" className="text-[#00ff94]" />
+              <span>Custom Social Media Content</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <CheckIcon fontSize="small" className="text-[#00ff94]" />
+              <span>Advanced sharing options</span>
+            </div>
+          </div>
+        </div>
+        
+        <div className="bg-[#18092a] p-4 rounded-lg border border-gray-800/30">
+          <div className="flex justify-between items-center">
+            <div>
+              <h4 className="font-bold">Enterprise Plan</h4>
+              <p className="text-white/70 text-sm">For organizations and institutions</p>
+            </div>
+            <span className="bg-[#a259ff]/20 px-3 py-1 rounded-full text-xs text-[#a259ff]">Coming Soon</span>
+          </div>
+          <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-white/70">
+            <div className="flex items-center gap-2">
+              <CheckIcon fontSize="small" className="text-[#00ff94]" />
+              <span>Dedicated Support</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <CheckIcon fontSize="small" className="text-[#00ff94]" />
+              <span>API Access</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <CheckIcon fontSize="small" className="text-[#00ff94]" />
+              <span>Multiple Team Members</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <CheckIcon fontSize="small" className="text-[#00ff94]" />
+              <span>Admin Controls</span>
+            </div>
           </div>
         </div>
       </div>
@@ -397,8 +453,12 @@ function HelpAndSupportSettings() {
             </div>
             
             <div className="bg-[#18092a]/80 rounded-lg p-4 border border-gray-800/50">
-              <h4 className="font-medium mb-2">Is Memorix free to use?</h4>
-              <p className="text-white/70 text-sm">We offer a free tier with up to 50 cards per day and basic features. Our Premium subscription ($9.99/month) unlocks unlimited cards, advanced analytics, offline mode, and removes ads.</p>
+              <div className="py-3">
+                <h4 className="font-medium mb-2">Is Memorix free to use?</h4>
+                <p className="text-white/70 text-sm">
+                  We offer a free tier with access to community cards, basic analytics, and standard support. Our Pro subscription ($9.99/month) unlocks unlimited flashcard creation, advanced analytics, priority support, and more. We also have upcoming Creator and Enterprise plans for content creators and organizations.
+                </p>
+              </div>
             </div>
             
             <div className="bg-[#18092a]/80 rounded-lg p-4 border border-gray-800/50">
