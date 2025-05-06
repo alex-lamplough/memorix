@@ -24,6 +24,8 @@ import Todo from './components/Todo'
 import FeatureDetailModal from './components/FeatureDetailModal'
 import Header from './Header'
 import DemoModal from './components/DemoModal'
+import CheckoutButton from './components/subscription/CheckoutButton'
+import useSubscription from './hooks/useSubscription'
 
 // Lazy load page components
 // These components are only loaded when they are needed
@@ -49,7 +51,7 @@ import OnboardingGuard from './components/OnboardingGuard'
 
 // Assets
 import logoWhite from './assets/MemorixLogoWhite.png'
-import logoGreen from './assets/MemorixLogoGreen.png'
+import logoGreen from './assets/MemorixBannerLogo.png'
 import facebookLogo from './assets/facebookLogo.png'
 import instagramLogo from './assets/instagramLogo.png'
 import xLogo from './assets/xLogo.png'
@@ -433,6 +435,7 @@ const pricingPlans = [
 function PricingSection() {
   // Get currency symbol based on user's locale
   const [currencySymbol, setCurrencySymbol] = useState('£');
+  const { subscription, isProSubscriber } = useSubscription();
   
   useEffect(() => {
     try {
@@ -500,12 +503,35 @@ function PricingSection() {
               ))}
             </ul>
             
-            <button 
-              className={`${plan.ctaColor} w-full py-3 rounded-xl font-semibold transition-colors mt-auto ${plan.comingSoon ? 'opacity-75 cursor-not-allowed' : ''}`}
-              disabled={plan.comingSoon}
-            >
-              {plan.cta}
-            </button>
+            {plan.name === 'Free' ? (
+              <button 
+                className={`${plan.ctaColor} w-full py-3 rounded-xl font-semibold transition-colors mt-auto`}
+              >
+                {plan.cta}
+              </button>
+            ) : plan.name === 'Pro' ? (
+              isProSubscriber() ? (
+                <button 
+                  className={`bg-[#00ff94]/10 text-white border border-[#00ff94]/30 w-full py-3 rounded-xl font-semibold transition-colors mt-auto`}
+                  disabled
+                >
+                  Current Plan
+                </button>
+              ) : (
+                <CheckoutButton
+                  plan="pro"
+                  text={plan.cta}
+                  className={`${plan.ctaColor} w-full py-3 rounded-xl font-semibold transition-colors mt-auto`}
+                />
+              )
+            ) : (
+              <button 
+                className={`${plan.ctaColor} w-full py-3 rounded-xl font-semibold transition-colors mt-auto ${plan.comingSoon ? 'opacity-75 cursor-not-allowed' : ''}`}
+                disabled={plan.comingSoon}
+              >
+                {plan.cta}
+              </button>
+            )}
           </div>
         ))}
       </div>

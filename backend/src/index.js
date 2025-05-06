@@ -14,6 +14,7 @@ import todoRoutes from './routes/todo-routes.js';
 import quizRoutes from './routes/quiz-routes.js';
 import publicRoutes from './routes/public-routes.js';
 import partnershipRoutes from './routes/partnership-routes.js';
+import subscriptionRoutes from './routes/subscription-routes.js';
 import { errorHandler } from './middleware/error-middleware.js';
 import { connectToMongoDB } from './db/mongodb.js';
 
@@ -31,6 +32,7 @@ const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:5174',
   'http://localhost:3000',
+  'http://localhost:5001',
   process.env.CORS_ORIGIN
 ].filter(Boolean); // Remove any undefined or empty values
 
@@ -50,6 +52,11 @@ app.use(cors({
 }));
 
 app.use(morgan('dev')); // Logging
+
+// Special route for Stripe webhook that needs raw body
+app.post('/api/subscriptions/webhook', express.raw({ type: 'application/json' }), subscriptionRoutes);
+
+// Parse JSON request body for all other routes
 app.use(express.json()); // Parse JSON request body
 
 // Function to set up and start the server
@@ -65,6 +72,7 @@ const setupServer = () => {
   app.use('/api/generator', flashcardGeneratorRoutes);
   app.use('/api/todos', todoRoutes);
   app.use('/api/quizzes', quizRoutes);
+  app.use('/api/subscriptions', subscriptionRoutes);
 
   // Health check endpoint
   app.get('/api/health', (req, res) => {
@@ -80,7 +88,7 @@ const setupServer = () => {
   app.use(errorHandler);
 
   // Start server
-  const PORT = process.env.PORT || 3000;
+  const PORT = process.env.PORT || 5001;
   
   const server = app.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);

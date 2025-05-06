@@ -21,6 +21,30 @@ const userSchema = new mongoose.Schema({
     type: Date,
     default: Date.now
   },
+  // Stripe customer information
+  stripeCustomerId: {
+    type: String,
+    sparse: true
+  },
+  subscription: {
+    plan: {
+      type: String,
+      enum: ['free', 'pro', 'creator', 'enterprise'],
+      default: 'free'
+    },
+    status: {
+      type: String,
+      enum: ['active', 'inactive', 'past_due', 'canceled', 'trialing'],
+      default: 'active'
+    },
+    stripeSubscriptionId: String,
+    currentPeriodEnd: Date,
+    cancelAtPeriodEnd: {
+      type: Boolean,
+      default: false
+    },
+    trialEnd: Date
+  },
   profile: {
     displayName: String,
     bio: String,
@@ -89,6 +113,77 @@ userSchema.pre('save', function(next) {
   this.updatedAt = Date.now();
   next();
 });
+
+// Method to check if user has active Pro subscription
+userSchema.methods.isProSubscriber = function() {
+  return this.subscription?.plan === 'pro' && 
+         this.subscription?.status === 'active';
+};
+
+// Method to check if specific feature is available for user's plan
+userSchema.methods.canUseFeature = function(feature) {
+  const plan = this.subscription?.plan || 'free';
+  
+  // Map of features available by plan level
+  const featureMap = {
+    // Free plan features
+    free: [
+      'view_community_cards',
+      'basic_analytics',
+      'standard_support'
+    ],
+    
+    // Pro plan features (includes all free features plus more)
+    pro: [
+      'view_community_cards',
+      'basic_analytics',
+      'standard_support',
+      'unlimited_flashcards',
+      'unlimited_quizzes',
+      'advanced_analytics',
+      'priority_support',
+      'download_content',
+      'export_reports'
+    ],
+    
+    // Creator plan features (includes all pro features plus more)
+    creator: [
+      'view_community_cards',
+      'basic_analytics',
+      'standard_support',
+      'unlimited_flashcards',
+      'unlimited_quizzes',
+      'advanced_analytics',
+      'priority_support',
+      'download_content',
+      'export_reports',
+      'custom_communities',
+      'social_media_content'
+    ],
+    
+    // Enterprise plan features (includes all creator features plus more)
+    enterprise: [
+      'view_community_cards',
+      'basic_analytics',
+      'standard_support',
+      'unlimited_flashcards',
+      'unlimited_quizzes',
+      'advanced_analytics',
+      'priority_support',
+      'download_content',
+      'export_reports',
+      'custom_communities',
+      'social_media_content',
+      'api_access',
+      'multi_team_members',
+      'admin_controls',
+      'dedicated_support'
+    ]
+  };
+  
+  // Check if the requested feature is available for user's plan
+  return featureMap[plan].includes(feature);
+};
 
 const User = mongoose.model('User', userSchema);
 

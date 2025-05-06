@@ -1,0 +1,33 @@
+# Server Configuration
+PORT=5001
+NODE_ENV=development
+
+# MongoDB Connection
+MONGODB_URI=mongodb://localhost:27017/memorix
+
+# Auth0 Configuration
+AUTH0_DOMAIN=your-auth0-domain.auth0.com
+AUTH0_AUDIENCE=your-auth0-audience
+
+# OpenAI Configuration
+OPENAI_API_KEY=your_openai_api_key
+
+# CORS Configuration
+CORS_ORIGIN=http://localhost:5173
+
+# Stripe Configuration
+# Add these to your .env file
+
+STRIPE_SECRET_KEY=sk_test_your_stripe_secret_key
+STRIPE_PUBLISHABLE_KEY=pk_test_your_stripe_publishable_key
+STRIPE_WEBHOOK_SECRET=whsec_b770e18997e345392a0b0e27a3e407112605f177c2642d3a616194fac544b234
+STRIPE_PRO_PLAN_PRICE_ID=price_1RLoWfRu5R0P1Ri7ZOsMEr7h
+
+# Product ID: prod_SGLCT3netvdKg5 (Memorix Pro)
+# Price ID: price_1RLoWfRu5R0P1Ri7ZOsMEr7h (£9.99/month)
+
+# Notes:
+# 1. Replace 'your-auth0-domain.auth0.com' with your Auth0 domain
+# 2. Replace 'your-auth0-audience' with your Auth0 API Audience
+# 3. Replace 'your_stripe_secret_key' and 'your_stripe_publishable_key'
+#    with your actual Stripe API keys from the Stripe Dashboard 

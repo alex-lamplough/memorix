@@ -85,7 +85,7 @@ Authentication is handled through Auth0. All API endpoints require a valid Auth0
 
 The following environment variables need to be set:
 
-- `PORT` - The port the server runs on (default: 3000)
+- `PORT` - The port the server runs on (default: 5001)
 - `NODE_ENV` - The environment (development, production)
 - `MONGODB_URI` - MongoDB connection string
 - `AUTH0_AUDIENCE` - Auth0 API audience
