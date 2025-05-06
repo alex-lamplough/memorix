@@ -182,6 +182,77 @@ router.put('/me', async (req, res, next) => {
   }
 });
 
+// Add PATCH endpoint for user profile updates
+router.patch('/me', async (req, res, next) => {
+  try {
+    const { name, nickname, preferences, profile } = req.body;
+    
+    console.log('🔄 PATCH /users/me - Request body:', JSON.stringify(req.body, null, 2));
+    
+    let user = await User.findOne({ auth0Id: req.user.auth0Id });
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    console.log('👤 Current user before update:', JSON.stringify({
+      name: user.name,
+      preferences: user.preferences
+    }, null, 2));
+    
+    // Update fields if provided
+    if (name !== undefined) user.name = name;
+    if (nickname !== undefined) user.nickname = nickname;
+    
+    // Update preferences if provided
+    if (preferences) {
+      // Initialize preferences if it doesn't exist
+      if (!user.preferences) user.preferences = {};
+      
+      console.log('🔧 Current preferences before update:', JSON.stringify(user.preferences, null, 2));
+      console.log('📝 New preferences to apply:', JSON.stringify(preferences, null, 2));
+      
+      // For each preference field, handle boolean values specially
+      Object.keys(preferences).forEach(key => {
+        const oldValue = user.preferences[key];
+        const newValue = preferences[key];
+        
+        // Ensure booleans are correctly handled 
+        if (typeof newValue === 'boolean') {
+          console.log(`🔑 Updating boolean preference '${key}' from ${oldValue} to ${newValue}`);
+          user.preferences[key] = newValue;
+        } else if (newValue !== undefined) {
+          console.log(`🔑 Updating preference '${key}' from ${oldValue} to ${newValue}`);
+          user.preferences[key] = newValue;
+        }
+      });
+      
+      console.log('✅ Updated preferences:', JSON.stringify(user.preferences, null, 2));
+    }
+    
+    // Update profile if provided
+    if (profile) {
+      user.profile = {
+        ...user.profile || {},
+        ...profile
+      };
+    }
+    
+    user.updatedAt = Date.now();
+    await user.save();
+    
+    console.log('👤 Updated user after save:', JSON.stringify({
+      name: user.name,
+      preferences: user.preferences
+    }, null, 2));
+    
+    res.json(user);
+  } catch (error) {
+    console.error('❌ Error updating user via PATCH:', error);
+    next(error);
+  }
+});
+
 // Get user statistics
 router.get('/me/stats', async (req, res, next) => {
   try {

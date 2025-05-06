@@ -54,6 +54,10 @@ const userSchema = new mongoose.Schema({
       type: Boolean,
       default: true
     },
+    contentUpdates: {
+      type: Boolean,
+      default: true
+    },
     defaultStudyTime: {
       type: Number,
       default: 20 // minutes
