@@ -40,6 +40,8 @@ const EditDeck = lazy(() => import('./pages/EditDeck'))
 const EditQuiz = lazy(() => import('./pages/EditQuiz'))
 const FlashcardStudyExample = lazy(() => import('./pages/FlashcardStudyExample'))
 const OnboardingForm = lazy(() => import('./components/onboarding/OnboardingForm'))
+const Privacy = lazy(() => import('./pages/Privacy'))
+const Terms = lazy(() => import('./pages/Terms'))
 
 // Auth components
 import OnboardingGuard from './components/OnboardingGuard'
@@ -649,6 +651,10 @@ function Footer() {
         </div>
         
         <div className="border-t border-gray-800/30 pt-6 text-center">
+          <div className="flex justify-center space-x-6 mb-4">
+            <Link to="/privacy" target="_blank" rel="noopener noreferrer" className="text-white/70 hover:text-[#00ff94] transition-colors text-sm">Privacy Policy</Link>
+            <Link to="/terms" target="_blank" rel="noopener noreferrer" className="text-white/70 hover:text-[#00ff94] transition-colors text-sm">Terms of Service</Link>
+          </div>
           <p className="text-white/50 text-sm">
             © {currentYear} Readler Ltd. All rights reserved.
           </p>
@@ -777,6 +783,8 @@ function App() {
         <Route path="/edit-quiz/:id" element={<ProtectedRoute element={<OnboardingGuard><EditQuiz /></OnboardingGuard>} />} />
         <Route path="/share/:type/:id" element={<SharedItem />} />
         <Route path="/share" element={<ShareFeature />} />
+        <Route path="/privacy" element={<Privacy />} />
+        <Route path="/terms" element={<Terms />} />
         <Route path="/flashcard-study-example" element={<FlashcardStudyExample />} />
         <Route path="/flashcard-study-example/:id" element={<FlashcardStudyExample />} />
         <Route path="/" element={

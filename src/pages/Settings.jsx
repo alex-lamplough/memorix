@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useMediaQuery } from '@mui/material'
 import { Menu as MenuIcon } from '@mui/icons-material'
+import { Link } from 'react-router-dom'
 
 // Components
 import Sidebar from '../components/Sidebar'
@@ -403,6 +404,39 @@ function HelpAndSupportSettings() {
             <div className="bg-[#18092a]/80 rounded-lg p-4 border border-gray-800/50">
               <h4 className="font-medium mb-2">How do I contact support?</h4>
               <p className="text-white/70 text-sm">For any questions or issues, please email us at <a href="mailto:support@getmemorix.app" className="text-[#00ff94] hover:underline">support@getmemorix.app</a>. Our team typically responds within 24 hours.</p>
+            </div>
+          </div>
+        </div>
+        
+        <div>
+          <h3 className="font-bold mb-4">Legal</h3>
+          <div className="space-y-4">
+            <div className="bg-[#18092a]/80 rounded-lg p-4 border border-gray-800/50">
+              <div className="flex justify-between items-center">
+                <h4 className="font-medium">Privacy Policy</h4>
+                <Link 
+                  to="/privacy" 
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-[#00ff94]/10 text-[#00ff94] px-3 py-1 rounded-lg hover:bg-[#00ff94]/20 transition-colors border border-[#00ff94]/30 text-sm"
+                >
+                  View
+                </Link>
+              </div>
+            </div>
+            
+            <div className="bg-[#18092a]/80 rounded-lg p-4 border border-gray-800/50">
+              <div className="flex justify-between items-center">
+                <h4 className="font-medium">Terms of Service</h4>
+                <Link 
+                  to="/terms" 
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-[#00ff94]/10 text-[#00ff94] px-3 py-1 rounded-lg hover:bg-[#00ff94]/20 transition-colors border border-[#00ff94]/30 text-sm"
+                >
+                  View
+                </Link>
+              </div>
             </div>
           </div>
         </div>

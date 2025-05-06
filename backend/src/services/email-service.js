@@ -1,4 +1,6 @@
 import sgMail from '@sendgrid/mail';
+import fs from 'fs';
+import path from 'path';
 
 /**
  * Email service for sending various types of emails via SendGrid
@@ -54,6 +56,15 @@ class EmailService {
         },
         subject: 'Welcome to Memorix! 🎉',
         html: this.getWelcomeEmailTemplate(name, to),
+        attachments: [
+          {
+            content: this.getLogoBase64(),
+            filename: 'MemorixLogoImage.png',
+            type: 'image/png',
+            disposition: 'inline',
+            content_id: 'memorix-logo'
+          }
+        ]
       };
 
       // Send the email
@@ -74,6 +85,24 @@ class EmailService {
   }
 
   /**
+   * Get the logo as base64 encoded string
+   * @returns {string} - Base64 encoded logo image
+   */
+  getLogoBase64() {
+    try {
+      // Path to the logo image
+      const logoPath = path.resolve(process.cwd(), '../src/assets/MemorixLogoImage.png');
+      // Read the file and convert to base64
+      const logoBuffer = fs.readFileSync(logoPath);
+      return logoBuffer.toString('base64');
+    } catch (error) {
+      console.error('Failed to load logo image:', error);
+      // Return empty string if logo cannot be loaded
+      return '';
+    }
+  }
+
+  /**
    * Returns HTML template for welcome email with Memorix branding
    * @param {string} name - User's name
    * @param {string} email - User's email address
@@ -82,6 +111,11 @@ class EmailService {
   getWelcomeEmailTemplate(name, email) {
     // Get the app URL from environment variables or use default
     const appUrl = process.env.APP_URL || 'https://getmemorix.app';
+    
+    // Using inline logo with Content-ID reference
+    const twitterIconUrl = 'https://cdn4.iconfinder.com/data/icons/social-media-black-white-2/1227/X-512.png'; // Replace with your actual Twitter icon URL
+    const instagramIconUrl = 'https://cdn0.iconfinder.com/data/icons/social-media-circle-6/1024/instagram-1024.png'; // Replace with your actual Instagram icon URL
+    const facebookIconUrl = 'https://cdn3.iconfinder.com/data/icons/2018-social-media-logotypes/1000/2018_social_media_popular_app_logo_facebook-1024.png'; // Replace with your actual Facebook icon URL
     
     return `
       <!DOCTYPE html>
@@ -115,6 +149,9 @@ class EmailService {
             }
             .content {
               padding: 30px 20px;
+              font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+              font-size: 16px;
+              line-height: 1.5;
             }
             .button {
               display: inline-block;
@@ -154,17 +191,23 @@ class EmailService {
               border-radius: 12px;
               margin: 20px 0;
             }
+            .user-name {
+              font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+              font-size: 16px;
+              color: #ffffff;
+              font-weight: normal;
+            }
           </style>
         </head>
         <body>
           <div class="container">
             <div class="header">
-              <img src="${appUrl}/logo.png" alt="Memorix Logo" width="150" height="auto">
+              <img src="cid:memorix-logo" alt="Memorix Logo" width="150" height="auto">
             </div>
             
             <div class="content">
               <h1>Welcome to <span class="accent">Memorix</span>!</h1>
-              <p>Hi ${name},</p>
+              <p>Hi <span class="user-name">${name}</span>,</p>
               <p>We're thrilled to have you join us! Memorix is your new study companion that makes learning efficient and fun.</p>
               
               <div class="card">
@@ -186,9 +229,9 @@ class EmailService {
               <span class="accent">The Memorix Team</span></p>
               
               <div class="social-icons">
-                <a href="https://twitter.com/memorixapp"><img src="${appUrl}/twitter-icon.png" alt="Twitter" width="24" height="24"></a>
-                <a href="https://instagram.com/memorixapp"><img src="${appUrl}/instagram-icon.png" alt="Instagram" width="24" height="24"></a>
-                <a href="https://facebook.com/memorixapp"><img src="${appUrl}/facebook-icon.png" alt="Facebook" width="24" height="24"></a>
+                <a href="https://twitter.com/memorixapp"><img src="${twitterIconUrl}" alt="Twitter" width="24" height="24"></a>
+                <a href="https://instagram.com/memorixapp"><img src="${instagramIconUrl}" alt="Instagram" width="24" height="24"></a>
+                <a href="https://facebook.com/memorixapp"><img src="${facebookIconUrl}" alt="Facebook" width="24" height="24"></a>
               </div>
             </div>
             
