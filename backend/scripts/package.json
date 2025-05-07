@@ -1,0 +1,12 @@
+{
+    "name": "subscription-expiry",
+    "version": "1.0.0",
+    "type": "module",
+    "scripts": {
+      "start": "node expire-subscriptions.js"
+    },
+    "dependencies": {
+      "mongoose": "^7.0.0",
+      "dotenv": "^16.0.0"
+    }
+  }
