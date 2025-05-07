@@ -213,8 +213,11 @@ export const quizService = {
         // If we get a 404, try with an alternative path format
         if (initialError.response && initialError.response.status === 404) {
           console.log('First attempt failed with 404, trying alternative path...');
-          // Some backends might expect /api/quizzes/favorites format
-          const altResponse = await api.get('/api/quizzes/favorites', { signal });
+          // Use the original path without duplicating /api/
+          const altResponse = await api.get('/quizzes/favorites', { 
+            signal,
+            baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5001/api'
+          });
           console.log('Alternative path quiz favorites response:', altResponse.data);
           return altResponse.data;
         }

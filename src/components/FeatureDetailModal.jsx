@@ -40,30 +40,30 @@ const featureDetails = {
   },
   'Progress Tracking': {
     title: 'Progress Tracking',
-    description: 'Track your improvement with detailed analytics and insights.',
-    longDescription: 'Get detailed insights into your learning journey with comprehensive analytics. See your retention rates, study patterns, and progress over time. Identify your weak areas and get recommendations for focused study.',
+    description: 'Track your improvement with detailed analytics and insights. (Coming Soon)',
+    longDescription: 'Our upcoming Progress dashboard will provide detailed insights into your learning journey with comprehensive analytics. You\'ll be able to see your retention rates, study patterns, and progress over time. The system will identify your weak areas and give recommendations for focused study.',
     benefits: [
-      'Detailed charts of your learning progress',
-      'Track retention rates for each flashcard deck',
-      'See your daily/weekly/monthly study habits',
-      'Identify difficult cards that need more attention'
+      'Detailed charts of your learning progress (Coming Soon)',
+      'Track retention rates for each flashcard deck (Coming Soon)',
+      'See your daily/weekly/monthly study habits (Coming Soon)',
+      'Identify difficult cards that need more attention (Coming Soon)'
     ],
     image: 'progress-tracking.png'
   },
   'Language Learning': {
     title: 'Language Learning',
-    description: 'Special templates for learning vocabulary in any language.',
-    longDescription: 'Our specialized language learning templates include pronunciation guides, example sentences, and context. Perfect for vocabulary acquisition in any language. The system supports audio pronunciation and native speaker recordings.',
+    description: 'Specialized features for learning vocabulary in any language.',
+    longDescription: 'Our platform is optimized for language learning with features for vocabulary acquisition, example sentences, and context. Perfect for mastering new languages efficiently with our AI assistance.',
     benefits: [
-      'Specialized templates for vocabulary acquisition',
+      'Specialized vocabulary learning features',
       'Example sentences for context',
-      'Audio pronunciation guides',
+      'AI-powered vocabulary suggestions',
       'Support for over 50 languages'
     ],
     image: 'language-learning.png'
   },
-  'Web Accessibility': {
-    title: 'Web Accessibility',
+  'Cross-Platform Access': {
+    title: 'Cross-Platform Access',
     description: 'Access your study materials from any browser on any device.',
     longDescription: 'Study anytime, anywhere with our responsive web application. Your flashcards and progress sync across all your devices instantly. No need to install anything - just open your browser and continue studying where you left off.',
     benefits: [
@@ -74,29 +74,29 @@ const featureDetails = {
     ],
     image: 'web-accessibility.png'
   },
-  'Smart Templates': {
-    title: 'Smart Templates',
-    description: 'Choose from a variety of templates for different subjects.',
-    longDescription: 'Specialized templates for different subjects ensure you create the most effective study materials. From math equations to chemical formulas, from coding snippets to historical timelines, our templates are designed for optimal learning in each discipline.',
+  'Community Content': {
+    title: 'Community Content',
+    description: 'Access a growing library of community-created flashcards.',
+    longDescription: 'Tap into our community library of flashcards created by other learners. Find ready-made decks for popular subjects, courses, and topics. Save time by using high-quality content created by other students and educators.',
     benefits: [
-      'Subject-specific templates for optimal learning',
-      'Support for math equations and diagrams',
-      'Code syntax highlighting for programming',
-      'Timeline templates for historical events'
+      'Access thousands of pre-made flashcard decks',
+      'Browse content by subject area or popularity',
+      'Rate and save community decks to your library',
+      'Contribute your own decks to help others learn'
     ],
-    image: 'smart-templates.png'
+    image: 'community-content.png'
   },
-  'Presentation Mode': {
-    title: 'Presentation Mode',
-    description: 'Practice your presentation skills with presenter view.',
-    longDescription: 'Turn your flashcards into presentation slides with our presentation mode. Great for practicing speeches, presentations, or lectures. You can see your notes while your audience sees only the main content.',
+  'Export & Share': {
+    title: 'Export & Share',
+    description: 'Export your flashcards or share them with friends and classmates.',
+    longDescription: 'Easily share your flashcards with classmates, friends, or study groups. Our community sharing lets you publish your decks publicly. Private sharing and export features are coming soon to enable offline use and targeted sharing with specific study groups.',
     benefits: [
-      'Practice presentations with speaker notes',
-      'Full-screen presentation mode',
-      'Timer and progress tracking',
-      'Export to PowerPoint or PDF'
+      'Community sharing via public links',
+      'Export to PDF, CSV, or other formats (Coming Soon)',
+      'Private sharing with specific users (Coming Soon)',
+      'Track shared content usage and engagement'
     ],
-    image: 'presentation-mode.png'
+    image: 'export-share.png'
   }
 };
 

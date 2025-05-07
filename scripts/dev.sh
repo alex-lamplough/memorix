@@ -1,8 +1,8 @@
 #!/bin/bash
 
-# Start backend on port 3000
-echo "🔵 Starting backend server on port 3000..."
-cd backend && PORT=3000 npm run dev &
+# Start backend on port 5001
+echo "🔵 Starting backend server on port 5001..."
+cd backend && PORT=5001 npm run dev &
 BACKEND_PID=$!
 
 # Start frontend on port 5173

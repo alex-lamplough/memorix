@@ -52,7 +52,7 @@ Memorix uses a separate backend service for API functionality, database operatio
 
 ### Local Development
 
-1. When running locally, set `VITE_API_URL` to `http://localhost:3000/api` (or whatever port your local backend runs on)
+1. When running locally, set `VITE_API_URL` to `http://localhost:5001/api` (or whatever port your local backend runs on)
 
 2. Ensure your backend is running with the correct environment variables:
    - `AUTH0_AUDIENCE` and `AUTH0_DOMAIN` should match your frontend's Auth0 configuration
@@ -104,7 +104,7 @@ When deploying to Railway:
    - `VITE_ENV=production`
 
 3. For the Backend API service, add these environment variables:
-   - `PORT=3000`
+   - `PORT=5001`
    - `NODE_ENV=production`
    - `MONGODB_URI` (connection string to your MongoDB service)
    - `AUTH0_AUDIENCE`

@@ -38,7 +38,7 @@ const envVars = [
   {
     name: 'VITE_API_URL',
     description: 'Your API URL (optional)',
-    default: 'http://localhost:3000/api'
+    default: 'http://localhost:5001/api'
   },
   {
     name: 'VITE_ENV',

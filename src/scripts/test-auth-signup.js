@@ -43,7 +43,7 @@ console.log('   - If you encountered issues, check the console logs for error me
 const auth0Domain = getEnvVariable('AUTH0_DOMAIN', undefined);
 const auth0ClientId = getEnvVariable('AUTH0_CLIENT_ID', undefined);
 const auth0Audience = getEnvVariable('AUTH0_AUDIENCE', undefined);
-const apiUrl = getEnvVariable('API_URL', 'http://localhost:3000/api');
+const apiUrl = getEnvVariable('API_URL', 'http://localhost:5001/api');
 
 console.log('Current Configuration:');
 console.log(`- Auth0 Domain: ${auth0Domain || 'Not configured'}`);

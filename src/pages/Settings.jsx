@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useMediaQuery } from '@mui/material'
 import { Menu as MenuIcon } from '@mui/icons-material'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 
 // Components
 import Sidebar from '../components/Sidebar'
@@ -18,6 +18,9 @@ import EmailIcon from '@mui/icons-material/Email'
 
 // API hooks
 import { useUserProfile, useUpdateUserProfile, useUpdateUserPreferences } from '../api/queries/users'
+import CheckoutButton from '../components/subscription/CheckoutButton'
+import ManageSubscriptionButton from '../components/subscription/ManageSubscriptionButton'
+import useSubscription from '../hooks/useSubscription'
 
 function SettingsNavItem({ icon, label, active, onClick }) {
   return (
@@ -61,9 +64,32 @@ function AccountSettings() {
   // Get user profile data and update mutation
   const { data: user, isLoading: isLoadingUser } = useUserProfile();
   const updateProfile = useUpdateUserProfile();
+  const location = useLocation();
+  const { subscription, isLoading: isLoadingSubscription, isProSubscriber } = useSubscription();
   
   const [displayName, setDisplayName] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [subscriptionMessage, setSubscriptionMessage] = useState('');
+
+  // Check for subscription status in URL
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const subscriptionStatus = params.get('subscription');
+    
+    if (subscriptionStatus === 'success') {
+      setSubscriptionMessage('Your subscription was successfully activated!');
+      // Clear the URL parameter after showing the message
+      setTimeout(() => {
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }, 5000);
+    } else if (subscriptionStatus === 'canceled') {
+      setSubscriptionMessage('Your subscription checkout was canceled.');
+      // Clear the URL parameter after showing the message
+      setTimeout(() => {
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }, 5000);
+    }
+  }, [location.search]);
 
   // Initialize display name when user data is loaded
   useEffect(() => {
@@ -101,7 +127,7 @@ function AccountSettings() {
     }
   };
 
-  if (isLoadingUser) {
+  if (isLoadingUser || isLoadingSubscription) {
     return (
       <div className="bg-[#18092a]/60 rounded-xl p-6 border border-gray-800/30 shadow-lg text-white">
         <p className="text-white/70">Loading user data...</p>
@@ -113,6 +139,12 @@ function AccountSettings() {
     <div className="bg-[#18092a]/60 rounded-xl p-6 border border-gray-800/30 shadow-lg text-white">
       <h2 className="text-xl font-bold mb-6">Account Settings</h2>
       
+      {subscriptionMessage && (
+        <div className="bg-[#00ff94]/10 border border-[#00ff94]/30 text-[#00ff94] p-4 rounded-lg mb-6">
+          {subscriptionMessage}
+        </div>
+      )}
+      
       <div className="mb-8">
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-6">
           <div className="w-16 h-16 bg-[#a259ff]/20 rounded-full flex items-center justify-center">
@@ -120,11 +152,25 @@ function AccountSettings() {
           </div>
           <div>
             <h3 className="font-bold text-lg">{user?.profile?.displayName || displayName}</h3>
-            <p className="text-white/70 text-sm">Free Plan</p>
+            <p className="text-white/70 text-sm">
+              {user.subscription?.plan
+                ? user.subscription.plan.charAt(0).toUpperCase() + user.subscription.plan.slice(1) + ' Plan'
+                : 'Free Plan'}
+            </p>
           </div>
-          <button className="sm:ml-auto bg-[#00ff94]/10 text-[#00ff94] px-4 py-2 rounded-lg hover:bg-[#00ff94]/20 transition-colors border border-[#00ff94]/30">
-            Upgrade Plan
-          </button>
+          {!isProSubscriber() && (
+            <CheckoutButton
+              plan="pro" 
+              text="Upgrade Plan"
+              className="sm:ml-auto bg-[#00ff94]/10 text-[#00ff94] px-4 py-2 rounded-lg hover:bg-[#00ff94]/20 transition-colors border border-[#00ff94]/30"
+            />
+          )}
+          {isProSubscriber() && (
+            <ManageSubscriptionButton
+              text="Manage Subscription"
+              className="sm:ml-auto bg-[#00ff94]/10 text-[#00ff94] px-4 py-2 rounded-lg hover:bg-[#00ff94]/20 transition-colors border border-[#00ff94]/30"
+            />
+          )}
         </div>
         
         <div className="space-y-6">
@@ -168,20 +214,22 @@ function AccountSettings() {
               <h4 className="font-bold">Free Plan</h4>
               <p className="text-white/70 text-sm">Basic features with limited usage</p>
             </div>
-            <span className="bg-white/10 px-3 py-1 rounded-full text-xs text-white/80">Current</span>
+            {user.subscription?.plan === 'free' && (
+              <span className="bg-white/10 px-3 py-1 rounded-full text-xs text-white/80">Current</span>
+            )}
           </div>
           <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-white/70">
             <div className="flex items-center gap-2">
               <CheckIcon fontSize="small" className="text-[#00ff94]" />
-              <span>50 cards per day</span>
+              <span>Access Community Cards</span>
             </div>
             <div className="flex items-center gap-2">
               <CheckIcon fontSize="small" className="text-[#00ff94]" />
-              <span>Basic analytics</span>
+              <span>Basic Analytics</span>
             </div>
             <div className="flex items-center gap-2">
               <CheckIcon fontSize="small" className="text-[#00ff94]" />
-              <span>Standard export</span>
+              <span>Standard Support</span>
             </div>
             <div className="flex items-center gap-2">
               <CheckIcon fontSize="small" className="text-[#00ff94]" />
@@ -193,41 +241,120 @@ function AccountSettings() {
         <div className="bg-gradient-to-r from-[#2E0033] to-[#1b1b2f] p-4 rounded-lg border border-[#00ff94]/30 mb-4">
           <div className="flex justify-between items-center">
             <div>
-              <h4 className="font-bold">Premium Plan</h4>
-              <p className="text-white/70 text-sm">Unlimited access to all features</p>
+              <h4 className="font-bold">Pro Plan</h4>
+              <p className="text-white/70 text-sm">Enhanced features for serious learners</p>
             </div>
-            <span className="bg-[#00ff94]/10 px-3 py-1 rounded-full text-xs text-[#00ff94]">Recommended</span>
+            {user.subscription?.plan === 'pro' ? (
+              <span className="bg-[#00ff94]/10 px-3 py-1 rounded-full text-xs text-[#00ff94]">Current</span>
+            ) : (
+              <span className="bg-[#00ff94]/10 px-3 py-1 rounded-full text-xs text-[#00ff94]">Recommended</span>
+            )}
           </div>
           <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-white/70">
             <div className="flex items-center gap-2">
               <CheckIcon fontSize="small" className="text-[#00ff94]" />
-              <span>Unlimited cards</span>
+              <span>Everything in Free plan</span>
             </div>
             <div className="flex items-center gap-2">
               <CheckIcon fontSize="small" className="text-[#00ff94]" />
-              <span>Advanced analytics</span>
+              <span>Unlimited Flashcard & Quiz creation</span>
             </div>
             <div className="flex items-center gap-2">
               <CheckIcon fontSize="small" className="text-[#00ff94]" />
-              <span>Priority support</span>
+              <span>Advanced Analytics</span>
             </div>
             <div className="flex items-center gap-2">
               <CheckIcon fontSize="small" className="text-[#00ff94]" />
-              <span>Mobile access</span>
+              <span>Priority Support</span>
             </div>
             <div className="flex items-center gap-2">
               <CheckIcon fontSize="small" className="text-[#00ff94]" />
-              <span>No ads</span>
+              <span>Downloadable Content</span>
             </div>
             <div className="flex items-center gap-2">
               <CheckIcon fontSize="small" className="text-[#00ff94]" />
-              <span>Offline mode</span>
+              <span>Export Reports</span>
             </div>
           </div>
           <div className="mt-4">
-            <button className="bg-[#00ff94] text-[#18092a] font-medium px-4 py-2 rounded-lg w-full hover:bg-[#00ff94]/90 transition-colors">
-              Upgrade to Premium - $9.99/month
-            </button>
+            {user.subscription?.plan === 'pro' ? (
+              <ManageSubscriptionButton
+                text="Manage Subscription"
+                className="bg-[#00ff94]/10 text-[#00ff94] font-medium px-4 py-2 rounded-lg w-full hover:bg-[#00ff94]/20 transition-colors border border-[#00ff94]/30"
+              />
+            ) : (
+              <CheckoutButton
+                plan="pro"
+                text="Upgrade to Pro - £9.99/month"
+                className="bg-[#00ff94] text-[#18092a] font-medium px-4 py-2 rounded-lg w-full hover:bg-[#00ff94]/90 transition-colors"
+              />
+            )}
+          </div>
+        </div>
+        
+        <div className="bg-[#18092a] p-4 rounded-lg border border-gray-800/30 mb-4">
+          <div className="flex justify-between items-center">
+            <div>
+              <h4 className="font-bold">Creator Plan</h4>
+              <p className="text-white/70 text-sm">For content creators and educators</p>
+            </div>
+            {user.subscription?.plan === 'creator' && (
+              <span className="bg-[#a259ff]/20 px-3 py-1 rounded-full text-xs text-[#a259ff]">Current</span>
+            )}
+            {!user.subscription?.plan || user.subscription?.plan !== 'creator' ? (
+              <span className="bg-[#a259ff]/20 px-3 py-1 rounded-full text-xs text-[#a259ff]">Coming Soon</span>
+            ) : null}
+          </div>
+          <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-white/70">
+            <div className="flex items-center gap-2">
+              <CheckIcon fontSize="small" className="text-[#00ff94]" />
+              <span>Everything in Pro plan</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <CheckIcon fontSize="small" className="text-[#00ff94]" />
+              <span>Custom Communities</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <CheckIcon fontSize="small" className="text-[#00ff94]" />
+              <span>Custom Social Media Content</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <CheckIcon fontSize="small" className="text-[#00ff94]" />
+              <span>Advanced sharing options</span>
+            </div>
+          </div>
+        </div>
+        
+        <div className="bg-[#18092a] p-4 rounded-lg border border-gray-800/30">
+          <div className="flex justify-between items-center">
+            <div>
+              <h4 className="font-bold">Enterprise Plan</h4>
+              <p className="text-white/70 text-sm">For organizations and institutions</p>
+            </div>
+            {user.subscription?.plan === 'enterprise' && (
+              <span className="bg-[#a259ff]/20 px-3 py-1 rounded-full text-xs text-[#a259ff]">Current</span>
+            )}
+            {!user.subscription?.plan || user.subscription?.plan !== 'enterprise' ? (
+              <span className="bg-[#a259ff]/20 px-3 py-1 rounded-full text-xs text-[#a259ff]">Coming Soon</span>
+            ) : null}
+          </div>
+          <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-white/70">
+            <div className="flex items-center gap-2">
+              <CheckIcon fontSize="small" className="text-[#00ff94]" />
+              <span>Dedicated Support</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <CheckIcon fontSize="small" className="text-[#00ff94]" />
+              <span>API Access</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <CheckIcon fontSize="small" className="text-[#00ff94]" />
+              <span>Multiple Team Members</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <CheckIcon fontSize="small" className="text-[#00ff94]" />
+              <span>Admin Controls</span>
+            </div>
           </div>
         </div>
       </div>
@@ -397,8 +524,12 @@ function HelpAndSupportSettings() {
             </div>
             
             <div className="bg-[#18092a]/80 rounded-lg p-4 border border-gray-800/50">
-              <h4 className="font-medium mb-2">Is Memorix free to use?</h4>
-              <p className="text-white/70 text-sm">We offer a free tier with up to 50 cards per day and basic features. Our Premium subscription ($9.99/month) unlocks unlimited cards, advanced analytics, offline mode, and removes ads.</p>
+              <div className="py-3">
+                <h4 className="font-medium mb-2">Is Memorix free to use?</h4>
+                <p className="text-white/70 text-sm">
+                  We offer a free tier with access to community cards, basic analytics, and standard support. Our Pro subscription ($9.99/month) unlocks unlimited flashcard creation, advanced analytics, priority support, and more. We also have upcoming Creator and Enterprise plans for content creators and organizations.
+                </p>
+              </div>
             </div>
             
             <div className="bg-[#18092a]/80 rounded-lg p-4 border border-gray-800/50">

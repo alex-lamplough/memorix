@@ -24,6 +24,8 @@ import Todo from './components/Todo'
 import FeatureDetailModal from './components/FeatureDetailModal'
 import Header from './Header'
 import DemoModal from './components/DemoModal'
+import CheckoutButton from './components/subscription/CheckoutButton'
+import useSubscription from './hooks/useSubscription'
 
 // Lazy load page components
 // These components are only loaded when they are needed
@@ -49,7 +51,7 @@ import OnboardingGuard from './components/OnboardingGuard'
 
 // Assets
 import logoWhite from './assets/MemorixLogoWhite.png'
-import logoGreen from './assets/MemorixLogoGreen.png'
+import logoGreen from './assets/MemorixBannerLogo.png'
 import facebookLogo from './assets/facebookLogo.png'
 import instagramLogo from './assets/instagramLogo.png'
 import xLogo from './assets/xLogo.png'
@@ -276,31 +278,31 @@ const features = [
     icon: <AnalyticsIcon fontSize="large" />,
     color: 'bg-[#ffeb3b]',
     title: 'Progress Tracking',
-    desc: 'Track your improvement with detailed analytics and insights.',
+    desc: 'Track your improvement with detailed analytics and insights. (Coming Soon)',
   },
   {
     icon: <TranslateIcon fontSize="large" />,
     color: 'bg-[#00ff94]',
     title: 'Language Learning',
-    desc: 'Special templates for learning vocabulary in any language.',
+    desc: 'Specialized features for learning vocabulary in any language.',
   },
   {
     icon: <PublicIcon fontSize="large" />,
     color: 'bg-[#a259ff]',
-    title: 'Web Accessibility',
+    title: 'Cross-Platform Access',
     desc: 'Access your study materials from any browser on any device.',
   },
   {
-    icon: <AutoFixHighIcon fontSize="large" />,
+    icon: <DevicesIcon fontSize="large" />,
     color: 'bg-[#3ec1ff]',
-    title: 'Smart Templates',
-    desc: 'Choose from a variety of templates for different subjects.',
+    title: 'Community Content',
+    desc: 'Access a growing library of community-created flashcards.',
   },
   {
-    icon: <PersonalVideoIcon fontSize="large" />,
+    icon: <RocketLaunchIcon fontSize="large" />,
     color: 'bg-[#ff7262]',
-    title: 'Presentation Mode',
-    desc: 'Practice your presentation skills with presenter view.',
+    title: 'Export & Share',
+    desc: 'Share publicly with community, with private sharing and export coming soon.',
   },
 ]
 
@@ -364,10 +366,9 @@ const pricingPlans = [
     price: '0',
     description: 'Perfect for casual learners',
     features: [
-      'Up to 50 flashcards per day',
-      'Basic analytics',
-      'Standard templates',
-      'Community support',
+      'Access Community Cards',
+      'Basic Analytics',
+      'Standard Support',
       'Web access'
     ],
     cta: 'Get Started',
@@ -381,12 +382,12 @@ const pricingPlans = [
     period: 'per month',
     description: 'For serious students and educators',
     features: [
-      'Unlimited flashcards',
-      'Advanced analytics & insights',
-      'All templates & customization',
-      'Priority email support',
-      'Web & mobile access',
-      'Offline mode'
+      'Everything in Free plan',
+      'Unlimited Flashcard & Quiz creation',
+      'Advanced Analytics',
+      'Priority Support',
+      'Downloadable Content',
+      'Export Reports'
     ],
     cta: 'Start Free Trial',
     popular: true,
@@ -394,28 +395,47 @@ const pricingPlans = [
     ctaColor: 'bg-[#00ff94] text-black hover:bg-[#00ff94]/90'
   },
   {
-    name: 'Teams',
+    name: 'Creator',
     price: '29.99',
     period: 'per month',
-    description: 'For teachers and study groups',
+    description: 'For content creators and educators',
     features: [
       'Everything in Pro plan',
-      'Up to 5 team members',
-      'Collaborative decks',
-      'Shared analytics',
-      'Admin controls',
-      'Dedicated support'
+      'Custom Communities',
+      'Custom Social Media Content',
+      'Advanced sharing options',
+      'Early access to new features'
     ],
-    cta: 'Contact Sales',
+    cta: 'Coming Soon',
     popular: false,
     bgColor: 'bg-[#15052a]/60',
-    ctaColor: 'bg-[#00ff94]/10 text-[#00ff94] border border-[#00ff94]/30 hover:bg-[#00ff94]/20'
+    ctaColor: 'bg-[#00ff94]/10 text-[#00ff94] border border-[#00ff94]/30 hover:bg-[#00ff94]/20',
+    comingSoon: true
+  },
+  {
+    name: 'Enterprise',
+    price: 'Custom',
+    description: 'For organizations and institutions',
+    features: [
+      'Dedicated Support',
+      'API Access',
+      'Multiple Team Members',
+      'Admin Controls',
+      'Custom integrations',
+      'SLA guarantees'
+    ],
+    cta: 'Coming Soon',
+    popular: false,
+    bgColor: 'bg-[#15052a]/60',
+    ctaColor: 'bg-[#00ff94]/10 text-[#00ff94] border border-[#00ff94]/30 hover:bg-[#00ff94]/20',
+    comingSoon: true
   }
 ];
 
 function PricingSection() {
   // Get currency symbol based on user's locale
   const [currencySymbol, setCurrencySymbol] = useState('£');
+  const { subscription, isProSubscriber } = useSubscription();
   
   useEffect(() => {
     try {
@@ -462,6 +482,11 @@ function PricingSection() {
                 Most Popular
               </div>
             )}
+            {plan.comingSoon && (
+              <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-[#a259ff] text-white text-xs font-bold py-1 px-4 rounded-full shadow-md">
+                Coming Soon
+              </div>
+            )}
             <h3 className="text-xl font-bold mb-1 mt-2">{plan.name}</h3>
             <div className="flex items-end mb-4">
               <span className="text-3xl font-bold">{plan.price === '0' ? 'Free' : `${currencySymbol}${plan.price}`}</span>
@@ -478,11 +503,35 @@ function PricingSection() {
               ))}
             </ul>
             
-            <button 
-              className={`${plan.ctaColor} w-full py-3 rounded-xl font-semibold transition-colors mt-auto`}
-            >
-              {plan.cta}
-            </button>
+            {plan.name === 'Free' ? (
+              <button 
+                className={`${plan.ctaColor} w-full py-3 rounded-xl font-semibold transition-colors mt-auto`}
+              >
+                {plan.cta}
+              </button>
+            ) : plan.name === 'Pro' ? (
+              isProSubscriber() ? (
+                <button 
+                  className={`bg-[#00ff94]/10 text-white border border-[#00ff94]/30 w-full py-3 rounded-xl font-semibold transition-colors mt-auto`}
+                  disabled
+                >
+                  Current Plan
+                </button>
+              ) : (
+                <CheckoutButton
+                  plan="pro"
+                  text={plan.cta}
+                  className={`${plan.ctaColor} w-full py-3 rounded-xl font-semibold transition-colors mt-auto`}
+                />
+              )
+            ) : (
+              <button 
+                className={`${plan.ctaColor} w-full py-3 rounded-xl font-semibold transition-colors mt-auto ${plan.comingSoon ? 'opacity-75 cursor-not-allowed' : ''}`}
+                disabled={plan.comingSoon}
+              >
+                {plan.cta}
+              </button>
+            )}
           </div>
         ))}
       </div>
@@ -497,7 +546,7 @@ const faqs = [
   },
   {
     q: 'Is Memorix free to use?',
-    a: 'We offer a free tier with up to 50 cards per day and basic features. Our Premium subscription ($9.99/month) unlocks unlimited cards, advanced analytics, offline mode, and removes ads.',
+    a: 'We offer a free tier with access to community cards, basic analytics, and standard support. Our Pro subscription (£9.99/month) unlocks unlimited flashcard creation, advanced analytics, priority support, and more. We also have upcoming Creator and Enterprise plans for content creators and organizations.',
   },
   {
     q: 'How accurate are the AI-generated flashcards?',
@@ -509,7 +558,7 @@ const faqs = [
   },
   {
     q: 'How do I track my progress?',
-    a: 'The Progress dashboard shows detailed analytics about your study habits, retention rates, and learning progress. You can see statistics for each deck, identify challenging cards, and get recommendations for what to study next.',
+    a: 'The Progress dashboard with detailed analytics about your study habits, retention rates, and learning progress is coming soon. This feature will show statistics for each deck, identify challenging cards, and provide recommendations for what to study next. Currently, basic progress information is available in your account.',
   },
   {
     q: 'Can I share my flashcards with friends or classmates?',
@@ -517,7 +566,7 @@ const faqs = [
   },
   {
     q: 'Which subjects work best with Memorix?',
-    a: 'Memorix works well for almost any subject that requires memorization, including languages, sciences, history, law, medicine, and more. Our specialized templates are optimized for different learning needs.',
+    a: 'Memorix works well for almost any subject that requires memorization, including languages, sciences, history, law, medicine, and more. Our AI is optimized for different learning needs and subject areas.',
   },
   {
     q: 'Is Memorix accessible on mobile devices?',
