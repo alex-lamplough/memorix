@@ -2,6 +2,7 @@ import Stripe from 'stripe';
 import { config } from '../config/config.js';
 
 // Initialize Stripe with the secret key
+console.log('Stripe Secret Key at init:', config.stripe.secretKey);
 const stripe = new Stripe(config.stripe.secretKey);
 
 /**
