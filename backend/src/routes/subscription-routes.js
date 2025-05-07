@@ -180,7 +180,7 @@ export const handleStripeWebhook = async (req, res) => {
       console.log('Checkout session completed:', session.id);
       
       // Get customer ID and metadata from the session
-      const { customer, metadata } = session;
+      const { customer, metadata, subscription: subscriptionId } = session;
       console.log('Session metadata:', metadata);
       
       if (!metadata || !metadata.userId) {
@@ -198,11 +198,27 @@ export const handleStripeWebhook = async (req, res) => {
       
       console.log(`Updating user ${user.email} subscription to ${metadata.plan}`);
       
+      // Get the subscription details from Stripe
+      const subscription = await stripeService.getSubscription(subscriptionId);
+      console.log('Retrieved subscription:', {
+        id: subscription.id,
+        status: subscription.status
+      });
+      
+      // Get current period end from subscription items
+      const currentPeriodEnd = subscription.items?.data?.[0]?.current_period_end;
+      console.log('Subscription period end:', {
+        timestamp: currentPeriodEnd,
+        date: currentPeriodEnd ? new Date(currentPeriodEnd * 1000) : null
+      });
+      
       // Update user's subscription information
       user.subscription = {
         plan: metadata.plan,
         status: 'active',
-        cancelAtPeriodEnd: false
+        cancelAtPeriodEnd: false,
+        currentPeriodEnd: currentPeriodEnd ? new Date(currentPeriodEnd * 1000) : null,
+        stripeSubscriptionId: subscriptionId
       };
       
       // Update the Stripe customer ID if not already set
@@ -230,13 +246,31 @@ export const handleStripeWebhook = async (req, res) => {
       
       console.log(`Updating subscription details for user ${user.email}`);
       
+      // Get current period end from subscription items
+      const currentPeriodEnd = subscription.items?.data?.[0]?.current_period_end;
+      console.log('Subscription period end:', {
+        timestamp: currentPeriodEnd,
+        date: currentPeriodEnd ? new Date(currentPeriodEnd * 1000) : null
+      });
+
+      // If subscription is cancelled at period end, use cancel_at as the end date
+      const endDate = subscription.cancel_at_period_end ? 
+        subscription.cancel_at : 
+        currentPeriodEnd;
+
+      console.log('Using end date:', {
+        timestamp: endDate,
+        date: endDate ? new Date(endDate * 1000) : null,
+        isCancelled: subscription.cancel_at_period_end
+      });
+      
       // Update user's subscription information
       user.subscription = {
         ...user.subscription,
         stripeSubscriptionId: subscription.id,
         plan: 'pro', // Determine plan based on price ID if you have multiple plans
         status: subscription.status,
-        currentPeriodEnd: subscription.current_period_end ? new Date(subscription.current_period_end * 1000) : null,
+        currentPeriodEnd: endDate ? new Date(endDate * 1000) : null,
         cancelAtPeriodEnd: subscription.cancel_at_period_end || false
       };
       
@@ -262,7 +296,9 @@ export const handleStripeWebhook = async (req, res) => {
       // Reset user's subscription to free plan
       user.subscription = {
         plan: 'free',
-        status: 'inactive'
+        status: 'inactive',
+        cancelAtPeriodEnd: false,
+        currentPeriodEnd: null  // Only set to null when subscription is actually deleted
       };
       
       await user.save();
