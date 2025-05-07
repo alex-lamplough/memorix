@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
+import { handleStripeWebhook } from './routes/subscription-routes.js';
 
 // Import routes
 import flashcardRoutes from './routes/flashcard-routes.js';
@@ -54,7 +55,10 @@ app.use(cors({
 app.use(morgan('dev')); // Logging
 
 // Special route for Stripe webhook that needs raw body
-app.post('/api/subscriptions/webhook', express.raw({ type: 'application/json' }), subscriptionRoutes);
+app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), handleStripeWebhook);
+
+// Also keep the original for backward compatibility
+app.post('/api/subscriptions/webhook', express.raw({ type: 'application/json' }), handleStripeWebhook);
 
 // Parse JSON request body for all other routes
 app.use(express.json()); // Parse JSON request body

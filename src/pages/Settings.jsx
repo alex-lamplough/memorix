@@ -153,7 +153,9 @@ function AccountSettings() {
           <div>
             <h3 className="font-bold text-lg">{user?.profile?.displayName || displayName}</h3>
             <p className="text-white/70 text-sm">
-              {isProSubscriber() ? 'Pro Plan' : 'Free Plan'}
+              {user.subscription?.plan
+                ? user.subscription.plan.charAt(0).toUpperCase() + user.subscription.plan.slice(1) + ' Plan'
+                : 'Free Plan'}
             </p>
           </div>
           {!isProSubscriber() && (
@@ -212,7 +214,7 @@ function AccountSettings() {
               <h4 className="font-bold">Free Plan</h4>
               <p className="text-white/70 text-sm">Basic features with limited usage</p>
             </div>
-            {!isProSubscriber() && (
+            {user.subscription?.plan === 'free' && (
               <span className="bg-white/10 px-3 py-1 rounded-full text-xs text-white/80">Current</span>
             )}
           </div>
@@ -242,7 +244,7 @@ function AccountSettings() {
               <h4 className="font-bold">Pro Plan</h4>
               <p className="text-white/70 text-sm">Enhanced features for serious learners</p>
             </div>
-            {isProSubscriber() ? (
+            {user.subscription?.plan === 'pro' ? (
               <span className="bg-[#00ff94]/10 px-3 py-1 rounded-full text-xs text-[#00ff94]">Current</span>
             ) : (
               <span className="bg-[#00ff94]/10 px-3 py-1 rounded-full text-xs text-[#00ff94]">Recommended</span>
@@ -275,7 +277,7 @@ function AccountSettings() {
             </div>
           </div>
           <div className="mt-4">
-            {isProSubscriber() ? (
+            {user.subscription?.plan === 'pro' ? (
               <ManageSubscriptionButton
                 text="Manage Subscription"
                 className="bg-[#00ff94]/10 text-[#00ff94] font-medium px-4 py-2 rounded-lg w-full hover:bg-[#00ff94]/20 transition-colors border border-[#00ff94]/30"
@@ -296,7 +298,12 @@ function AccountSettings() {
               <h4 className="font-bold">Creator Plan</h4>
               <p className="text-white/70 text-sm">For content creators and educators</p>
             </div>
-            <span className="bg-[#a259ff]/20 px-3 py-1 rounded-full text-xs text-[#a259ff]">Coming Soon</span>
+            {user.subscription?.plan === 'creator' && (
+              <span className="bg-[#a259ff]/20 px-3 py-1 rounded-full text-xs text-[#a259ff]">Current</span>
+            )}
+            {!user.subscription?.plan || user.subscription?.plan !== 'creator' ? (
+              <span className="bg-[#a259ff]/20 px-3 py-1 rounded-full text-xs text-[#a259ff]">Coming Soon</span>
+            ) : null}
           </div>
           <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-white/70">
             <div className="flex items-center gap-2">
@@ -324,7 +331,12 @@ function AccountSettings() {
               <h4 className="font-bold">Enterprise Plan</h4>
               <p className="text-white/70 text-sm">For organizations and institutions</p>
             </div>
-            <span className="bg-[#a259ff]/20 px-3 py-1 rounded-full text-xs text-[#a259ff]">Coming Soon</span>
+            {user.subscription?.plan === 'enterprise' && (
+              <span className="bg-[#a259ff]/20 px-3 py-1 rounded-full text-xs text-[#a259ff]">Current</span>
+            )}
+            {!user.subscription?.plan || user.subscription?.plan !== 'enterprise' ? (
+              <span className="bg-[#a259ff]/20 px-3 py-1 rounded-full text-xs text-[#a259ff]">Coming Soon</span>
+            ) : null}
           </div>
           <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-white/70">
             <div className="flex items-center gap-2">

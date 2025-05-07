@@ -54,6 +54,27 @@ export const createCheckoutSession = async ({
   metadata = {}
 }) => {
   try {
+    console.log('Creating checkout session with params:', {
+      customer: customerId,
+      priceId,
+      success_url: successUrl,
+      cancel_url: cancelUrl,
+    });
+    
+    // Check if we have Stripe initialized correctly
+    if (!stripe) {
+      console.error('Stripe object is not initialized properly');
+      throw new Error('Stripe is not initialized');
+    }
+    
+    // Log the Stripe secret key (first 6 chars only for security)
+    const secretKeyPreview = config.stripe.secretKey ? 
+      `${config.stripe.secretKey.substring(0, 6)}...` : 'undefined or empty';
+    console.log(`Using Stripe secret key: ${secretKeyPreview}`);
+    
+    // Log the price ID being used
+    console.log(`Using price ID: ${priceId}`);
+    
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       payment_method_types: ['card'],
@@ -69,9 +90,24 @@ export const createCheckoutSession = async ({
       metadata,
     });
 
+    console.log('Successfully created checkout session:', {
+      id: session.id,
+      url: session.url
+    });
+    
     return session;
   } catch (error) {
     console.error('Error in createCheckoutSession:', error);
+    console.error('Error details:', error.message);
+    if (error.type) {
+      console.error('Stripe error type:', error.type);
+    }
+    if (error.code) {
+      console.error('Stripe error code:', error.code);
+    }
+    if (error.param) {
+      console.error('Invalid parameter:', error.param);
+    }
     throw error;
   }
 };
@@ -134,47 +170,34 @@ export const cancelSubscription = async (subscriptionId) => {
  */
 export const handleWebhookEvent = async (payload, signature) => {
   try {
+    console.log('Verifying webhook signature with secret:', config.stripe.webhookSecret ? `${config.stripe.webhookSecret.substring(0, 6)}...` : 'missing');
+    
+    if (!config.stripe.webhookSecret) {
+      throw new Error('Webhook secret is not configured');
+    }
+    
+    if (!signature) {
+      throw new Error('No Stripe signature found in headers');
+    }
+    
+    // Verify and construct the event
     const event = stripe.webhooks.constructEvent(
       payload,
       signature,
       config.stripe.webhookSecret
     );
-
-    // Process different event types
-    switch (event.type) {
-      case 'customer.subscription.created':
-      case 'customer.subscription.updated':
-        // Handle subscription created/updated
-        const subscription = event.data.object;
-        // Update user's subscription status in your database
-        // Example: await updateUserSubscription(subscription);
-        break;
-      case 'customer.subscription.deleted':
-        // Handle subscription cancelled
-        const cancelledSubscription = event.data.object;
-        // Update user's subscription status in your database
-        // Example: await cancelUserSubscription(cancelledSubscription);
-        break;
-      case 'invoice.payment_succeeded':
-        // Handle successful payment
-        const invoice = event.data.object;
-        // Update payment records in your database
-        // Example: await recordSuccessfulPayment(invoice);
-        break;
-      case 'invoice.payment_failed':
-        // Handle failed payment
-        const failedInvoice = event.data.object;
-        // Update payment status and notify user
-        // Example: await handleFailedPayment(failedInvoice);
-        break;
-      default:
-        // Unexpected event type
-        console.log(`Unhandled event type: ${event.type}`);
-    }
-
+    
+    console.log('Webhook event successfully verified:', event.id, event.type);
+    
+    // Log the event data for debugging
+    console.log('Event data:', JSON.stringify(event.data.object).substring(0, 500) + '...');
+    
     return event;
   } catch (error) {
-    console.error('Error in handleWebhookEvent:', error);
+    console.error('Error in handleWebhookEvent:', error.message);
+    if (error.type === 'StripeSignatureVerificationError') {
+      console.error('Webhook signature verification failed');
+    }
     throw error;
   }
 };
