@@ -232,11 +232,12 @@ export const handleStripeWebhook = async (req, res) => {
       
       // Update user's subscription information
       user.subscription = {
+        ...user.subscription,
         stripeSubscriptionId: subscription.id,
         plan: 'pro', // Determine plan based on price ID if you have multiple plans
         status: subscription.status,
-        currentPeriodEnd: new Date(subscription.current_period_end * 1000),
-        cancelAtPeriodEnd: subscription.cancel_at_period_end
+        currentPeriodEnd: subscription.current_period_end ? new Date(subscription.current_period_end * 1000) : null,
+        cancelAtPeriodEnd: subscription.cancel_at_period_end || false
       };
       
       await user.save();
