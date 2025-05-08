@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import logger from '../utils/logger';
 import { useNavigate, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
@@ -35,11 +36,11 @@ const fetchSharedContent = async () => {
     // This doesn't require authentication
     const [flashcardsResponse, quizzesResponse] = await Promise.all([
       publicApiClient.get('/public/flashcards').catch(err => {
-        console.log('Error fetching public flashcards:', err);
+        logger.debug('Error fetching public flashcards:', { value: err });
         return { data: [] };
       }),
       publicApiClient.get('/public/quizzes').catch(err => {
-        console.log('Error fetching public quizzes:', err);
+        logger.debug('Error fetching public quizzes:', { value: err });
         return { data: [] };
       })
     ]);
@@ -71,20 +72,20 @@ const fetchSharedContent = async () => {
     // Combine and return all public items
     const combinedResults = [...publicFlashcards, ...publicQuizzes];
     
-    console.log('Public shared content:', combinedResults);
+    logger.debug('Public shared content:', { value: combinedResults });
     
     if (combinedResults.length > 0) {
       return combinedResults;
     }
     
     // If no public items found or we're in development, use mock data
-    console.log('No public items found, using mock data for shared content');
+    logger.debug('No public items found, using mock data for shared content');
     return mockSharedContent;
   } catch (error) {
-    console.error('Error fetching shared content:', error);
+    logger.error('Error fetching shared content:', error);
     
     // Always fallback to mock data for this public page
-    console.log('Using mock data for shared content');
+    logger.debug('Using mock data for shared content');
     return mockSharedContent;
   }
 };
@@ -205,7 +206,7 @@ const ShareFeature = () => {
         alert('Link copied to clipboard!');
       })
       .catch((error) => {
-        console.error('Failed to copy: ', error);
+        logger.error('Failed to copy: ', error);
       });
   };
   

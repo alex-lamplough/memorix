@@ -1,31 +1,32 @@
 import Stripe from 'stripe';
+import logger from '../utils/logger.js';
 import { config } from '../config/config.js';
 
 // Initialize Stripe with the secret key
-console.log('Initializing Stripe service:');
+logger.debug('Initializing Stripe service:');
 const isProduction = process.env.NODE_ENV === 'production';
-console.log(`- Running in ${isProduction ? 'production' : 'development'} mode`);
+logger.debug(`- Running in ${isProduction ? 'production' : 'development'} mode`);
 
 // Check for required configuration
 if (!config.stripe.secretKey) {
-  console.error('CRITICAL ERROR: Stripe secret key is missing in configuration');
-  console.error('Please ensure STRIPE_SECRET_KEY is set in environment variables');
+  logger.error('CRITICAL ERROR: Stripe secret key is missing in configuration');
+  logger.error('Please ensure STRIPE_SECRET_KEY is set in environment variables');
 } else {
   console.log(`- Using Stripe key: ${config.stripe.secretKey.substring(0, 6)}...`);
 }
 
 if (!config.stripe.proPlanPriceId) {
-  console.error('CRITICAL ERROR: Pro plan price ID is missing in configuration');
-  console.error('Please ensure STRIPE_PRO_PLAN is set in environment variables');
+  logger.error('CRITICAL ERROR: Pro plan price ID is missing in configuration');
+  logger.error('Please ensure STRIPE_PRO_PLAN is set in environment variables');
 } else {
-  console.log(`- Pro plan price ID: ${config.stripe.proPlanPriceId}`);
+  logger.debug(`- Pro plan price ID: ${config.stripe.proPlanPriceId}`);
 }
 
 if (!config.stripe.creatorPlanPriceId) {
-  console.error('CRITICAL ERROR: Creator plan price ID is missing in configuration');
-  console.error('Please ensure STRIPE_CREATOR_PLAN is set in environment variables');
+  logger.error('CRITICAL ERROR: Creator plan price ID is missing in configuration');
+  logger.error('Please ensure STRIPE_CREATOR_PLAN is set in environment variables');
 } else {
-  console.log(`- Creator plan price ID: ${config.stripe.creatorPlanPriceId}`);
+  logger.debug(`- Creator plan price ID: ${config.stripe.creatorPlanPriceId}`);
 }
 
 // Initialize stripe with proper error handling
@@ -33,12 +34,12 @@ let stripe = null;
 try {
   if (config.stripe.secretKey) {
     stripe = new Stripe(config.stripe.secretKey);
-    console.log('Stripe service initialized successfully');
+    logger.debug('Stripe service initialized successfully');
   } else {
-    console.error('Failed to initialize Stripe - secret key missing or invalid');
+    logger.error('Failed to initialize Stripe - secret key missing or invalid');
   }
 } catch (error) {
-  console.error('Error initializing Stripe client:', error.message);
+  logger.error('Error initializing Stripe client:', { value: error.message });
 }
 
 /**
@@ -73,7 +74,7 @@ export const createOrRetrieveCustomer = async (user) => {
 
     return customer;
   } catch (error) {
-    console.error('Error in createOrRetrieveCustomer:', error);
+    logger.error('Error in createOrRetrieveCustomer:', error);
     throw error;
   }
 };
@@ -98,7 +99,7 @@ export const createCheckoutSession = async ({
     if (!successUrl) throw new Error('Success URL is required for creating a checkout session');
     if (!cancelUrl) throw new Error('Cancel URL is required for creating a checkout session');
     
-    console.log('Creating checkout session with params:', {
+    logger.debug('Creating checkout session with params:', {
       customer: customerId,
       priceId,
       success_url: successUrl,
@@ -108,17 +109,17 @@ export const createCheckoutSession = async ({
     
     // Check if we have Stripe initialized correctly
     if (!stripe) {
-      console.error('Stripe object is not initialized properly - check environment variables');
+      logger.error('Stripe object is not initialized properly - check environment variables');
       throw new Error('Stripe is not initialized - missing API key');
     }
     
     // Log the Stripe secret key (first 6 chars only for security)
     const secretKeyPreview = config.stripe.secretKey ? 
       `${config.stripe.secretKey.substring(0, 6)}...` : 'undefined or empty';
-    console.log(`Using Stripe secret key: ${secretKeyPreview}`);
+    logger.debug(`Using Stripe secret key: ${secretKeyPreview}`);
     
     // Log the price ID being used
-    console.log(`Using price ID: ${priceId}`);
+    logger.debug(`Using price ID: ${priceId}`);
     
     // Create session options
     const sessionOptions = {
@@ -143,31 +144,31 @@ export const createCheckoutSession = async ({
           coupon: couponCode,
         },
       ];
-      console.log(`Applied coupon code: ${couponCode}`);
+      logger.debug(`Applied coupon code: ${couponCode}`);
     }
     
     // Create the checkout session with Stripe
     try {
       const session = await stripe.checkout.sessions.create(sessionOptions);
 
-      console.log('Successfully created checkout session:', {
+      logger.debug('Successfully created checkout session:', {
         id: session.id,
         url: session.url
       });
       
       return session;
     } catch (stripeApiError) {
-      console.error('Stripe API error in createCheckoutSession:', stripeApiError.message);
-      console.error('Error details:', stripeApiError.message);
+      logger.error('Stripe API error in createCheckoutSession:', stripeApiError.message);
+      logger.error('Error details:', stripeApiError.message);
       
       if (stripeApiError.type) {
-        console.error('Stripe error type:', stripeApiError.type);
+        logger.error('Stripe error type:', stripeApiError.type);
       }
       if (stripeApiError.code) {
-        console.error('Stripe error code:', stripeApiError.code);
+        logger.error('Stripe error code:', stripeApiError.code);
       }
       if (stripeApiError.param) {
-        console.error('Invalid parameter:', stripeApiError.param);
+        logger.error('Invalid parameter:', stripeApiError.param);
       }
       
       // Rethrow with more context for better debugging
@@ -179,7 +180,7 @@ export const createCheckoutSession = async ({
       throw enhancedError;
     }
   } catch (error) {
-    console.error('Error in createCheckoutSession:', error);
+    logger.error('Error in createCheckoutSession:', error);
     throw error;
   }
 };
@@ -199,7 +200,7 @@ export const createPortalSession = async (customerId, returnUrl) => {
 
     return session;
   } catch (error) {
-    console.error('Error in createPortalSession:', error);
+    logger.error('Error in createPortalSession:', error);
     throw error;
   }
 };
@@ -214,7 +215,7 @@ export const getSubscription = async (subscriptionId) => {
     const subscription = await stripe.subscriptions.retrieve(subscriptionId);
     return subscription;
   } catch (error) {
-    console.error('Error in getSubscription:', error);
+    logger.error('Error in getSubscription:', error);
     throw error;
   }
 };
@@ -229,7 +230,7 @@ export const cancelSubscription = async (subscriptionId) => {
     const subscription = await stripe.subscriptions.cancel(subscriptionId);
     return subscription;
   } catch (error) {
-    console.error('Error in cancelSubscription:', error);
+    logger.error('Error in cancelSubscription:', error);
     throw error;
   }
 };
@@ -245,7 +246,7 @@ export const updateSubscription = async (subscriptionId, updateParams) => {
     const subscription = await stripe.subscriptions.update(subscriptionId, updateParams);
     return subscription;
   } catch (error) {
-    console.error('Error in updateSubscription:', error);
+    logger.error('Error in updateSubscription:', error);
     throw error;
   }
 };
@@ -260,7 +261,7 @@ export const getCustomer = async (customerId) => {
     const customer = await stripe.customers.retrieve(customerId);
     return customer;
   } catch (error) {
-    console.error('Error in getCustomer:', error);
+    logger.error('Error in getCustomer:', error);
     throw error;
   }
 };
@@ -276,7 +277,7 @@ export const updateCustomer = async (customerId, updateParams) => {
     const customer = await stripe.customers.update(customerId, updateParams);
     return customer;
   } catch (error) {
-    console.error('Error in updateCustomer:', error);
+    logger.error('Error in updateCustomer:', error);
     throw error;
   }
 };
@@ -291,7 +292,7 @@ export const getPaymentMethod = async (paymentMethodId) => {
     const paymentMethod = await stripe.paymentMethods.retrieve(paymentMethodId);
     return paymentMethod;
   } catch (error) {
-    console.error('Error in getPaymentMethod:', error);
+    logger.error('Error in getPaymentMethod:', error);
     throw error;
   }
 };
@@ -304,7 +305,7 @@ export const getPaymentMethod = async (paymentMethodId) => {
  */
 export const handleWebhookEvent = async (payload, signature) => {
   try {
-    console.log('Verifying webhook signature...');
+    logger.debug('Verifying webhook signature...');
     
     if (!config.stripe.webhookSecret) {
       throw new Error('Webhook secret is not configured');
@@ -317,12 +318,12 @@ export const handleWebhookEvent = async (payload, signature) => {
     // Check if payload is a Buffer or string
     let rawBody = payload;
     if (typeof payload !== 'string' && !Buffer.isBuffer(payload)) {
-      console.log('Payload is not a string or Buffer. Type:', typeof payload);
+      logger.debug('Payload is not a string or Buffer. Type:', { value: typeof payload });
       if (payload instanceof Uint8Array) {
         rawBody = Buffer.from(payload);
       } else if (typeof payload === 'object') {
         // If it's an object, stringify it (this is a fallback and not ideal)
-        console.log('WARNING: Payload is an object, stringifying it. This is not ideal for signature verification.');
+        logger.debug('WARNING: Payload is an object, stringifying it. This is not ideal for signature verification.');
         rawBody = JSON.stringify(payload);
       } else {
         throw new Error(`Unexpected payload type: ${typeof payload}`);
@@ -331,14 +332,14 @@ export const handleWebhookEvent = async (payload, signature) => {
     
     // Log payload snippet for debugging
     if (Buffer.isBuffer(rawBody)) {
-      console.log('Payload snippet (Buffer):', rawBody.toString('utf8').substring(0, 50) + '...');
+      logger.debug('Payload snippet (Buffer):', { value: rawBody.toString('utf8').substring(0, 50) + '...' });
     } else if (typeof rawBody === 'string') {
-      console.log('Payload snippet (String):', rawBody.substring(0, 50) + '...');
+      logger.debug('Payload snippet (String):', { value: rawBody.substring(0, 50) + '...' });
     }
     
     // Verify and construct the event
-    console.log('Using webhook secret:', config.stripe.webhookSecret.substring(0, 8) + '...');
-    console.log('Signature header:', signature.substring(0, 20) + '...');
+    logger.debug('Using webhook secret:', { value: config.stripe.webhookSecret.substring(0, 8) + '...' });
+    logger.debug('Signature header:', { value: signature.substring(0, 20) + '...' });
     
     const event = stripe.webhooks.constructEvent(
       rawBody,
@@ -346,16 +347,16 @@ export const handleWebhookEvent = async (payload, signature) => {
       config.stripe.webhookSecret
     );
     
-    console.log('Webhook event successfully verified:', event.id, event.type);
+    logger.debug('Webhook event successfully verified:', { value: `${event.id}, ${event.type}` });
     
     // Return the event
     return event;
   } catch (error) {
-    console.error('Error in handleWebhookEvent:', error.message);
+    logger.error('Error in handleWebhookEvent:', { value: error.message });
     if (error.type === 'StripeSignatureVerificationError') {
-      console.error('Webhook signature verification failed');
-      console.error('Expected signature starts with:', error.expected ? error.expected.substring(0, 20) + '...' : 'unknown');
-      console.error('Received signature starts with:', error.signature ? error.signature.substring(0, 20) + '...' : 'unknown');
+      logger.error('Webhook signature verification failed');
+      logger.error('Expected signature starts with:', { value: error.expected ? error.expected.substring(0, 20) + '...' : 'unknown' });
+      logger.error('Received signature starts with:', { value: error.signature ? error.signature.substring(0, 20) + '...' : 'unknown' });
     }
     throw error;
   }
@@ -374,7 +375,7 @@ export const getCustomerSubscriptions = async (customerId) => {
     });
     return subscriptions;
   } catch (error) {
-    console.error('Error in getCustomerSubscriptions:', error);
+    logger.error('Error in getCustomerSubscriptions:', error);
     throw error;
   }
 };
@@ -395,6 +396,6 @@ export const stripeService = {
 };
 
 // Log final status of Stripe service
-console.log(`Stripe service export ready, client ${stripe ? 'is initialized' : 'failed to initialize'}`);
+logger.debug(`Stripe service export ready, client ${stripe ? 'is initialized' : 'failed to initialize'}`);
 
 export default stripeService; 

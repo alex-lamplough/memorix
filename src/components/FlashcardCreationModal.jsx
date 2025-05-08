@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import logger from '../utils/logger';
 import { 
   Dialog, 
   DialogTitle, 
@@ -134,7 +135,7 @@ const FlashcardCreationModal = ({ open, onClose }) => {
         throw new Error('Invalid response format from server')
       }
     } catch (error) {
-      console.error('Error generating flashcards:', error)
+      logger.error('Error generating flashcards:', error)
       showSnackbarMessage('Failed to generate flashcards. Please try again.', 'error')
     }
   }
@@ -189,7 +190,7 @@ const FlashcardCreationModal = ({ open, onClose }) => {
         onClose();
       },
       onError: (error) => {
-        console.error('Error saving flashcard set:', error);
+        logger.error('Error saving flashcard set:', error);
         showSnackbarMessage('Failed to save flashcard set. Please try again.', 'error');
       }
     });

@@ -1,4 +1,5 @@
 import stripeService from '../services/stripe-service.js';
+import logger from '../utils/logger.js';
 import User from '../models/user-model.js';
 import { config } from '../config/config.js';
 
@@ -10,11 +11,11 @@ export const createCheckoutSession = async (req, res) => {
     const { plan, couponCode } = req.body;
     const auth0Id = req.auth.sub;
     
-    console.log('Creating checkout session for:', { plan, auth0Id, hasCoupon: !!couponCode });
+    logger.debug('Creating checkout session for:', { plan, auth0Id, hasCoupon: !!couponCode });
     
     // Validate plan input
     if (!plan || !['pro', 'creator', 'enterprise'].includes(plan)) {
-      console.error('Invalid plan selected:', plan);
+      logger.error('Invalid plan selected:', { value: plan });
       return res.status(400).json({ 
         error: 'Invalid plan selected',
         message: 'The selected subscription plan is not valid' 
@@ -25,11 +26,11 @@ export const createCheckoutSession = async (req, res) => {
     const user = await User.findOne({ auth0Id });
     
     if (!user) {
-      console.error('User not found for auth0Id:', auth0Id);
+      logger.error('User not found for auth0Id:', { value: auth0Id });
       return res.status(404).json({ error: 'User not found' });
     }
     
-    console.log('Found user:', { 
+    logger.debug('Found user:', { 
       id: user._id.toString(),
       email: user.email, 
       hasStripeCustomerId: !!user.stripeCustomerId
@@ -39,22 +40,22 @@ export const createCheckoutSession = async (req, res) => {
     let priceId;
     if (plan === 'pro') {
       priceId = config.stripe.proPlanPriceId;
-      console.log('Using Pro plan price ID:', priceId);
+      logger.debug('Using Pro plan price ID:', { value: priceId });
     } else if (plan === 'creator') {
       priceId = config.stripe.creatorPlanPriceId;
-      console.log('Using Creator plan price ID:', priceId);
+      logger.debug('Using Creator plan price ID:', { value: priceId });
     } else if (plan === 'enterprise') {
       priceId = config.stripe.enterprisePlanPriceId;
-      console.log('Using Enterprise plan price ID:', priceId);
+      logger.debug('Using Enterprise plan price ID:', { value: priceId });
     } else {
-      console.error('Invalid plan selected:', plan);
+      logger.error('Invalid plan selected:', { value: plan });
       return res.status(400).json({ error: 'Invalid plan selected' });
     }
     
     // Check if we have a valid price ID
     if (!priceId) {
-      console.error('Missing price ID in config. Check env variable for the selected plan.');
-      console.error(`Config has proPlanPriceId: ${!!config.stripe.proPlanPriceId}, creatorPlanPriceId: ${!!config.stripe.creatorPlanPriceId}`);
+      logger.error('Missing price ID in config. Check env variable for the selected plan.');
+      logger.error(`Config has proPlanPriceId: ${!!config.stripe.proPlanPriceId}, creatorPlanPriceId: ${!!config.stripe.creatorPlanPriceId}`);
       return res.status(500).json({ 
         error: 'Missing price configuration',
         message: 'The subscription plan is not configured correctly. Please contact support.'
@@ -63,13 +64,13 @@ export const createCheckoutSession = async (req, res) => {
     
     // Create or retrieve Stripe customer
     try {
-      console.log('Creating or retrieving Stripe customer for user');
+      logger.debug('Creating or retrieving Stripe customer for user');
       const customer = await stripeService.createOrRetrieveCustomer(user);
-      console.log('Customer:', { id: customer.id, isNew: !user.stripeCustomerId });
+      logger.debug('Customer:', { id: customer.id, isNew: !user.stripeCustomerId });
       
       // If customer was created, save ID to user record
       if (!user.stripeCustomerId) {
-        console.log('Updating user with new Stripe customer ID');
+        logger.debug('Updating user with new Stripe customer ID');
         user.stripeCustomerId = customer.id;
         await user.save();
       }
@@ -89,10 +90,10 @@ export const createCheckoutSession = async (req, res) => {
       // Add coupon code if provided
       if (couponCode && couponCode.trim()) {
         sessionOptions.couponCode = couponCode.trim();
-        console.log('Applying coupon code to checkout session:', couponCode.trim());
+        logger.debug('Applying coupon code to checkout session:', { value: couponCode.trim() });
       }
       
-      console.log('Creating checkout session with params:', {
+      logger.debug('Creating checkout session with params:', {
         customerId: customer.id,
         priceId,
         successUrl: `${config.server.corsOrigin}/settings?subscription=success`,
@@ -102,10 +103,10 @@ export const createCheckoutSession = async (req, res) => {
       
       const session = await stripeService.createCheckoutSession(sessionOptions);
       
-      console.log('Checkout session created successfully:', { sessionId: session.id });
+      logger.debug('Checkout session created successfully:', { sessionId: session.id });
       return res.json({ sessionId: session.id, url: session.url });
     } catch (stripeError) {
-      console.error('Stripe error in checkout session creation:', stripeError.message);
+      logger.error('Stripe error in checkout session creation:', stripeError.message);
       console.error(stripeError);
       
       // Handle specific Stripe errors
@@ -131,7 +132,7 @@ export const createCheckoutSession = async (req, res) => {
       });
     }
   } catch (error) {
-    console.error('Unexpected error creating checkout session:', error);
+    logger.error('Unexpected error creating checkout session:', error);
     return res.status(500).json({ 
       error: 'Failed to create checkout session', 
       message: 'An unexpected error occurred while setting up your payment. Please try again later.'
@@ -166,7 +167,7 @@ export const createPortalSession = async (req, res) => {
       
       return res.json({ url: session.url });
     } catch (stripeError) {
-      console.error('Stripe error creating portal session:', stripeError);
+      logger.error('Stripe error creating portal session:', stripeError);
       
       // Check for specific Stripe errors related to configuration
       if (stripeError.type === 'StripeInvalidRequestError') {
@@ -183,7 +184,7 @@ export const createPortalSession = async (req, res) => {
       throw stripeError;
     }
   } catch (error) {
-    console.error('Error creating portal session:', error);
+    logger.error('Error creating portal session:', error);
     return res.status(500).json({ 
       error: 'Failed to create portal session',
       message: error.message
@@ -225,7 +226,7 @@ export const cancelSubscription = async (req, res) => {
       currentPeriodEnd: new Date(subscription.current_period_end * 1000)
     });
   } catch (error) {
-    console.error('Error canceling subscription:', error);
+    logger.error('Error canceling subscription:', error);
     return res.status(500).json({ error: 'Failed to cancel subscription' });
   }
 };
@@ -268,7 +269,7 @@ export const resumeSubscription = async (req, res) => {
       currentPeriodEnd: new Date(subscription.current_period_end * 1000)
     });
   } catch (error) {
-    console.error('Error resuming subscription:', error);
+    logger.error('Error resuming subscription:', error);
     return res.status(500).json({ error: 'Failed to resume subscription' });
   }
 };
@@ -337,7 +338,7 @@ export const upgradeSubscription = async (req, res) => {
       portalUrl: portalSession.url
     });
   } catch (error) {
-    console.error('Error upgrading subscription:', error);
+    logger.error('Error upgrading subscription:', error);
     return res.status(500).json({ error: 'Failed to upgrade subscription' });
   }
 };
@@ -407,7 +408,7 @@ export const downgradeSubscription = async (req, res) => {
       portalUrl: portalSession.url
     });
   } catch (error) {
-    console.error('Error downgrading subscription:', error);
+    logger.error('Error downgrading subscription:', error);
     return res.status(500).json({ error: 'Failed to downgrade subscription' });
   }
 };
@@ -426,7 +427,7 @@ export const validateCoupon = async (req, res) => {
       });
     }
     
-    console.log('Validating coupon code:', couponCode);
+    logger.debug('Validating coupon code:', { value: couponCode });
     
     try {
       // Retrieve the coupon from Stripe
@@ -478,7 +479,7 @@ export const validateCoupon = async (req, res) => {
         message: `Coupon applied: ${discountDisplay}`
       });
     } catch (error) {
-      console.error('Error retrieving coupon from Stripe:', error);
+      logger.error('Error retrieving coupon from Stripe:', error);
       
       // Check if it's a "coupon not found" error
       if (error.type === 'StripeInvalidRequestError' && error.message.includes('No such coupon')) {
@@ -491,7 +492,7 @@ export const validateCoupon = async (req, res) => {
       throw error; // Re-throw for the outer catch block
     }
   } catch (error) {
-    console.error('Error validating coupon:', error);
+    logger.error('Error validating coupon:', error);
     return res.status(500).json({ 
       valid: false, 
       message: 'Failed to validate coupon',

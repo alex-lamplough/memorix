@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import logger from '../utils/logger';
 import { todoService } from '../services/todo-service'
 
 // Icons
@@ -49,22 +50,22 @@ function Todo() {
         // Add status filter if not "all"
         if (filter === 'active') {
           queryParams.status = 'pending,in-progress';
-          console.log('Fetching active todos with filter:', queryParams);
+          logger.debug('Fetching active todos with filter:', { value: queryParams });
         } else if (filter === 'completed') {
           queryParams.status = 'completed';
-          console.log('Fetching completed todos with filter:', queryParams);
+          logger.debug('Fetching completed todos with filter:', { value: queryParams });
         } else {
-          console.log('Fetching all todos with filter:', queryParams);
+          logger.debug('Fetching all todos with filter:', { value: queryParams });
         }
         
         const response = await todoService.getAllTodos(queryParams);
         
         if (isMountedRef.current) {
-          console.log('API response:', response);
+          logger.debug('API response:', { value: response });
           setTodos(response.todos);
         }
       } catch (err) {
-        console.error('Error fetching todos:', err);
+        logger.error('Error fetching todos:', { value: err });
         if (isMountedRef.current) {
           setError('Failed to load your todo items');
         }
@@ -112,7 +113,7 @@ function Todo() {
       // Reset priority to medium after adding
       setNewTodoPriority('medium');
     } catch (err) {
-      console.error('Error adding todo:', err);
+      logger.error('Error adding todo:', { value: err });
       setError('Failed to add todo');
     } finally {
       setIsAdding(false);
@@ -129,7 +130,7 @@ function Todo() {
       // Make API call
       await todoService.toggleTodoCompletion(id);
     } catch (err) {
-      console.error('Error toggling todo:', err);
+      logger.error('Error toggling todo:', { value: err });
       // Revert the optimistic update
       setTodos(prevTodos => [...prevTodos]);
     }
@@ -143,7 +144,7 @@ function Todo() {
       // Make API call
       await todoService.deleteTodo(id);
     } catch (err) {
-      console.error('Error deleting todo:', err);
+      logger.error('Error deleting todo:', { value: err });
       // Fetch todos again in case the delete failed
       const response = await todoService.getAllTodos();
       setTodos(response.todos);
@@ -181,7 +182,7 @@ function Todo() {
       // Exit edit mode
       setEditingTodo(null);
     } catch (err) {
-      console.error('Error updating todo:', err);
+      logger.error('Error updating todo:', { value: err });
     }
   };
   
@@ -201,7 +202,7 @@ function Todo() {
       // Make API call
       await todoService.deleteCompletedTodos();
     } catch (err) {
-      console.error('Error deleting completed todos:', err);
+      logger.error('Error deleting completed todos:', { value: err });
       // Fetch todos again in case the delete failed
       const response = await todoService.getAllTodos();
       setTodos(response.todos);

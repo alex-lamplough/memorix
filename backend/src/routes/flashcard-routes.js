@@ -1,4 +1,5 @@
 import express from 'express';
+import logger from '../utils/logger.js';
 import mongoose from 'mongoose';
 import { checkJwt, getUserFromToken, requireCompletedOnboarding } from '../middleware/auth-middleware.js';
 import { lookupMongoUser } from '../middleware/user-middleware.js';
@@ -24,10 +25,10 @@ router.get('/favorites', authenticate(), lookupMongoUser, async (req, res, next)
     let userId;
     if (req.user.mongoUser && req.user.mongoUser._id) {
       userId = req.user.mongoUser._id;
-      console.log('Using MongoDB user ID from mongoUser:', userId);
+      logger.debug('Using MongoDB user ID from mongoUser:', { value: userId });
     } else if (req.user.id && mongoose.Types.ObjectId.isValid(req.user.id)) {
       userId = new mongoose.Types.ObjectId(req.user.id);
-      console.log('Using converted ObjectId from req.user.id:', userId);
+      logger.debug('Using converted ObjectId from req.user.id:', { value: userId });
     } else {
       // If no valid MongoDB ID found, look up the user by Auth0 ID
       console.log('No valid MongoDB ID available, searching by Auth0 ID:', req.user.auth0Id);
@@ -38,7 +39,7 @@ router.get('/favorites', authenticate(), lookupMongoUser, async (req, res, next)
       
       const user = await User.findOne({ auth0Id: req.user.auth0Id });
       if (!user) {
-        console.log('No user found with Auth0 ID:', req.user.auth0Id);
+        logger.debug('No user found with Auth0 ID:', { value: req.user.auth0Id });
         // Return empty array instead of error to not break the UI
         return res.json([]);
       }
@@ -47,14 +48,14 @@ router.get('/favorites', authenticate(), lookupMongoUser, async (req, res, next)
       console.log('Found user by Auth0 ID, using MongoDB ID:', userId);
     }
     
-    console.log('Get favorites - Final User ID for query:', userId);
+    logger.debug('Get favorites - Final User ID for query:', { value: userId });
     
     // Find all flashcard sets where the user's ID is in the favorites array
     const favoriteFlashcardSets = await FlashcardSet.find({
       favorites: userId
     }).populate('userId', 'name picture');
     
-    console.log(`Found ${favoriteFlashcardSets.length} favorite flashcard sets`);
+    logger.debug(`Found ${favoriteFlashcardSets.length} favorite flashcard sets`);
     
     // Format response
     const formattedSets = favoriteFlashcardSets.map(set => ({
@@ -63,7 +64,7 @@ router.get('/favorites', authenticate(), lookupMongoUser, async (req, res, next)
       description: set.description,
       category: set.category,
       tags: set.tags,
-      cardCount: set.cards.length,
+      cardCount: set.cards ? set.cards.length : 0,
       createdBy: set.userId,
       isPublic: set.isPublic,
       createdAt: set.createdAt,
@@ -73,7 +74,7 @@ router.get('/favorites', authenticate(), lookupMongoUser, async (req, res, next)
     
     res.json(formattedSets);
   } catch (error) {
-    console.error('Error getting favorite flashcard sets:', error);
+    logger.error('Error getting favorite flashcard sets:', error);
     // Return empty array instead of error to prevent UI from breaking
     res.json([]);
   }
@@ -83,56 +84,58 @@ router.get('/favorites', authenticate(), lookupMongoUser, async (req, res, next)
 router.get('/', async (req, res, next) => {
   try {
     // Debug logging
-    console.log('==== FLASHCARD GET REQUEST ====');
-    console.log('Database name:', mongoose.connection.name);
-    console.log('User from request:', {
+    logger.debug('==== FLASHCARD GET REQUEST ====');
+    logger.debug('Database name:', { value: mongoose.connection.name });
+    logger.debug('User from request:', {
       id: req.user.id,
       auth0Id: req.user.auth0Id
     });
     
     // Add more detailed checking
     if (!req.user || !req.user.id) {
-      console.error('No valid user in request');
+      logger.error('No valid user in request');
       return res.status(401).json({ error: 'User not authenticated' });
     }
     
-    console.log('Finding flashcards with userId:', req.user.id);
+    logger.debug('Finding flashcards with userId:', { value: req.user.id });
     
     const flashcardSets = await FlashcardSet.find({ userId: req.user.id })
       .select('-cards.reviewHistory -cards.hint')
       .sort({ updatedAt: -1 });
     
-    console.log(`Found ${flashcardSets.length} flashcard sets`);
+    logger.debug(`Found ${flashcardSets.length} flashcard sets`);
     
     // If no sets are found, double-check with a looser query
     if (flashcardSets.length === 0) {
-      console.log('No flashcards found for this user, checking all sets in the database');
+      logger.debug('No flashcards found for this user, checking all sets in the database');
       const allSets = await FlashcardSet.find({}).select('_id title userId');
-      console.log('All sets in database:', JSON.stringify(allSets.map(set => ({
+      
+      // Add null check to make sure set.cards exists before accessing length
+      logger.debug('All sets in database:', allSets.map(set => ({
         id: set._id,
         title: set.title,
-        userId: set.userId
-      }))));
+        cards: set.cards ? set.cards.length : 0
+      })));
       
       // Try to find by Auth0 ID if MongoDB ID approach failed
-      console.log('Attempting to find user in database by Auth0 ID');
+      logger.debug('Attempting to find user in database by Auth0 ID');
       const dbUser = await User.findOne({ auth0Id: req.user.auth0Id });
       if (dbUser) {
-        console.log(`Found user in database with ID ${dbUser._id}`);
-        console.log('Checking if any flashcard sets have this userId');
+        logger.debug(`Found user in database with ID ${dbUser._id}`);
+        logger.debug('Checking if any flashcard sets have this userId');
         
         // Look for flashcards with the found user ID
         const setsByDbUser = await FlashcardSet.find({ userId: dbUser._id })
           .select('-cards.reviewHistory -cards.hint')
           .sort({ updatedAt: -1 });
           
-        console.log(`Found ${setsByDbUser.length} flashcard sets for database user`);
+        logger.debug(`Found ${setsByDbUser.length} flashcard sets for database user`);
         
         if (setsByDbUser.length > 0) {
           // If we found flashcards with the database user ID, use them
           const formattedSets = setsByDbUser.map(set => ({
             ...set.toObject(),
-            cardCount: set.cards.length,
+            cardCount: set.cards ? set.cards.length : 0,
             progress: set.studyStats.masteryLevel || 0,
             lastStudied: set.studyStats.lastStudied || null,
             // Check if the current user has favorited this set
@@ -141,7 +144,7 @@ router.get('/', async (req, res, next) => {
             cards: undefined
           }));
           
-          console.log('Returning sets found by database user ID lookup');
+          logger.debug('Returning sets found by database user ID lookup');
           return res.json(formattedSets);
         }
       }
@@ -152,7 +155,7 @@ router.get('/', async (req, res, next) => {
       const setObj = set.toObject();
       return {
         ...setObj,
-        cardCount: set.cards.length,
+        cardCount: set.cards ? set.cards.length : 0,
         progress: set.studyStats.masteryLevel || 0,
         lastStudied: set.studyStats.lastStudied || null,
         // Check if the current user has favorited this set
@@ -165,7 +168,7 @@ router.get('/', async (req, res, next) => {
     
     res.json(formattedSets);
   } catch (error) {
-    console.error('Error in flashcard GET route:', error);
+    logger.error('Error in flashcard GET route:', error);
     next(error);
   }
 });
@@ -217,7 +220,7 @@ router.post('/generate', async (req, res, next) => {
       return res.status(400).json({ error: 'Content is required' });
     }
     
-    console.log(`Generating flashcards with: content length=${content.length}, count=${count}, difficulty=${difficulty}`);
+    logger.debug(`Generating flashcards with: content length=${content.length}, count=${count}, difficulty=${difficulty}`);
     
     try {
       // Generate flashcards using OpenAI
@@ -227,7 +230,7 @@ router.post('/generate', async (req, res, next) => {
       const title = await openaiService.generateFlashcardSetTitle(content);
       
       // Log success
-      console.log(`Successfully generated ${cards.length} flashcards`);
+      logger.debug(`Successfully generated ${cards.length} flashcards`);
       
       // Return the generated flashcards and title
       res.json({
@@ -236,7 +239,7 @@ router.post('/generate', async (req, res, next) => {
         count: cards.length
       });
     } catch (openaiError) {
-      console.error('OpenAI service error:', openaiError);
+      logger.error('OpenAI service error:', openaiError);
       return res.status(500).json({ 
         error: 'Failed to generate flashcards',
         message: openaiError.message,
@@ -244,7 +247,7 @@ router.post('/generate', async (req, res, next) => {
       });
     }
   } catch (error) {
-    console.error('Unexpected error in flashcard generation route:', error);
+    logger.error('Unexpected error in flashcard generation route:', error);
     res.status(500).json({ 
       error: 'Failed to generate flashcards',
       message: error.message 
@@ -268,7 +271,7 @@ router.get('/:id', async (req, res, next) => {
     }
     
     // Log for debugging
-    console.log('Get flashcard permission check:', {
+    logger.debug('Get flashcard permission check:', {
       setUserId: flashcardSet.userId.toString(),
       reqUserId: req.user.id,
       reqUserAuth0Id: req.user.auth0Id,
@@ -295,7 +298,7 @@ router.get('/:id', async (req, res, next) => {
 
     res.json(responseObj);
   } catch (error) {
-    console.error('Error getting flashcard set:', error);
+    logger.error('Error getting flashcard set:', error);
     next(error);
   }
 });
@@ -307,7 +310,7 @@ router.post('/', async (req, res, next) => {
     
     // Check if user ID is properly set by the lookupMongoUser middleware
     if (!req.user || !req.user.id) {
-      console.error('User ID not properly set');
+      logger.error('User ID not properly set');
       return res.status(401).json({ error: 'User not authenticated or identified' });
     }
     
@@ -320,7 +323,7 @@ router.post('/', async (req, res, next) => {
       // Extract user info from Auth0 token
       const userInfo = req.auth;
       
-      console.error('❌ User not found in database when creating flashcard set');
+      logger.error('❌ User not found in database when creating flashcard set');
       return res.status(404).json({ error: 'User not found. Please try logging in again.' });
     }
     
@@ -335,11 +338,11 @@ router.post('/', async (req, res, next) => {
       userId: user._id // Use the MongoDB _id, not Auth0 ID
     });
     
-    console.log(`Flashcard set created with ID: ${flashcardSet._id}`);
+    logger.debug(`Flashcard set created with ID: ${flashcardSet._id}`);
     
     res.status(201).json(flashcardSet);
   } catch (error) {
-    console.error('Error creating flashcard set:', error);
+    logger.error('Error creating flashcard set:', error);
     next(error);
   }
 });
@@ -361,7 +364,7 @@ router.put('/:id', async (req, res, next) => {
     }
     
     // Log for debugging
-    console.log('Update flashcard permission check:', {
+    logger.debug('Update flashcard permission check:', {
       setUserId: flashcardSet.userId.toString(),
       reqUserId: req.user.id,
       reqUserAuth0Id: req.user.auth0Id
@@ -393,7 +396,7 @@ router.put('/:id', async (req, res, next) => {
     
     res.json(updatedFlashcardSet);
   } catch (error) {
-    console.error('Error updating flashcard set:', error);
+    logger.error('Error updating flashcard set:', error);
     next(error);
   }
 });
@@ -414,7 +417,7 @@ router.delete('/:id', async (req, res, next) => {
     }
     
     // Log for debugging
-    console.log('Delete flashcard permission check:', {
+    logger.debug('Delete flashcard permission check:', {
       setUserId: flashcardSet.userId.toString(),
       reqUserId: req.user.id,
       reqUserAuth0Id: req.user.auth0Id
@@ -433,7 +436,7 @@ router.delete('/:id', async (req, res, next) => {
     
     res.status(204).end();
   } catch (error) {
-    console.error('Error deleting flashcard set:', error);
+    logger.error('Error deleting flashcard set:', error);
     next(error);
   }
 });
@@ -455,7 +458,7 @@ router.post('/:id/study', async (req, res, next) => {
     }
     
     // Log for debugging
-    console.log('Study session permission check:', {
+    logger.debug('Study session permission check:', {
       setUserId: flashcardSet.userId.toString(),
       reqUserId: req.user.id,
       reqUserAuth0Id: req.user.auth0Id
@@ -496,10 +499,10 @@ router.post('/:id/study', async (req, res, next) => {
       });
       
       // Calculate mastery level based on review history
-      const totalCards = flashcardSet.cards.length;
+      const totalCards = flashcardSet.cards ? flashcardSet.cards.length : 0;
       let masteredCards = 0;
       
-      flashcardSet.cards.forEach(card => {
+      flashcardSet.cards && flashcardSet.cards.forEach(card => {
         const history = card.reviewHistory || [];
         // Consider a card mastered if it has at least 3 reviews with performance > 3
         if (history.filter(h => h.performance > 3).length >= 3) {
@@ -534,14 +537,14 @@ router.patch('/:id/favorite', authenticate(), lookupMongoUser, async (req, res, 
       try {
         userId = new mongoose.Types.ObjectId(req.user.id);
       } catch (e) {
-        console.error('Error converting user ID to ObjectId:', e);
+        logger.error('Error converting user ID to ObjectId:', { value: e });
         userId = req.user.id; // Use as is if conversion fails
       }
     } else {
       return res.status(401).json({ error: 'User not authenticated properly' });
     }
     
-    console.log('Toggle favorite - User ID:', userId);
+    logger.debug('Toggle favorite - User ID:', { value: userId });
     
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({ error: 'Invalid ID format' });
@@ -583,7 +586,7 @@ router.patch('/:id/favorite', authenticate(), lookupMongoUser, async (req, res, 
       favorites: flashcardSet.favorites.length
     });
   } catch (error) {
-    console.error('Error toggling favorite status:', error);
+    logger.error('Error toggling favorite status:', error);
     next(error);
   }
 });

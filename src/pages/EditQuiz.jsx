@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import logger from '../utils/logger';
 import { useParams, useNavigate } from 'react-router-dom'
 import { quizService } from '../services/quiz-service'
 import { handleRequestError } from '../services/utils'
@@ -52,7 +53,7 @@ function EditQuiz() {
         setIsLoading(true)
         setError(null)
         
-        console.log(`Fetching quiz with ID: ${id}`)
+        logger.debug(`Fetching quiz with ID: ${id}`)
         const data = await quizService.getQuiz(id)
         
         if (isMountedRef.current) {
@@ -61,7 +62,7 @@ function EditQuiz() {
           retryCount.current = 0;
         }
       } catch (err) {
-        console.error('Error fetching quiz:', err)
+        logger.error('Error fetching quiz:', { value: err })
         
         // Check if it's a cancellation error - pass true to indicate this is a critical request
         if (!handleRequestError(err, 'Quiz fetch', true)) {
@@ -256,7 +257,7 @@ function EditQuiz() {
       await quizService.updateQuiz(id, updatedQuiz)
       showSnackbarMessage('Quiz saved successfully!', 'success')
     } catch (err) {
-      console.error('Error saving quiz:', err)
+      logger.error('Error saving quiz:', { value: err })
       showSnackbarMessage('Failed to save changes. Please try again.', 'error')
     } finally {
       setIsSaving(false)

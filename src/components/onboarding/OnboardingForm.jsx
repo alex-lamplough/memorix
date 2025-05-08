@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import logger from '../../utils/logger';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthProvider';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -13,19 +14,19 @@ import CompletionStep from './steps/CompletionStep';
 const fetchOnboardingStatus = async () => {
   try {
     const response = await apiClient.get('/users/me/onboarding');
-    console.log('Fetched onboarding status:', response.data);
+    logger.debug('Fetched onboarding status:', { value: response.data });
     return response.data;
   } catch (error) {
-    console.error('Error fetching onboarding status:', error);
+    logger.error('Error fetching onboarding status:', error);
     return { stage: 'not_started', completed: false, requiresOnboarding: true };
   }
 };
 
 // Update onboarding stage
 const updateOnboardingStage = async ({ stage, profileData }) => {
-  console.log(`Updating onboarding stage to: ${stage}`, profileData);
+  logger.debug(`Updating onboarding stage to: ${stage}`, { value: profileData });
   const response = await apiClient.put('/users/me/onboarding', { stage, profileData });
-  console.log('Onboarding update response:', response.data);
+  logger.debug('Onboarding update response:', { value: response.data });
   return response.data;
 };
 
@@ -59,7 +60,7 @@ const OnboardingForm = () => {
   const stageMutation = useMutation({
     mutationFn: updateOnboardingStage,
     onSuccess: (data) => {
-      console.log('Onboarding stage updated:', data);
+      logger.debug('Onboarding stage updated:', { value: data });
       
       // Update the onboarding status in the query cache
       queryClient.setQueryData(['onboardingStatus'], {
@@ -76,12 +77,12 @@ const OnboardingForm = () => {
       
       // If completed, redirect to dashboard
       if (data.user?.profile?.profileCompleted) {
-        console.log('Onboarding completed, redirecting to dashboard');
+        logger.debug('Onboarding completed, redirecting to dashboard');
         navigate('/dashboard');
       }
     },
     onError: (error) => {
-      console.error('Error updating onboarding stage:', error);
+      logger.error('Error updating onboarding stage:', error);
       // Display an error message to the user
       alert('There was an error saving your information. Please try again.');
     }
@@ -108,7 +109,7 @@ const OnboardingForm = () => {
   // Determine initial step based on onboarding status
   useEffect(() => {
     if (onboardingStatus) {
-      console.log('Setting initial step based on status:', onboardingStatus);
+      logger.debug('Setting initial step based on status:', { value: onboardingStatus });
       
       switch (onboardingStatus.stage) {
         case 'not_started':
@@ -129,7 +130,7 @@ const OnboardingForm = () => {
       
       // If onboarding is already completed, redirect to dashboard
       if (onboardingStatus.completed) {
-        console.log('Onboarding already completed, redirecting to dashboard');
+        logger.debug('Onboarding already completed, redirecting to dashboard');
         navigate('/dashboard');
       }
     }
@@ -193,13 +194,13 @@ const OnboardingForm = () => {
         });
 
         // Log completion
-        console.log('🎉 Marking onboarding as COMPLETED');
+        logger.debug('🎉 Marking onboarding as COMPLETED');
         break;
       default:
         return;
     }
     
-    console.log(`Submitting step ${step} with stage: ${stage}`);
+    logger.debug(`Submitting step ${step} with stage: ${stage}`);
     
     // Update onboarding stage
     stageMutation.mutate({ stage, profileData });

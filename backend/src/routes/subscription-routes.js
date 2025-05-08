@@ -1,4 +1,5 @@
 import express from 'express';
+import logger from '../utils/logger.js';
 import { expressjwt as jwt } from 'express-jwt';
 import jwksRsa from 'jwks-rsa';
 import { config } from '../config/config.js';
@@ -16,13 +17,13 @@ router.use(checkJwt);
 router.get('/current', async (req, res) => {
   try {
     const auth0Id = req.auth.sub;
-    console.log(`Fetching subscription for user: ${auth0Id}`);
+    logger.debug(`Fetching subscription for user: ${auth0Id}`);
     
     // Find user by Auth0 ID
     const user = await User.findOne({ auth0Id });
     
     if (!user) {
-      console.error(`User not found for auth0Id: ${auth0Id}`);
+      logger.error(`User not found for auth0Id: ${auth0Id}`);
       return res.status(404).json({ error: 'User not found' });
     }
     
@@ -42,7 +43,7 @@ router.get('/current', async (req, res) => {
     try {
       // Make sure Stripe is initialized
       if (!stripeService.stripe) {
-        console.error('Stripe service not initialized. Check environment variables.');
+        logger.error('Stripe service not initialized. Check environment variables.');
         return res.status(500).json({
           error: 'Subscription service unavailable',
           message: 'The subscription service is currently unavailable. Please try again later.',
@@ -50,9 +51,9 @@ router.get('/current', async (req, res) => {
         });
       }
       
-      console.log(`Fetching subscription ${user.subscription.stripeSubscriptionId} from Stripe`);
+      logger.debug(`Fetching subscription ${user.subscription.stripeSubscriptionId} from Stripe`);
       const subscription = await stripeService.getSubscription(user.subscription.stripeSubscriptionId);
-      console.log(`Stripe subscription fetched: ${subscription.id}, status: ${subscription.status}`);
+      logger.debug(`Stripe subscription fetched: ${subscription.id}, status: ${subscription.status}`);
       
       // Format the renewal date (current period end) for frontend display
       let renewalDateFormatted = null;
@@ -72,12 +73,12 @@ router.get('/current', async (req, res) => {
         cancelAtPeriodEnd: subscription.cancel_at_period_end
       });
     } catch (stripeError) {
-      console.error(`Stripe error fetching subscription: ${stripeError.message}`);
+      logger.error(`Stripe error fetching subscription: ${stripeError.message}`);
       console.error(stripeError);
       
       // If the subscription doesn't exist in Stripe anymore, update the user record
       if (stripeError.code === 'resource_missing') {
-        console.log(`Subscription ${user.subscription.stripeSubscriptionId} no longer exists in Stripe, resetting user to free plan`);
+        logger.debug(`Subscription ${user.subscription.stripeSubscriptionId} no longer exists in Stripe, resetting user to free plan`);
         user.subscription = null;
         await user.save();
         
@@ -101,7 +102,7 @@ router.get('/current', async (req, res) => {
       });
     }
   } catch (error) {
-    console.error('Unexpected error fetching subscription:', error);
+    logger.error('Unexpected error fetching subscription:', error);
     return res.status(500).json({ 
       error: 'Failed to fetch subscription information',
       message: 'An unexpected error occurred. Our team has been notified.',
@@ -149,7 +150,7 @@ router.get('/details', async (req, res) => {
           });
         }
       } catch (stripeError) {
-        console.error('Error fetching latest subscription from Stripe:', stripeError);
+        logger.error('Error fetching latest subscription from Stripe:', stripeError);
         // Continue with the stored data if Stripe fetch fails
       }
     }
@@ -193,7 +194,7 @@ router.get('/details', async (req, res) => {
     
     return res.status(200).json(subscriptionDetails);
   } catch (error) {
-    console.error('Error fetching subscription details:', error);
+    logger.error('Error fetching subscription details:', error);
     return res.status(500).json({ message: 'Server error', error: error.message });
   }
 });

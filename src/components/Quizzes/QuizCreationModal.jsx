@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import logger from '../../utils/logger';
 import { 
   Dialog, 
   DialogTitle, 
@@ -213,7 +214,7 @@ const QuizCreationModal = ({ open, onClose, onQuizCreated }) => {
       
       onClose()
     } catch (error) {
-      console.error('Error saving quiz:', error)
+      logger.error('Error saving quiz:', error)
       showSnackbarMessage('Failed to save quiz. Please try again.', 'error')
     } finally {
       setIsLoading(false)

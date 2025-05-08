@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import LoginButton from './components/LoginButton'
 import { useAuth } from './auth/useAuth'
-import logoGreen from './assets/MemorixBannerLogo.png'
+import logoGreen from './assets/MemorixIcon.png'
 
 function Header() {
   const { isAuthenticated } = useAuth();

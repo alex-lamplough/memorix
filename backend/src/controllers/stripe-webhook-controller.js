@@ -1,4 +1,5 @@
 import User from '../models/user-model.js';
+import logger from '../utils/logger.js';
 import stripeService from '../services/stripe-service.js';
 import { config } from '../config/config.js';
 
@@ -9,12 +10,12 @@ export const handleStripeWebhook = async (req, res) => {
   const sig = req.headers['stripe-signature'];
   const webhookSecret = config.stripe.webhookSecret;
   
-  console.log('-------------------------------------------');
-  console.log('🔔 STRIPE WEBHOOK RECEIVED');
-  console.log('Endpoint:', req.originalUrl);
-  console.log('Method:', req.method);
-  console.log('Signature:', sig ? 'present' : 'missing');
-  console.log('Webhook secret:', webhookSecret ? `${webhookSecret.substring(0, 8)}...` : 'missing');
+  logger.debug('-------------------------------------------');
+  logger.debug('🔔 STRIPE WEBHOOK RECEIVED');
+  logger.debug('Endpoint:', { value: req.originalUrl });
+  logger.debug('Method:', { value: req.method });
+  logger.debug('Signature:', sig ? 'present' : 'missing');
+  logger.debug('Webhook secret:', { value: webhookSecret ? `${webhookSecret.substring(0, 8)}...` : 'missing' });
   
   let event;
   
@@ -28,25 +29,25 @@ export const handleStripeWebhook = async (req, res) => {
         sig,
         webhookSecret
       );
-      console.log(`✅ Webhook signature verified!`);
+      logger.debug(`✅ Webhook signature verified!`);
     } catch (err) {
-      console.log(`⚠️ Webhook signature verification failed:`, err.message);
+      logger.debug(`⚠️ Webhook signature verification failed:`, { value: err.message });
       return res.status(400).send(`Webhook Error: ${err.message}`);
     }
   } else {
     // When webhook secret is not configured, we take the event as is (less secure)
     try {
       event = JSON.parse(req.body);
-      console.log(`⚠️ Webhook without signature verification - not recommended!`);
+      logger.debug(`⚠️ Webhook without signature verification - not recommended!`);
     } catch (err) {
-      console.log(`⚠️ Webhook JSON parsing failed:`, err.message);
+      logger.debug(`⚠️ Webhook JSON parsing failed:`, { value: err.message });
       return res.status(400).send(`Webhook Error: Invalid payload format`);
     }
   }
   
   // Log the event type
-  console.log(`Event type: ${event.type}`);
-  console.log('-------------------------------------------');
+  logger.debug(`Event type: ${event.type}`);
+  logger.debug('-------------------------------------------');
   
   // Extract the object from the event for passing to handlers
   const data = event.data.object;
@@ -104,13 +105,13 @@ export const handleStripeWebhook = async (req, res) => {
         break;
         
       default:
-        console.log(`Unhandled event type: ${event.type}`);
+        logger.debug(`Unhandled event type: ${event.type}`);
     }
     
     // Return a 200 response to acknowledge receipt of the event
     return res.status(200).json({received: true});
   } catch (err) {
-    console.error(`Error processing webhook: ${err.message}`, err);
+    logger.error(`Error processing webhook: ${err.message}`, { value: err });
     return res.status(200).json({received: true}); // Still return 200 to avoid retries
   }
 };
@@ -120,7 +121,7 @@ export const handleStripeWebhook = async (req, res) => {
  * @param {Object} customer - Stripe customer object
  */
 async function handleCustomerCreated(customer) {
-  console.log('Customer created:', customer.id);
+  logger.debug('Customer created:', { value: customer.id });
   
   try {
     // If metadata contains userId, find and update the user
@@ -149,10 +150,10 @@ async function handleCustomerCreated(customer) {
           };
           
           await user.save();
-          console.log(`Updated user ${user.email} with Stripe customer ID`);
+          logger.debug(`Updated user ${user.email} with Stripe customer ID`);
         }
       } else {
-        console.log(`User not found for customer.created event with ID ${customer.metadata.userId}`);
+        logger.debug(`User not found for customer.created event with ID ${customer.metadata.userId}`);
       }
     } else {
       // Try to find user by email
@@ -178,11 +179,11 @@ async function handleCustomerCreated(customer) {
         };
         
         await user.save();
-        console.log(`Updated user ${user.email} with Stripe customer ID`);
+        logger.debug(`Updated user ${user.email} with Stripe customer ID`);
       }
     }
   } catch (error) {
-    console.error('Error handling customer.created event:', error);
+    logger.error('Error handling customer.created event:', error);
   }
 }
 
@@ -191,7 +192,7 @@ async function handleCustomerCreated(customer) {
  * @param {Object} customer - Stripe customer object
  */
 async function handleCustomerUpdated(customer) {
-  console.log('Customer updated:', customer.id);
+  logger.debug('Customer updated:', { value: customer.id });
   
   try {
     // Find user by Stripe customer ID
@@ -215,12 +216,12 @@ async function handleCustomerUpdated(customer) {
       };
       
       await user.save();
-      console.log(`Updated user ${user.email} with latest customer data`);
+      logger.debug(`Updated user ${user.email} with latest customer data`);
     } else {
-      console.log(`User not found for customer.updated event with ID ${customer.id}`);
+      logger.debug(`User not found for customer.updated event with ID ${customer.id}`);
     }
   } catch (error) {
-    console.error('Error handling customer.updated event:', error);
+    logger.error('Error handling customer.updated event:', error);
   }
 }
 
@@ -229,7 +230,7 @@ async function handleCustomerUpdated(customer) {
  * @param {Object} customer - Stripe customer object
  */
 async function handleCustomerDeleted(customer) {
-  console.log('Customer deleted:', customer.id);
+  logger.debug('Customer deleted:', { value: customer.id });
   
   try {
     // Find user by Stripe customer ID
@@ -255,12 +256,12 @@ async function handleCustomerDeleted(customer) {
       };
       
       await user.save();
-      console.log(`Updated user ${user.email} after customer deletion`);
+      logger.debug(`Updated user ${user.email} after customer deletion`);
     } else {
-      console.log(`User not found for customer.deleted event with ID ${customer.id}`);
+      logger.debug(`User not found for customer.deleted event with ID ${customer.id}`);
     }
   } catch (error) {
-    console.error('Error handling customer.deleted event:', error);
+    logger.error('Error handling customer.deleted event:', error);
   }
 }
 
@@ -270,15 +271,15 @@ async function handleCustomerDeleted(customer) {
  * @param {Object} event - Full Stripe event
  */
 async function handleSubscriptionCreated(subscription, event) {
-  console.log('Subscription created with ID:', subscription.id);
-  console.log('Debug - Subscription object contains current_period_end:', subscription.current_period_end);
+  logger.debug('Subscription created with ID:', { value: subscription.id });
+  logger.debug('Debug - Subscription object contains current_period_end:', { value: subscription.current_period_end });
   
   try {
     // Find user by Stripe customer ID
     const user = await User.findOne({ stripeCustomerId: subscription.customer });
     
     if (user) {
-      console.log(`Found user ${user.email} for subscription created event`);
+      logger.debug(`Found user ${user.email} for subscription created event`);
       
       // Extract plan information from subscription items
       let planName = 'pro'; // Default to pro
@@ -287,7 +288,7 @@ async function handleSubscriptionCreated(subscription, event) {
         const item = subscription.items.data[0];
         const priceId = item.price.id;
         
-        console.log(`Found price ID: ${priceId} in subscription`);
+        logger.debug(`Found price ID: ${priceId} in subscription`);
         
         // Match price ID to plan (fallback to pro)
         if (priceId === config.stripe.proPlanPriceId || !priceId.includes('creator') && !priceId.includes('enterprise')) {
@@ -303,10 +304,10 @@ async function handleSubscriptionCreated(subscription, event) {
       let currentPeriodEnd = null;
       if (subscription.current_period_end) {
         currentPeriodEnd = new Date(subscription.current_period_end * 1000);
-        console.log('Found current_period_end in subscription:', subscription.current_period_end);
-        console.log('Converted to Date object:', currentPeriodEnd);
+        logger.debug('Found current_period_end in subscription:', { value: subscription.current_period_end });
+        logger.debug('Converted to Date object:', { value: currentPeriodEnd });
       } else {
-        console.log('WARNING: current_period_end not found in subscription object');
+        logger.debug('WARNING: current_period_end not found in subscription object');
         // Try to find it in other Stripe subscription properties, like the default payment schedule
         if (subscription.items?.data?.[0]?.price?.recurring?.interval_count) {
           const interval = subscription.items.data[0].price.recurring.interval || 'month';
@@ -327,7 +328,7 @@ async function handleSubscriptionCreated(subscription, event) {
           }
           
           currentPeriodEnd = defaultEnd;
-          console.log('Created default period end based on interval:', currentPeriodEnd);
+          logger.debug('Created default period end based on interval:', { value: currentPeriodEnd });
         }
       }
       
@@ -335,7 +336,7 @@ async function handleSubscriptionCreated(subscription, event) {
       const currency = subscription.currency || 'gbp';
       const interval = subscription.items?.data?.[0]?.price?.recurring?.interval || 'month';
       
-      console.log(`Setting user plan to: ${planName} with period end:`, currentPeriodEnd);
+      logger.debug(`Setting user plan to: ${planName} with period end:`, { value: currentPeriodEnd });
       
       // Update user's subscription information
       user.subscription = {
@@ -386,7 +387,7 @@ async function handleSubscriptionCreated(subscription, event) {
         }
       };
       
-      console.log('About to save user with updated subscription:', {
+      logger.debug('About to save user with updated subscription:', {
         id: user._id,
         email: user.email,
         plan: user.subscription.plan,
@@ -397,12 +398,12 @@ async function handleSubscriptionCreated(subscription, event) {
       });
       
       await user.save();
-      console.log(`✅ Updated user ${user.email} with subscription plan: ${planName}`);
+      logger.debug(`✅ Updated user ${user.email} with subscription plan: ${planName}`);
     } else {
-      console.log(`❌ User not found for subscription created event with customer ID ${subscription.customer}`);
+      logger.debug(`❌ User not found for subscription created event with customer ID ${subscription.customer}`);
     }
   } catch (error) {
-    console.error('Error handling subscription.created event:', error);
+    logger.error('Error handling subscription.created event:', error);
   }
 }
 
@@ -411,7 +412,7 @@ async function handleSubscriptionCreated(subscription, event) {
  * @param {Object} subscription - Stripe subscription object
  */
 async function handleSubscriptionUpdated(subscription, event) {
-  console.log('Subscription updated:', subscription.id);
+  logger.debug('Subscription updated:', { value: subscription.id });
   
   try {
     // Find user by Stripe customer ID
@@ -460,12 +461,12 @@ async function handleSubscriptionUpdated(subscription, event) {
       };
       
       await user.save();
-      console.log(`Updated user ${user.email} with latest subscription data`);
+      logger.debug(`Updated user ${user.email} with latest subscription data`);
     } else {
-      console.log(`User not found for subscription updated event with customer ID ${subscription.customer}`);
+      logger.debug(`User not found for subscription updated event with customer ID ${subscription.customer}`);
     }
   } catch (error) {
-    console.error('Error handling subscription.updated event:', error);
+    logger.error('Error handling subscription.updated event:', error);
   }
 }
 
@@ -474,7 +475,7 @@ async function handleSubscriptionUpdated(subscription, event) {
  * @param {Object} subscription - Stripe subscription object
  */
 async function handleSubscriptionDeleted(subscription, event) {
-  console.log('Subscription deleted:', subscription.id);
+  logger.debug('Subscription deleted:', { value: subscription.id });
   
   try {
     // Find user by Stripe customer ID
@@ -503,12 +504,12 @@ async function handleSubscriptionDeleted(subscription, event) {
       };
       
       await user.save();
-      console.log(`Updated user ${user.email} after subscription deletion`);
+      logger.debug(`Updated user ${user.email} after subscription deletion`);
     } else {
-      console.log(`User not found for subscription deleted event with customer ID ${subscription.customer}`);
+      logger.debug(`User not found for subscription deleted event with customer ID ${subscription.customer}`);
     }
   } catch (error) {
-    console.error('Error handling subscription.deleted event:', error);
+    logger.error('Error handling subscription.deleted event:', error);
   }
 }
 
@@ -517,7 +518,7 @@ async function handleSubscriptionDeleted(subscription, event) {
  * @param {Object} subscription - Stripe subscription object
  */
 async function handleSubscriptionTrialWillEnd(subscription, event) {
-  console.log('Subscription trial will end:', subscription.id);
+  logger.debug('Subscription trial will end:', { value: subscription.id });
   
   try {
     // Find user by Stripe customer ID
@@ -541,15 +542,15 @@ async function handleSubscriptionTrialWillEnd(subscription, event) {
       };
       
       await user.save();
-      console.log(`Updated user ${user.email} with trial end notification`);
+      logger.debug(`Updated user ${user.email} with trial end notification`);
       
       // Here you could also trigger an email notification to the user
       // about their trial ending soon
     } else {
-      console.log(`User not found for trial will end event with customer ID ${subscription.customer}`);
+      logger.debug(`User not found for trial will end event with customer ID ${subscription.customer}`);
     }
   } catch (error) {
-    console.error('Error handling trial_will_end event:', error);
+    logger.error('Error handling trial_will_end event:', error);
   }
 }
 
@@ -558,7 +559,7 @@ async function handleSubscriptionTrialWillEnd(subscription, event) {
  * @param {Object} paymentMethod - Stripe payment method object
  */
 async function handlePaymentMethodAttached(paymentMethod) {
-  console.log('Payment method attached:', paymentMethod.id);
+  logger.debug('Payment method attached:', { value: paymentMethod.id });
   
   try {
     // Find user by Stripe customer ID
@@ -588,12 +589,12 @@ async function handlePaymentMethodAttached(paymentMethod) {
       };
       
       await user.save();
-      console.log(`Updated user ${user.email} with new payment method`);
+      logger.debug(`Updated user ${user.email} with new payment method`);
     } else {
-      console.log(`User not found for payment method attached event with customer ID ${paymentMethod.customer}`);
+      logger.debug(`User not found for payment method attached event with customer ID ${paymentMethod.customer}`);
     }
   } catch (error) {
-    console.error('Error handling payment_method.attached event:', error);
+    logger.error('Error handling payment_method.attached event:', error);
   }
 }
 
@@ -602,7 +603,7 @@ async function handlePaymentMethodAttached(paymentMethod) {
  * @param {Object} paymentMethod - Stripe payment method object
  */
 async function handlePaymentMethodDetached(paymentMethod) {
-  console.log('Payment method detached:', paymentMethod.id);
+  logger.debug('Payment method detached:', { value: paymentMethod.id });
   
   try {
     // Since the payment method is detached, the customer ID might not be present
@@ -625,12 +626,12 @@ async function handlePaymentMethodDetached(paymentMethod) {
       };
       
       await user.save();
-      console.log(`Updated user ${user.email} after payment method detached`);
+      logger.debug(`Updated user ${user.email} after payment method detached`);
     } else {
-      console.log(`User not found for payment method detached event with ID ${paymentMethod.id}`);
+      logger.debug(`User not found for payment method detached event with ID ${paymentMethod.id}`);
     }
   } catch (error) {
-    console.error('Error handling payment_method.detached event:', error);
+    logger.error('Error handling payment_method.detached event:', error);
   }
 }
 
@@ -639,7 +640,7 @@ async function handlePaymentMethodDetached(paymentMethod) {
  * @param {Object} paymentMethod - Stripe payment method object
  */
 async function handlePaymentMethodUpdated(paymentMethod) {
-  console.log('Payment method updated:', paymentMethod.id);
+  logger.debug('Payment method updated:', { value: paymentMethod.id });
   
   try {
     // Find user by Stripe customer ID
@@ -672,12 +673,12 @@ async function handlePaymentMethodUpdated(paymentMethod) {
       };
       
       await user.save();
-      console.log(`Updated user ${user.email} with updated payment method`);
+      logger.debug(`Updated user ${user.email} with updated payment method`);
     } else {
-      console.log(`User not found for payment method updated event with customer ID ${paymentMethod.customer}`);
+      logger.debug(`User not found for payment method updated event with customer ID ${paymentMethod.customer}`);
     }
   } catch (error) {
-    console.error('Error handling payment_method.updated event:', error);
+    logger.error('Error handling payment_method.updated event:', error);
   }
 }
 
@@ -686,7 +687,7 @@ async function handlePaymentMethodUpdated(paymentMethod) {
  * @param {Object} invoice - Stripe invoice object
  */
 async function handleInvoicePaymentSucceeded(invoice) {
-  console.log('Invoice payment succeeded:', invoice.id);
+  logger.debug('Invoice payment succeeded:', { value: invoice.id });
   
   try {
     // Find user by Stripe customer ID
@@ -726,7 +727,7 @@ async function handleInvoicePaymentSucceeded(invoice) {
             })
           : null;
         
-        console.log('Setting next billing date from invoice:', {
+        logger.debug('Setting next billing date from invoice:', {
           invoiceId: invoice.id,
           periodEnd: invoice.period_end,
           formattedDate: nextBillingDate
@@ -741,12 +742,12 @@ async function handleInvoicePaymentSucceeded(invoice) {
       }
       
       await user.save();
-      console.log(`Updated user ${user.email} with successful payment information`);
+      logger.debug(`Updated user ${user.email} with successful payment information`);
     } else {
-      console.log(`User not found for invoice payment succeeded event with customer ID ${invoice.customer}`);
+      logger.debug(`User not found for invoice payment succeeded event with customer ID ${invoice.customer}`);
     }
   } catch (error) {
-    console.error('Error handling invoice.payment_succeeded event:', error);
+    logger.error('Error handling invoice.payment_succeeded event:', error);
   }
 }
 
@@ -755,7 +756,7 @@ async function handleInvoicePaymentSucceeded(invoice) {
  * @param {Object} invoice - Stripe invoice object
  */
 async function handleInvoicePaymentFailed(invoice) {
-  console.log('Invoice payment failed:', invoice.id);
+  logger.debug('Invoice payment failed:', { value: invoice.id });
   
   try {
     // Find user by Stripe customer ID
@@ -794,15 +795,15 @@ async function handleInvoicePaymentFailed(invoice) {
       }
       
       await user.save();
-      console.log(`Updated user ${user.email} with failed payment information`);
+      logger.debug(`Updated user ${user.email} with failed payment information`);
       
       // Here you could also trigger an email notification to the user
       // about their payment failing
     } else {
-      console.log(`User not found for invoice payment failed event with customer ID ${invoice.customer}`);
+      logger.debug(`User not found for invoice payment failed event with customer ID ${invoice.customer}`);
     }
   } catch (error) {
-    console.error('Error handling invoice.payment_failed event:', error);
+    logger.error('Error handling invoice.payment_failed event:', error);
   }
 }
 
@@ -812,7 +813,7 @@ async function handleInvoicePaymentFailed(invoice) {
  * @param {Object} event - Full Stripe event
  */
 async function handleCheckoutSessionCompleted(session, event) {
-  console.log('Checkout session completed:', session.id);
+  logger.debug('Checkout session completed:', { value: session.id });
   
   try {
     // Get customer ID and metadata from the session
@@ -820,15 +821,15 @@ async function handleCheckoutSessionCompleted(session, event) {
     
     // Only proceed if this is a subscription checkout
     if (mode !== 'subscription') {
-      console.log('Not a subscription checkout, skipping...');
+      logger.debug('Not a subscription checkout, skipping...');
       return;
     }
     
-    console.log('Session metadata:', metadata);
-    console.log('Subscription ID from session:', subscriptionId);
+    logger.debug('Session metadata:', { value: metadata });
+    logger.debug('Subscription ID from session:', { value: subscriptionId });
     
     if (!customer) {
-      console.error('No customer ID found in checkout session');
+      logger.error('No customer ID found in checkout session');
       return;
     }
     
@@ -837,19 +838,19 @@ async function handleCheckoutSessionCompleted(session, event) {
     
     // If no user found by customer ID but we have metadata, try to find by ID
     if (!user && metadata && metadata.userId) {
-      console.log(`No user found with stripeCustomerId ${customer}, trying userId from metadata: ${metadata.userId}`);
+      logger.debug(`No user found with stripeCustomerId ${customer}, trying userId from metadata: ${metadata.userId}`);
       user = await User.findById(metadata.userId);
       
       // Update user with customer ID if found
       if (user) {
         user.stripeCustomerId = customer;
         await user.save();
-        console.log(`Updated user ${user.email} with customer ID ${customer}`);
+        logger.debug(`Updated user ${user.email} with customer ID ${customer}`);
       }
     }
     
     if (!user) {
-      console.error('User not found for checkout session:', session.id);
+      logger.error('User not found for checkout session:', { value: session.id });
       return;
     }
     
@@ -860,9 +861,9 @@ async function handleCheckoutSessionCompleted(session, event) {
         const subscription = await stripeService.stripe.subscriptions.retrieve(subscriptionId, {
           expand: ['latest_invoice']
         });
-        console.log('Retrieved subscription:', subscription.id);
-        console.log('Current period end timestamp:', subscription.current_period_end);
-        console.log('Full subscription period info:', {
+        logger.debug('Retrieved subscription:', { value: subscription.id });
+        logger.debug('Current period end timestamp:', { value: subscription.current_period_end });
+        logger.debug('Full subscription period info:', {
           current_period_start: subscription.current_period_start,
           current_period_end: subscription.current_period_end
         });
@@ -898,9 +899,9 @@ async function handleCheckoutSessionCompleted(session, event) {
             month: 'long',
             day: 'numeric'
           });
-          console.log('Formatted next billing date:', nextBillingDate);
+          logger.debug('Formatted next billing date:', { value: nextBillingDate });
         } else {
-          console.warn('No current_period_end found in subscription, using fallback');
+          logger.warn('No current_period_end found in subscription, using fallback');
           // Use fallback based on price interval if available
           if (subscription.items?.data?.[0]?.price?.recurring) {
             const interval = subscription.items.data[0].price.recurring.interval || 'month';
@@ -925,11 +926,11 @@ async function handleCheckoutSessionCompleted(session, event) {
               month: 'long',
               day: 'numeric'
             });
-            console.log('Created fallback next billing date:', nextBillingDate);
+            logger.debug('Created fallback next billing date:', { value: nextBillingDate });
           }
         }
         
-        console.log(`Setting user ${user.email} to plan: ${planName} with period end:`, currentPeriodEnd);
+        logger.debug(`Setting user ${user.email} to plan: ${planName} with period end:`, { value: currentPeriodEnd });
         
         // Update user's subscription information with the details
         user.subscription = {
@@ -978,7 +979,7 @@ async function handleCheckoutSessionCompleted(session, event) {
           }
         };
         
-        console.log('About to save user with updated subscription data:', {
+        logger.debug('About to save user with updated subscription data:', {
           id: user._id,
           email: user.email,
           plan: planName,
@@ -988,14 +989,14 @@ async function handleCheckoutSessionCompleted(session, event) {
         });
         
       } catch (error) {
-        console.error('Error retrieving subscription details:', error);
+        logger.error('Error retrieving subscription details:', error);
       }
     }
     
     await user.save();
-    console.log(`Updated user ${user.email} with latest customer data`);
+    logger.debug(`Updated user ${user.email} with latest customer data`);
   } catch (error) {
-    console.error('Error handling checkout.session.completed event:', error);
+    logger.error('Error handling checkout.session.completed event:', error);
   }
 }
 
@@ -1006,12 +1007,10 @@ async function handleCheckoutSessionCompleted(session, event) {
  */
 async function determinePlanFromSubscription(subscription) {
   try {
-    console.log('Determining plan from subscription items:', 
-      subscription.items.data.map(item => ({
-        priceId: item.price.id,
-        productId: item.price.product
-      }))
-    );
+    logger.debug('Determining plan from subscription items:', subscription.items.data.map(item => ({
+      priceId: item.price.id,
+      productId: item.price.product
+    })));
     
     // Default to 'pro' plan if we can't determine
     let planName = 'pro';
@@ -1021,7 +1020,7 @@ async function determinePlanFromSubscription(subscription) {
     
     if (item) {
       const priceId = item.price.id;
-      console.log(`Matching price ID ${priceId} to known plan price IDs:`, {
+      logger.debug(`Matching price ID ${priceId} to known plan price IDs:`, {
         proPlanPriceId: config.stripe.proPlanPriceId,
         creatorPlanPriceId: config.stripe.creatorPlanPriceId,
         enterprisePlanPriceId: config.stripe.enterprisePlanPriceId
@@ -1036,12 +1035,12 @@ async function determinePlanFromSubscription(subscription) {
         planName = 'enterprise';
       }
       
-      console.log(`Determined plan: ${planName} from price ID: ${priceId}`);
+      logger.debug(`Determined plan: ${planName} from price ID: ${priceId}`);
     }
     
     return planName;
   } catch (error) {
-    console.error('Error determining plan from subscription:', error);
+    logger.error('Error determining plan from subscription:', error);
     return 'pro'; // Default fallback
   }
 }

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import logger from '../../utils/logger';
 import { loadStripe } from '@stripe/stripe-js';
 import subscriptionService from '../../services/subscription-service';
 
@@ -40,7 +41,7 @@ const StripeWidget = ({ user, subscription, onSubscriptionUpdate, className = ''
       // Redirect to Stripe checkout
       window.location.href = url;
     } catch (err) {
-      console.error('Checkout error:', err);
+      logger.error('Checkout error:', { value: err });
       setError('Failed to start checkout process. Please try again.');
     } finally {
       setIsLoading(false);
@@ -59,7 +60,7 @@ const StripeWidget = ({ user, subscription, onSubscriptionUpdate, className = ''
       // Redirect to Stripe portal
       window.location.href = url;
     } catch (err) {
-      console.error('Portal error:', err);
+      logger.error('Portal error:', { value: err });
       setError('Failed to open subscription management. Please try again.');
     } finally {
       setIsLoading(false);
@@ -95,7 +96,7 @@ const StripeWidget = ({ user, subscription, onSubscriptionUpdate, className = ''
         });
       }
     } catch (err) {
-      console.error('Cancellation error:', err);
+      logger.error('Cancellation error:', { value: err });
       setError('Failed to cancel subscription. Please try again.');
     } finally {
       setIsLoading(false);
@@ -125,7 +126,7 @@ const StripeWidget = ({ user, subscription, onSubscriptionUpdate, className = ''
         });
       }
     } catch (err) {
-      console.error('Reactivation error:', err);
+      logger.error('Reactivation error:', { value: err });
       setError('Failed to reactivate subscription. Please try again.');
     } finally {
       setIsLoading(false);

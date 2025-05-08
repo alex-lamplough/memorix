@@ -1,3 +1,5 @@
+import logger from '../src/utils/logger.js';
+
 /**
  * Auth0 Action: Add Email to ID Token
  * 
@@ -19,12 +21,12 @@
  * @param {PostLoginAPI} api - Interface whose methods can be used to change the behavior of the login.
  */
 exports.onExecutePostLogin = async (event, api) => {
-  console.log("Running add-email-to-tokens action");
+  logger.debug("Running add-email-to-tokens action");
   
   // Only add claims if the user has an email
   if (event.user.email) {
     // Log for debugging
-    console.log(`Adding email ${event.user.email} to token claims`);
+    logger.debug(`Adding email ${event.user.email} to token claims`);
     
     // Add custom claims to the ID token and access token
     // Using namespaced format as recommended by Auth0
@@ -36,7 +38,7 @@ exports.onExecutePostLogin = async (event, api) => {
       api.accessToken.setCustomClaim("email", event.user.email);
     }
   } else {
-    console.log("User has no email to add to token claims");
+    logger.debug("User has no email to add to token claims");
   }
 };
 

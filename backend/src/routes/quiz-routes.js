@@ -1,4 +1,5 @@
 import express from 'express';
+import logger from '../utils/logger.js';
 import { checkJwt, getUserFromToken, requireCompletedOnboarding } from '../middleware/auth-middleware.js';
 import { lookupMongoUser } from '../middleware/user-middleware.js';
 import quizController from '../controllers/quiz-controller.js';
@@ -22,10 +23,10 @@ router.get('/favorites', authenticate(), lookupMongoUser, async (req, res, next)
     let userId;
     if (req.user.mongoUser && req.user.mongoUser._id) {
       userId = req.user.mongoUser._id;
-      console.log('Using MongoDB user ID from mongoUser:', userId);
+      logger.debug('Using MongoDB user ID from mongoUser:', { value: userId });
     } else if (req.user.id && mongoose.Types.ObjectId.isValid(req.user.id)) {
       userId = new mongoose.Types.ObjectId(req.user.id);
-      console.log('Using converted ObjectId from req.user.id:', userId);
+      logger.debug('Using converted ObjectId from req.user.id:', { value: userId });
     } else {
       // If no valid MongoDB ID found, look up the user by Auth0 ID
       console.log('No valid MongoDB ID available, searching by Auth0 ID:', req.user.auth0Id);
@@ -37,7 +38,7 @@ router.get('/favorites', authenticate(), lookupMongoUser, async (req, res, next)
       const User = mongoose.model('User');
       const user = await User.findOne({ auth0Id: req.user.auth0Id });
       if (!user) {
-        console.log('No user found with Auth0 ID:', req.user.auth0Id);
+        logger.debug('No user found with Auth0 ID:', { value: req.user.auth0Id });
         // Return empty array instead of error to not break the UI
         return res.json([]);
       }
@@ -46,14 +47,14 @@ router.get('/favorites', authenticate(), lookupMongoUser, async (req, res, next)
       console.log('Found user by Auth0 ID, using MongoDB ID:', userId);
     }
     
-    console.log('Get quiz favorites - Final User ID for query:', userId);
+    logger.debug('Get quiz favorites - Final User ID for query:', { value: userId });
     
     // Find all quizzes where the user's ID is in the favorites array
     const favoriteQuizzes = await Quiz.find({
       favorites: userId
     }).populate('userId', 'name picture');
     
-    console.log(`Found ${favoriteQuizzes.length} favorite quizzes`);
+    logger.debug(`Found ${favoriteQuizzes.length} favorite quizzes`);
     
     // Format response
     const formattedQuizzes = favoriteQuizzes.map(quiz => ({
@@ -74,7 +75,7 @@ router.get('/favorites', authenticate(), lookupMongoUser, async (req, res, next)
     
     res.json(formattedQuizzes);
   } catch (error) {
-    console.error('Error getting favorite quizzes:', error);
+    logger.error('Error getting favorite quizzes:', error);
     // Return empty array instead of error to prevent UI from breaking
     res.json([]);
   }
@@ -119,14 +120,14 @@ router.patch('/:id/favorite', authenticate(), lookupMongoUser, async (req, res, 
       try {
         userId = new mongoose.Types.ObjectId(req.user.id);
       } catch (e) {
-        console.error('Error converting user ID to ObjectId:', e);
+        logger.error('Error converting user ID to ObjectId:', { value: e });
         userId = req.user.id; // Use as is if conversion fails
       }
     } else {
       return res.status(401).json({ error: 'User not authenticated properly' });
     }
     
-    console.log('Toggle quiz favorite - User ID:', userId);
+    logger.debug('Toggle quiz favorite - User ID:', { value: userId });
     
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({ error: 'Invalid ID format' });
@@ -168,7 +169,7 @@ router.patch('/:id/favorite', authenticate(), lookupMongoUser, async (req, res, 
       favorites: quiz.favorites.length
     });
   } catch (error) {
-    console.error('Error toggling favorite status:', error);
+    logger.error('Error toggling favorite status:', error);
     next(error);
   }
 });

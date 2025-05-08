@@ -6,6 +6,7 @@
  */
 
 import { exec } from 'child_process';
+import logger from '../src/utils/logger.js';
 import crypto from 'crypto';
 import dotenv from 'dotenv';
 import fs from 'fs';
@@ -17,7 +18,7 @@ dotenv.config();
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
 if (!webhookSecret) {
-  console.error('STRIPE_WEBHOOK_SECRET not found in environment variables');
+  logger.error('STRIPE_WEBHOOK_SECRET not found in environment variables');
   process.exit(1);
 }
 
@@ -64,9 +65,9 @@ const curlCommand = `curl -X POST ${endpoint} \
   -H "Stripe-Signature: ${stripeSignature}" \
   --data @${tmpFile}`;
 
-console.log('Testing webhook with the following command:');
+logger.debug('Testing webhook with the following command:');
 console.log(curlCommand);
-console.log('-----------------------------------------');
+logger.debug('-----------------------------------------');
 
 // Execute the curl command
 exec(curlCommand, (error, stdout, stderr) => {
@@ -74,17 +75,17 @@ exec(curlCommand, (error, stdout, stderr) => {
   fs.unlinkSync(tmpFile);
   
   if (error) {
-    console.error(`Error: ${error.message}`);
+    logger.error(`Error: ${error.message}`);
     return;
   }
   
   if (stderr) {
-    console.error(`Stderr: ${stderr}`);
+    logger.error(`Stderr: ${stderr}`);
     return;
   }
   
-  console.log('Response:');
+  logger.debug('Response:');
   console.log(stdout || '(empty response - this is good, means 200 OK)');
-  console.log('-----------------------------------------');
-  console.log('✅ Test completed. Check your server logs for webhook processing details.');
+  logger.debug('-----------------------------------------');
+  logger.debug('✅ Test completed. Check your server logs for webhook processing details.');
 }); 

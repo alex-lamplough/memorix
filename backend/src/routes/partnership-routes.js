@@ -1,4 +1,5 @@
 import express from 'express';
+import logger from '../utils/logger.js';
 import PartnershipRequest from '../models/partnership-request-model.js';
 import { handleError } from '../utils/error-handlers.js';
 
@@ -11,7 +12,7 @@ const router = express.Router();
  */
 router.post('/', async (req, res) => {
   try {
-    console.log('📝 Received partnership request:', req.body);
+    logger.debug('📝 Received partnership request:', { value: req.body });
     
     // Create a new partnership request
     const partnershipRequest = new PartnershipRequest({
@@ -21,7 +22,7 @@ router.post('/', async (req, res) => {
     // Save the partnership request
     await partnershipRequest.save();
     
-    console.log(`✅ Partnership request saved: ${partnershipRequest._id}`);
+    logger.debug(`✅ Partnership request saved: ${partnershipRequest._id}`);
     
     // Return success status with the created request ID
     res.status(201).json({
@@ -30,7 +31,7 @@ router.post('/', async (req, res) => {
       requestId: partnershipRequest._id
     });
   } catch (error) {
-    console.error('❌ Error saving partnership request:', error);
+    logger.error('❌ Error saving partnership request:', error);
     handleError(res, error);
   }
 });
@@ -53,7 +54,7 @@ router.get('/', async (req, res) => {
       data: partnershipRequests
     });
   } catch (error) {
-    console.error('❌ Error retrieving partnership requests:', error);
+    logger.error('❌ Error retrieving partnership requests:', error);
     handleError(res, error);
   }
 });

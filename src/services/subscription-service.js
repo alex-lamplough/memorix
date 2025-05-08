@@ -1,4 +1,5 @@
 import axios from 'axios';
+import logger from '../utils/logger';
 
 // Base URL from environment variables or default to localhost
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
@@ -32,7 +33,7 @@ const getCurrentSubscription = async () => {
     const response = await subscriptionApi.get('/current');
     return response.data;
   } catch (error) {
-    console.error('Error fetching subscription:', error);
+    logger.error('Error fetching subscription:', error);
     throw error;
   }
 };
@@ -46,7 +47,7 @@ const getSubscriptionDetails = async () => {
     const response = await subscriptionApi.get('/details');
     return response.data;
   } catch (error) {
-    console.error('Error fetching subscription details:', error);
+    logger.error('Error fetching subscription details:', error);
     throw error;
   }
 };
@@ -65,7 +66,7 @@ const createCheckoutSession = async (plan, couponCode = '') => {
     });
     return response.data;
   } catch (error) {
-    console.error('Error creating checkout session:', error);
+    logger.error('Error creating checkout session:', error);
     throw error;
   }
 };
@@ -79,7 +80,7 @@ const createPortalSession = async () => {
     const response = await subscriptionApi.post('/create-portal-session');
     return response.data;
   } catch (error) {
-    console.error('Error creating portal session:', error);
+    logger.error('Error creating portal session:', error);
     throw error;
   }
 };
@@ -93,7 +94,7 @@ const cancelSubscription = async () => {
     const response = await subscriptionApi.post('/cancel');
     return response.data;
   } catch (error) {
-    console.error('Error canceling subscription:', error);
+    logger.error('Error canceling subscription:', error);
     throw error;
   }
 };
@@ -107,7 +108,7 @@ const reactivateSubscription = async () => {
     const response = await subscriptionApi.post('/reactivate');
     return response.data;
   } catch (error) {
-    console.error('Error reactivating subscription:', error);
+    logger.error('Error reactivating subscription:', error);
     throw error;
   }
 };
@@ -199,7 +200,7 @@ const validateCoupon = async (couponCode) => {
     
     return response.data;
   } catch (error) {
-    console.error('Error validating coupon:', error);
+    logger.error('Error validating coupon:', error);
     throw error;
   }
 };

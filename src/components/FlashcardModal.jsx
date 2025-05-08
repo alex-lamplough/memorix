@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import logger from '../utils/logger';
 import { 
   Dialog, 
   DialogContent, 
@@ -60,7 +61,7 @@ function FlashcardCard({ flashcard, onDelete, onRefresh }) {
       if (onDelete) onDelete(flashcard.id);
       if (onRefresh) onRefresh();
     } catch (error) {
-      console.error('Error deleting flashcard set:', error);
+      logger.error('Error deleting flashcard set:', error);
       alert('Failed to delete flashcard set. Please try again.');
     } finally {
       setShowDeleteConfirm(false);
@@ -198,7 +199,7 @@ function FlashcardModal({ open, onClose, onUpdate }) {
       
       setFlashcards(transformedSets);
     } catch (error) {
-      console.error('Error fetching flashcard sets:', error);
+      logger.error('Error fetching flashcard sets:', error);
     } finally {
       setIsLoading(false);
     }

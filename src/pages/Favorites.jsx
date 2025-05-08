@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react'
+import logger from '../utils/logger';
 import { useMediaQuery } from '@mui/material'
 import { Menu as MenuIcon } from '@mui/icons-material'
 import { useAuth0 } from '@auth0/auth0-react'
@@ -69,7 +70,7 @@ function FlashcardCard({ title, cards, lastStudied, progress, id, onDelete, isFa
         }
       );
     } catch (error) {
-      console.error('Error toggling favorite:', error);
+      logger.error('Error toggling favorite:', error);
       // Revert the UI state on error
       setFavorite(favorite);
     }
@@ -102,7 +103,7 @@ function FlashcardCard({ title, cards, lastStudied, progress, id, onDelete, isFa
         setShowDeleteConfirm(false);
       },
       onError: (error) => {
-        console.error('Error deleting flashcard set:', error);
+        logger.error('Error deleting flashcard set:', error);
         setShowDeleteConfirm(false);
       }
     });
@@ -253,7 +254,7 @@ function QuizCard({ title, description, questionCount, difficulty, time, tags, i
         }
       );
     } catch (error) {
-      console.error('Error toggling favorite:', error)
+      logger.error('Error toggling favorite:', error)
       // Revert the UI state on error
       setFavorite(favorite)
     }
@@ -269,7 +270,7 @@ function QuizCard({ title, description, questionCount, difficulty, time, tags, i
         setShowDeleteConfirm(false);
       },
       onError: (error) => {
-        console.error('Error deleting quiz:', error);
+        logger.error('Error deleting quiz:', error);
         
         // If 403, user is not authorized (owner ID mismatch)
         if (error.response && error.response.status === 403) {

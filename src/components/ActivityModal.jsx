@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import logger from '../utils/logger';
 import { 
   Dialog, 
   DialogContent, 
@@ -253,7 +254,7 @@ function ActivityModal({ open, onClose }) {
       setActivities(limitedActivities);
       setPage(1); // Reset to page 1 when new data loads
     } catch (error) {
-      console.error('Error fetching activity data:', error);
+      logger.error('Error fetching activity data:', error);
     } finally {
       setIsLoading(false);
     }

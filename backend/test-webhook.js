@@ -5,6 +5,7 @@
  */
 
 import fetch from 'node-fetch';
+import logger from '../src/utils/logger.js';
 import crypto from 'crypto';
 import dotenv from 'dotenv';
 
@@ -15,7 +16,7 @@ dotenv.config();
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
 if (!webhookSecret) {
-  console.error('STRIPE_WEBHOOK_SECRET not found in environment variables');
+  logger.error('STRIPE_WEBHOOK_SECRET not found in environment variables');
   process.exit(1);
 }
 
@@ -81,21 +82,21 @@ const testEndpoint = async (url) => {
     
     const responseText = await response.text();
     
-    console.log(`${url} - Status: ${response.status}`);
-    console.log(`Response: ${responseText}`);
-    console.log('-----------------------------------');
+    logger.debug(`${url} - Status: ${response.status}`);
+    logger.debug(`Response: ${responseText}`);
+    logger.debug('-----------------------------------');
     
     return response.status === 200;
   } catch (error) {
-    console.error(`Error testing ${url}:`, error.message);
+    logger.error(`Error testing ${url}:`, { value: error.message });
     return false;
   }
 };
 
 // Run tests for all endpoints
 (async () => {
-  console.log('Testing Stripe webhook endpoints...');
-  console.log('===================================');
+  logger.debug('Testing Stripe webhook endpoints...');
+  logger.debug('===================================');
   
   let successCount = 0;
   
@@ -104,13 +105,13 @@ const testEndpoint = async (url) => {
     if (success) successCount++;
   }
   
-  console.log(`Results: ${successCount}/${endpoints.length} endpoints working correctly`);
+  logger.debug(`Results: ${successCount}/${endpoints.length} endpoints working correctly`);
   
   if (successCount === 0) {
-    console.error('❌ All webhook tests failed. Check that your server is running and webhook routes are configured correctly.');
+    logger.error('❌ All webhook tests failed. Check that your server is running and webhook routes are configured correctly.');
   } else if (successCount === endpoints.length) {
-    console.log('✅ All webhook endpoints are working correctly!');
+    logger.debug('✅ All webhook endpoints are working correctly!');
   } else {
-    console.log('⚠️ Some webhook endpoints are working, but not all.');
+    logger.debug('⚠️ Some webhook endpoints are working, but not all.');
   }
 })(); 

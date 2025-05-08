@@ -1,4 +1,5 @@
 import OpenAI from 'openai';
+import logger from '../utils/logger.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -40,7 +41,7 @@ export const generateFlashcards = async (prompt, numberOfCards = 5) => {
     
     return parsedContent.flashcards || [];
   } catch (error) {
-    console.error('Error generating flashcards with OpenAI:', error);
+    logger.error('Error generating flashcards with OpenAI:', error);
     throw new Error('Failed to generate flashcards');
   }
 };
@@ -75,7 +76,7 @@ export const enhanceFlashcards = async (flashcards) => {
     
     return parsedContent.flashcards || [];
   } catch (error) {
-    console.error('Error enhancing flashcards with OpenAI:', error);
+    logger.error('Error enhancing flashcards with OpenAI:', error);
     throw new Error('Failed to enhance flashcards');
   }
 };
@@ -114,7 +115,7 @@ export const generateTopicSummary = async (topic) => {
       tags: parsedContent.tags || []
     };
   } catch (error) {
-    console.error('Error generating topic summary with OpenAI:', error);
+    logger.error('Error generating topic summary with OpenAI:', error);
     throw new Error('Failed to generate topic summary');
   }
 }; 

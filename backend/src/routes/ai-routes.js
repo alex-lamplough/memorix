@@ -1,4 +1,5 @@
 import express from 'express';
+import logger from '../utils/logger.js';
 import { checkJwt, getUserFromToken } from '../middleware/auth-middleware.js';
 import { generateFlashcards, enhanceFlashcards, generateTopicSummary } from '../utils/openai-service.js';
 
@@ -24,7 +25,7 @@ router.post('/generate-flashcards', async (req, res, next) => {
     
     res.json({ flashcards });
   } catch (error) {
-    console.error('Error generating flashcards:', error);
+    logger.error('Error generating flashcards:', error);
     next(error);
   }
 });
@@ -45,7 +46,7 @@ router.post('/enhance-flashcards', async (req, res, next) => {
     
     res.json({ flashcards: enhancedFlashcards });
   } catch (error) {
-    console.error('Error enhancing flashcards:', error);
+    logger.error('Error enhancing flashcards:', error);
     next(error);
   }
 });
@@ -63,7 +64,7 @@ router.post('/generate-summary', async (req, res, next) => {
     
     res.json(summary);
   } catch (error) {
-    console.error('Error generating topic summary:', error);
+    logger.error('Error generating topic summary:', error);
     next(error);
   }
 });

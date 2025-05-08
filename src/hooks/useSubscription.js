@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import logger from '../utils/logger';
 import { useAuth0 } from '@auth0/auth0-react';
 import subscriptionService from '../services/subscription-service';
 
@@ -31,7 +32,7 @@ export function useSubscription() {
       const data = await subscriptionService.getCurrentSubscription();
       setSubscription(data);
     } catch (err) {
-      console.error('Error fetching subscription:', err);
+      logger.error('Error fetching subscription:', { value: err });
       setError('Failed to load subscription information');
       // Default to free plan on error
       setSubscription({ plan: 'free', status: 'active' });

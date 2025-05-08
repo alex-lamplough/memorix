@@ -1,4 +1,5 @@
 import express from 'express';
+import logger from '../utils/logger.js';
 import { expireSubscriptions } from '../cron/subscription-cron.js';
 
 const router = express.Router();
@@ -10,13 +11,13 @@ const router = express.Router();
  */
 router.post('/expire-subscriptions', async (req, res) => {
   try {
-    console.log('Received request to expire subscriptions');
-    console.log('Headers:', req.headers);
+    logger.debug('Received request to expire subscriptions');
+    logger.debug('Headers:', { value: req.headers });
     
     // Check for admin secret in headers
     const adminSecret = req.headers['x-admin-secret'];
     if (!adminSecret) {
-      console.log('No admin secret provided');
+      logger.debug('No admin secret provided');
       return res.status(401).json({
         success: false,
         message: 'Unauthorized: No admin secret provided'
@@ -24,32 +25,32 @@ router.post('/expire-subscriptions', async (req, res) => {
     }
 
     if (adminSecret !== process.env.ADMIN_SECRET) {
-      console.log('Invalid admin secret provided');
+      logger.debug('Invalid admin secret provided');
       return res.status(401).json({
         success: false,
         message: 'Unauthorized: Invalid admin secret'
       });
     }
 
-    console.log('Admin secret validated, proceeding with subscription expiry check');
+    logger.debug('Admin secret validated, proceeding with subscription expiry check');
     const result = await expireSubscriptions();
     
     if (result.success) {
-      console.log('Subscription expiry check completed successfully');
+      logger.debug('Subscription expiry check completed successfully');
       res.status(200).json({
         success: true,
         message: result.message,
         expiredCount: result.expiredCount
       });
     } else {
-      console.log('Subscription expiry check failed:', result.message);
+      logger.debug('Subscription expiry check failed:', { value: result.message });
       res.status(500).json({
         success: false,
         message: result.message
       });
     }
   } catch (error) {
-    console.error('Error in subscription expiry endpoint:', error);
+    logger.error('Error in subscription expiry endpoint:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error',

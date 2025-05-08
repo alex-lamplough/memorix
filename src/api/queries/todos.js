@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import logger from '../../utils/logger';
 import apiClient from '../apiClient';
 
 // Query keys for caching
@@ -16,7 +17,7 @@ export const useTodos = () => {
         const response = await apiClient.get('/todos');
         return response.data;
       } catch (error) {
-        console.error('Error fetching todos:', error);
+        logger.error('Error fetching todos:', error);
         // Return empty array to avoid UI issues
         return [];
       }
@@ -37,7 +38,7 @@ export const useCreateTodo = () => {
         const response = await apiClient.post('/todos', todo);
         return response.data;
       } catch (error) {
-        console.error('Error creating todo:', error);
+        logger.error('Error creating todo:', error);
         throw error;
       }
     },
@@ -58,7 +59,7 @@ export const useUpdateTodo = () => {
         const response = await apiClient.put(`/todos/${id}`, todo);
         return response.data;
       } catch (error) {
-        console.error(`Error updating todo ${id}:`, error);
+        logger.error(`Error updating todo ${id}:`, error);
         throw error;
       }
     },
@@ -80,7 +81,7 @@ export const useToggleTodoCompletion = () => {
         const response = await apiClient.patch(`/todos/${id}/complete`, { isCompleted });
         return response.data;
       } catch (error) {
-        console.error(`Error toggling todo completion for ${id}:`, error);
+        logger.error(`Error toggling todo completion for ${id}:`, error);
         throw error;
       }
     },
@@ -129,7 +130,7 @@ export const useDeleteTodo = () => {
         const response = await apiClient.delete(`/todos/${id}`);
         return response.data;
       } catch (error) {
-        console.error(`Error deleting todo ${id}:`, error);
+        logger.error(`Error deleting todo ${id}:`, error);
         throw error;
       }
     },

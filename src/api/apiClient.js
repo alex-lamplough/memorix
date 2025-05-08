@@ -1,4 +1,5 @@
 import axios from 'axios';
+import logger from '../utils/logger';
 
 // Set default base URL for API requests
 const API_URL = import.meta.env.VITE_API_URL || '/api';
@@ -36,10 +37,10 @@ export const refreshAuthToken = async () => {
   try {
     currentToken = await getAccessToken();
     if (currentToken) {
-      console.log('Successfully obtained auth token');
+      logger.debug('Successfully obtained auth token');
     }
   } catch (error) {
-    console.error('Failed to refresh auth token:', error);
+    logger.error('Failed to refresh auth token:', error);
   }
 };
 
@@ -61,12 +62,12 @@ apiClient.interceptors.request.use(
       }
       
       // Log the request for debugging
-      console.log(`API Request: ${config.method.toUpperCase()} ${config.url}`, {
+      logger.debug(`API Request: ${config.method.toUpperCase()} ${config.url}`, {
         headers: config.headers,
         data: config.data
       });
     } catch (error) {
-      console.error('Error getting auth token for request:', error);
+      logger.error('Error getting auth token for request:', error);
     }
     return config;
   },
@@ -77,7 +78,7 @@ apiClient.interceptors.request.use(
 publicApiClient.interceptors.request.use(
   async (config) => {
     // Log the request for debugging
-    console.log(`Public API Request: ${config.method.toUpperCase()} ${config.url}`, {
+    logger.debug(`Public API Request: ${config.method.toUpperCase()} ${config.url}`, {
       headers: config.headers,
       data: config.data
     });
@@ -89,20 +90,20 @@ publicApiClient.interceptors.request.use(
 // Add response interceptor to log all responses and handle auth errors
 apiClient.interceptors.response.use(
   (response) => {
-    console.log(`API Response: ${response.status} ${response.config.method.toUpperCase()} ${response.config.url}`, {
+    logger.debug(`API Response: ${response.status} ${response.config.method.toUpperCase()} ${response.config.url}`, {
       data: response.data
     });
     return response;
   },
   async (error) => {
     if (error.response) {
-      console.error(`API Error: ${error.response.status} ${error.config?.method?.toUpperCase()} ${error.config?.url}`, {
+      logger.error(`API Error: ${error.response.status} ${error.config?.method?.toUpperCase()} ${error.config?.url}`, {
         data: error.response.data
       });
       
       // Check for onboarding required errors (403 with requiresOnboarding flag)
       if (error.response.status === 403 && error.response.data?.requiresOnboarding) {
-        console.error('Onboarding required error from API:', error.response.data);
+        logger.error('Onboarding required error from API:', { value: error.response.data });
         
         // Dispatch a custom event that can be caught by the onboarding guard
         window.dispatchEvent(new CustomEvent('axios-error', { 
@@ -112,7 +113,7 @@ apiClient.interceptors.response.use(
       
       // Handle 401 Unauthorized errors (expired token)
       if (error.response.status === 401) {
-        console.warn('Unauthorized request - token may be expired');
+        logger.warn('Unauthorized request - token may be expired');
         
         // Clear the current token
         currentToken = null;
@@ -127,7 +128,7 @@ apiClient.interceptors.response.use(
         }
       }
     } else {
-      console.error('API request failed:', error.message);
+      logger.error('API request failed:', { value: error.message });
     }
     return Promise.reject(error);
   }
@@ -136,18 +137,18 @@ apiClient.interceptors.response.use(
 // Add response interceptor for public API client
 publicApiClient.interceptors.response.use(
   (response) => {
-    console.log(`Public API Response: ${response.status} ${response.config.method.toUpperCase()} ${response.config.url}`, {
+    logger.debug(`Public API Response: ${response.status} ${response.config.method.toUpperCase()} ${response.config.url}`, {
       data: response.data
     });
     return response;
   },
   (error) => {
     if (error.response) {
-      console.error(`Public API Error: ${error.response.status} ${error.config?.method?.toUpperCase()} ${error.config?.url}`, {
+      logger.error(`Public API Error: ${error.response.status} ${error.config?.method?.toUpperCase()} ${error.config?.url}`, {
         data: error.response.data
       });
     } else {
-      console.error('Public API request failed:', error.message);
+      logger.error('Public API request failed:', { value: error.message });
     }
     return Promise.reject(error);
   }

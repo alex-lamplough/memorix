@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import logger from '../../utils/logger';
 import apiClient from '../apiClient';
 
 // Query keys for caching
@@ -25,7 +26,7 @@ export const useFlashcardSets = () => {
         
         return flashcardSets;
       } catch (error) {
-        console.error('Error fetching flashcard sets:', error);
+        logger.error('Error fetching flashcard sets:', error);
         throw error;
       }
     },
@@ -45,7 +46,7 @@ export const useFlashcardSet = (id) => {
         const response = await apiClient.get(`/flashcards/${id}`);
         return response.data;
       } catch (error) {
-        console.error(`Error fetching flashcard set ${id}:`, error);
+        logger.error(`Error fetching flashcard set ${id}:`, error);
         throw error;
       }
     },
@@ -73,7 +74,7 @@ export const useFavoriteFlashcardSets = () => {
         return flashcardSets;
       } catch (error) {
         if (error.response && error.response.status === 404) {
-          console.log('Favorites endpoint not found, trying alternative path...');
+          logger.debug('Favorites endpoint not found, trying alternative path...');
           try {
             // Some backends might expect /api/flashcards/favorites format
             const altResponse = await apiClient.get('/api/flashcards/favorites');
@@ -86,12 +87,12 @@ export const useFavoriteFlashcardSets = () => {
             
             return flashcardSets;
           } catch (altError) {
-            console.error('Error fetching from alternative path:', altError);
+            logger.error('Error fetching from alternative path:', altError);
             return [];
           }
         }
         
-        console.error('Error fetching favorites:', error);
+        logger.error('Error fetching favorites:', error);
         // Return empty array for better UI experience
         return [];
       }
@@ -111,7 +112,7 @@ export const useCreateFlashcardSet = () => {
         const response = await apiClient.post('/flashcards', flashcardSet);
         return response.data;
       } catch (error) {
-        console.error('Error creating flashcard set:', error);
+        logger.error('Error creating flashcard set:', error);
         throw error;
       }
     },
@@ -133,7 +134,7 @@ export const useUpdateFlashcardSet = () => {
         const response = await apiClient.put(`/flashcards/${id}`, flashcardSet);
         return response.data;
       } catch (error) {
-        console.error(`Error updating flashcard set ${id}:`, error);
+        logger.error(`Error updating flashcard set ${id}:`, error);
         throw error;
       }
     },
@@ -157,7 +158,7 @@ export const useToggleFavorite = () => {
         const response = await apiClient.patch(`/flashcards/${id}/favorite`, { isFavorite });
         return response.data;
       } catch (error) {
-        console.error(`Error toggling favorite status for ${id}:`, error);
+        logger.error(`Error toggling favorite status for ${id}:`, error);
         throw error;
       }
     },
@@ -180,7 +181,7 @@ export const useDeleteFlashcardSet = () => {
         const response = await apiClient.delete(`/flashcards/${id}`);
         return response.data;
       } catch (error) {
-        console.error(`Error deleting flashcard set ${id}:`, error);
+        logger.error(`Error deleting flashcard set ${id}:`, error);
         throw error;
       }
     },

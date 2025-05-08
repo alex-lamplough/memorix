@@ -1,4 +1,5 @@
 import OpenAI from 'openai';
+import logger from '../utils/logger.js';
 import dotenv from 'dotenv';
 
 // Load environment variables
@@ -42,7 +43,7 @@ export const initializeOpenAI = () => {
   const apiKey = process.env.OPENAI_API_KEY;
   
   if (!apiKey) {
-    console.error('OpenAI API key is missing. Set OPENAI_API_KEY environment variable.');
+    logger.error('OpenAI API key is missing. Set OPENAI_API_KEY environment variable.');
     process.exit(1);
   }
   
@@ -50,7 +51,7 @@ export const initializeOpenAI = () => {
     apiKey,
   });
   
-  console.log('OpenAI client initialized successfully');
+  logger.debug('OpenAI client initialized successfully');
 };
 
 /**

@@ -1,3 +1,5 @@
+import logger from '../utils/logger';
+
 // utils.js - Utility functions for API handling, component lifecycles, etc.
 
 /**
@@ -66,7 +68,7 @@ export const safeSetState = (setState, mountedRef) => {
 export const handleRequestError = (error, requestName = 'API request', isCritical = false) => {
   // Check if this is a cancellation (don't treat as error)
   if (error.name === 'CanceledError' || error.name === 'AbortError') {
-    console.log(`${requestName} was cancelled`);
+    logger.debug(`${requestName} was cancelled`);
     
     // For critical requests, we want to indicate that this can be retried
     if (isCritical) {
@@ -77,7 +79,7 @@ export const handleRequestError = (error, requestName = 'API request', isCritica
   }
   
   // Log other errors
-  console.error(`Error in ${requestName}:`, error);
+  logger.error(`Error in ${requestName}:`, error);
   return false;
 };
 
@@ -100,7 +102,7 @@ export const createNavigationHandler = (historyMethod, cancelFn) => {
        
     // If navigating to a critical path, ensure we run cancellation more carefully
     if (isStudyOrEditPath) {
-      console.log(`Navigating to critical path: ${targetPath}, preserving essential requests`);
+      logger.debug(`Navigating to critical path: ${targetPath}, preserving essential requests`);
     }
     
     // Cancel non-critical ongoing requests before navigating

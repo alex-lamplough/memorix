@@ -1,4 +1,5 @@
 import axios from 'axios';
+import logger from '../utils/logger.js';
 import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
@@ -39,12 +40,12 @@ export async function getManagementApiToken() {
   const clientSecret = process.env.AUTH0_MGMT_CLIENT_SECRET;
   
   if (!clientId || !clientSecret) {
-    console.warn('Missing Auth0 Management API credentials');
+    logger.warn('Missing Auth0 Management API credentials');
     return null;
   }
 
   try {
-    console.log('Requesting Auth0 Management API token...');
+    logger.debug('Requesting Auth0 Management API token...');
     console.log(`Using Management API Client ID: ${clientId.substring(0, 6)}...`);
     
     const response = await axios.post(
@@ -62,16 +63,16 @@ export async function getManagementApiToken() {
       }
     );
     
-    console.log('✅ Successfully obtained Management API token');
+    logger.debug('✅ Successfully obtained Management API token');
     managementApiToken = response.data.access_token;
     tokenExpiry = new Date(Date.now() + response.data.expires_in * 1000);
     
     return managementApiToken;
   } catch (error) {
-    console.error('❌ Error getting Management API token:', error.message);
+    logger.error('❌ Error getting Management API token:', { value: error.message });
     if (error.response) {
-      console.error(`Status: ${error.response.status}`);
-      console.error('Data:', JSON.stringify(error.response.data));
+      logger.error(`Status: ${error.response.status}`);
+      logger.error('Data:', { value: JSON.stringify(error.response.data) });
     }
     return null;
   }
@@ -87,11 +88,11 @@ export async function getUserProfile(userId) {
     // Get Management API token
     const token = await getManagementApiToken();
     if (!token) {
-      console.warn('No Management API token available');
+      logger.warn('No Management API token available');
       return null;
     }
     
-    console.log(`Fetching user profile for ${userId}`);
+    logger.debug(`Fetching user profile for ${userId}`);
     
     const response = await axios.get(
       `https://${process.env.AUTH0_DOMAIN}/api/v2/users/${encodeURIComponent(userId)}`,
@@ -103,14 +104,14 @@ export async function getUserProfile(userId) {
       }
     );
     
-    console.log('✅ Successfully retrieved user profile');
+    logger.debug('✅ Successfully retrieved user profile');
     return response.data;
   } catch (error) {
-    console.error('❌ Error fetching user profile:', error.message);
+    logger.error('❌ Error fetching user profile:', { value: error.message });
     if (error.response) {
-      console.error(`Status: ${error.response.status}`);
+      logger.error(`Status: ${error.response.status}`);
       if (error.response.status === 429) {
-        console.error('Rate limit exceeded - consider caching user profiles');
+        logger.error('Rate limit exceeded - consider caching user profiles');
       }
     }
     return null;
@@ -140,7 +141,7 @@ export async function getUsers(page = 0, perPage = 10) {
     
     return response.data;
   } catch (error) {
-    console.error('Error fetching users list:', error.message);
+    logger.error('Error fetching users list:', { value: error.message });
     return null;
   }
 }
