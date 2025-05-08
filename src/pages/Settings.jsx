@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import logger from '../../utils/logger';
+import logger from '../utils/logger';
 import { useMediaQuery } from '@mui/material'
 import { Menu as MenuIcon } from '@mui/icons-material'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
@@ -118,7 +118,7 @@ function AccountSettings({ setActiveSection }) {
     
     setIsSaving(true);
     try {
-      logger.debug('Saving profile update:', { { profile: { displayName } } });
+      logger.debug('Saving profile update:', { profile: { displayName } });
       await updateProfile.mutateAsync({ 
         profile: { displayName },
         // Also update the name field for backwards compatibility
@@ -399,13 +399,13 @@ function SubscriptionSettings() {
   }
 
   // Debug log all potential sources of billing date
-  logger.debug('Billing date sources:', { {
+  logger.debug('Billing date sources:', {
     detailedNextBillingDate: detailedSubscription?.nextBillingDate,
     subscriptionRenewalDate: subscription?.renewalDate,
     userNextBillingDate: user.subscription?.nextBillingDate,
     subscriptionCurrentPeriodEnd: subscription?.currentPeriodEnd,
     userCurrentPeriodEnd: user.subscription?.currentPeriodEnd
-  } });
+  });
 
   // Extract and prioritize next billing date from available sources
   let nextBillingDate = null;

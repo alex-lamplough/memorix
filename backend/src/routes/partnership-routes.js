@@ -1,5 +1,5 @@
 import express from 'express';
-import logger from './utils/logger';
+import logger from '../utils/logger.js';
 import PartnershipRequest from '../models/partnership-request-model.js';
 import { handleError } from '../utils/error-handlers.js';
 

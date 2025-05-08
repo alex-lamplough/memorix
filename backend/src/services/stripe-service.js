@@ -1,5 +1,5 @@
 import Stripe from 'stripe';
-import logger from './utils/logger';
+import logger from '../utils/logger.js';
 import { config } from '../config/config.js';
 
 // Initialize Stripe with the secret key
@@ -99,13 +99,13 @@ export const createCheckoutSession = async ({
     if (!successUrl) throw new Error('Success URL is required for creating a checkout session');
     if (!cancelUrl) throw new Error('Cancel URL is required for creating a checkout session');
     
-    logger.debug('Creating checkout session with params:', { {
+    logger.debug('Creating checkout session with params:', {
       customer: customerId,
       priceId,
       success_url: successUrl,
       cancel_url: cancelUrl,
       hasCoupon: !!couponCode
-    } });
+    });
     
     // Check if we have Stripe initialized correctly
     if (!stripe) {
@@ -151,10 +151,10 @@ export const createCheckoutSession = async ({
     try {
       const session = await stripe.checkout.sessions.create(sessionOptions);
 
-      logger.debug('Successfully created checkout session:', { {
+      logger.debug('Successfully created checkout session:', {
         id: session.id,
         url: session.url
-      } });
+      });
       
       return session;
     } catch (stripeApiError) {
@@ -332,14 +332,14 @@ export const handleWebhookEvent = async (payload, signature) => {
     
     // Log payload snippet for debugging
     if (Buffer.isBuffer(rawBody)) {
-      logger.debug('Payload snippet (Buffer):', { value: rawBody.toString('utf8' }).substring(0, 50) + '...');
+      logger.debug('Payload snippet (Buffer):', { value: rawBody.toString('utf8').substring(0, 50) + '...' });
     } else if (typeof rawBody === 'string') {
-      logger.debug('Payload snippet (String):', { value: rawBody.substring(0, 50 }) + '...');
+      logger.debug('Payload snippet (String):', { value: rawBody.substring(0, 50) + '...' });
     }
     
     // Verify and construct the event
-    logger.debug('Using webhook secret:', { value: config.stripe.webhookSecret.substring(0, 8 }) + '...');
-    logger.debug('Signature header:', { value: signature.substring(0, 20 }) + '...');
+    logger.debug('Using webhook secret:', { value: config.stripe.webhookSecret.substring(0, 8) + '...' });
+    logger.debug('Signature header:', { value: signature.substring(0, 20) + '...' });
     
     const event = stripe.webhooks.constructEvent(
       rawBody,
@@ -347,7 +347,7 @@ export const handleWebhookEvent = async (payload, signature) => {
       config.stripe.webhookSecret
     );
     
-    logger.debug('Webhook event successfully verified:', { value: event.id, event.type });
+    logger.debug('Webhook event successfully verified:', { value: `${event.id}, ${event.type}` });
     
     // Return the event
     return event;
@@ -355,8 +355,8 @@ export const handleWebhookEvent = async (payload, signature) => {
     logger.error('Error in handleWebhookEvent:', { value: error.message });
     if (error.type === 'StripeSignatureVerificationError') {
       logger.error('Webhook signature verification failed');
-      logger.error('Expected signature starts with:', { value: error.expected ? error.expected.substring(0, 20 }) + '...' : 'unknown');
-      logger.error('Received signature starts with:', { value: error.signature ? error.signature.substring(0, 20 }) + '...' : 'unknown');
+      logger.error('Expected signature starts with:', { value: error.expected ? error.expected.substring(0, 20) + '...' : 'unknown' });
+      logger.error('Received signature starts with:', { value: error.signature ? error.signature.substring(0, 20) + '...' : 'unknown' });
     }
     throw error;
   }

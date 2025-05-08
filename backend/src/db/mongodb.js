@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import logger from './utils/logger';
+import logger from '../utils/logger.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -165,7 +165,7 @@ export const connectToMongoDB = async () => {
     const connectionString = getMongoConnectionString();
     
     // Add logging for debugging the connection string (sanitized)
-    logger.debug('Attempting to connect with URI:', { value: connectionString.replace(/mongodb(\+srv })?:\/\/[^:]+:[^@]+@/, 'mongodb$1://username:password@')); 
+    logger.debug('Attempting to connect with URI:', { value: connectionString.replace(/mongodb(\+srv)?:\/\/[^:]+:[^@]+@/, 'mongodb$1://username:password@') }); 
     
     const options = {
       serverSelectionTimeoutMS: 10000 // Timeout after 10 seconds
@@ -184,8 +184,9 @@ export const connectToMongoDB = async () => {
     
     // Log all collections after initialization
     const collections = await db.db.listCollections().toArray();
-    logger.debug('Collections in database:', { value: collections.length ? 
-      collections.map(c => c.name }) : 'No collections found');
+    logger.debug('Collections in database:', { 
+      value: collections.length ? collections.map(c => c.name) : 'No collections found'
+    });
     
     return db;
   } catch (error) {

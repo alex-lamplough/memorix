@@ -1,5 +1,5 @@
 import { expressjwt } from 'express-jwt';
-import logger from './utils/logger';
+import logger from '../utils/logger.js';
 import jwksRsa from 'jwks-rsa';
 import dotenv from 'dotenv';
 import axios from 'axios';
@@ -9,7 +9,7 @@ dotenv.config();
 
 // Custom error handler for expressjwt
 const handleJwtError = (err, req, res, next) => {
-  logger.error('❌ JWT validation error:', { value: err.name, err.message });
+  logger.error('❌ JWT validation error:', { value: err.name, message: err.message });
   if (err.name === 'UnauthorizedError') {
     logger.error('Token details:', err.inner ? err.inner.message : 'No details available');
     return res.status(401).json({ 
@@ -44,7 +44,7 @@ export const checkJwt = (req, res, next) => {
   const authHeader = req.headers.authorization || '';
   if (authHeader.startsWith('Bearer ')) {
     const token = authHeader.substring(7);
-    logger.debug('🔑 Received token:', { value: token.substring(0, 15 }) + '...' + token.substring(token.length - 5));
+    logger.debug('🔑 Received token:', { value: token.substring(0, 15 )}) + '...' + token.substring(token.length - 5);
   } else {
     logger.debug('❌ No Bearer token found in Authorization header');
   }
@@ -126,7 +126,7 @@ export const getUserFromToken = (req, res, next) => {
   }
 
   // Log auth object for debugging
-  logger.debug('📝 Auth object from token:', { value: JSON.stringify(req.auth, null, 2 }));
+  logger.debug('📝 Auth object from token:', { value: JSON.stringify(req.auth, null, 2) });
 
   // Extract user info from the Auth0 token
   const { sub } = req.auth;

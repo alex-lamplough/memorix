@@ -1,5 +1,5 @@
 import Todo from '../models/todo-model.js';
-import logger from './utils/logger';
+import logger from '../utils/logger.js';
 import { handleError } from '../utils/error-handlers.js';
 
 // Create a new todo item
@@ -28,7 +28,7 @@ export const getTodos = async (req, res) => {
     const userId = req.user.id || req.user.auth0Id;
     const { status, priority, sort, limit = 50, skip = 0 } = req.query;
     
-    logger.debug('Get todos request:', { { userId, query: req.query } });
+    logger.debug('Get todos request:', { userId, query: req.query });
     
     // Build filter object
     const filter = { userId };

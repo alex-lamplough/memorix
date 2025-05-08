@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import logger from '../../utils/logger';
+import logger from '../utils/logger';
 import { useMediaQuery } from '@mui/material'
 import { Menu as MenuIcon } from '@mui/icons-material'
 import { useAuth0 } from '@auth0/auth0-react'

@@ -1,5 +1,5 @@
 import express from 'express';
-import logger from './utils/logger';
+import logger from '../utils/logger.js';
 import mongoose from 'mongoose';
 import FlashcardSet from '../models/flashcard-set-model.js';
 import Quiz from '../models/quiz-model.js';

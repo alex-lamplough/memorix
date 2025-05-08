@@ -1,5 +1,5 @@
 import axios from 'axios';
-import logger from '../../utils/logger';
+import logger from '../utils/logger';
 
 // Set default base URL for API requests
 const API_URL = import.meta.env.VITE_API_URL || '/api';
@@ -62,10 +62,10 @@ apiClient.interceptors.request.use(
       }
       
       // Log the request for debugging
-      logger.debug(`API Request: ${config.method.toUpperCase()} ${config.url}`, { {
+      logger.debug(`API Request: ${config.method.toUpperCase()} ${config.url}`, {
         headers: config.headers,
         data: config.data
-      } });
+      });
     } catch (error) {
       logger.error('Error getting auth token for request:', error);
     }
@@ -78,10 +78,10 @@ apiClient.interceptors.request.use(
 publicApiClient.interceptors.request.use(
   async (config) => {
     // Log the request for debugging
-    logger.debug(`Public API Request: ${config.method.toUpperCase()} ${config.url}`, { {
+    logger.debug(`Public API Request: ${config.method.toUpperCase()} ${config.url}`, {
       headers: config.headers,
       data: config.data
-    } });
+    });
     return config;
   },
   (error) => Promise.reject(error)
@@ -90,16 +90,16 @@ publicApiClient.interceptors.request.use(
 // Add response interceptor to log all responses and handle auth errors
 apiClient.interceptors.response.use(
   (response) => {
-    logger.debug(`API Response: ${response.status} ${response.config.method.toUpperCase()} ${response.config.url}`, { {
+    logger.debug(`API Response: ${response.status} ${response.config.method.toUpperCase()} ${response.config.url}`, {
       data: response.data
-    } });
+    });
     return response;
   },
   async (error) => {
     if (error.response) {
-      logger.error(`API Error: ${error.response.status} ${error.config?.method?.toUpperCase()} ${error.config?.url}`, { {
+      logger.error(`API Error: ${error.response.status} ${error.config?.method?.toUpperCase()} ${error.config?.url}`, {
         data: error.response.data
-      } });
+      });
       
       // Check for onboarding required errors (403 with requiresOnboarding flag)
       if (error.response.status === 403 && error.response.data?.requiresOnboarding) {
@@ -137,16 +137,16 @@ apiClient.interceptors.response.use(
 // Add response interceptor for public API client
 publicApiClient.interceptors.response.use(
   (response) => {
-    logger.debug(`Public API Response: ${response.status} ${response.config.method.toUpperCase()} ${response.config.url}`, { {
+    logger.debug(`Public API Response: ${response.status} ${response.config.method.toUpperCase()} ${response.config.url}`, {
       data: response.data
-    } });
+    });
     return response;
   },
   (error) => {
     if (error.response) {
-      logger.error(`Public API Error: ${error.response.status} ${error.config?.method?.toUpperCase()} ${error.config?.url}`, { {
+      logger.error(`Public API Error: ${error.response.status} ${error.config?.method?.toUpperCase()} ${error.config?.url}`, {
         data: error.response.data
-      } });
+      });
     } else {
       logger.error('Public API request failed:', { value: error.message });
     }

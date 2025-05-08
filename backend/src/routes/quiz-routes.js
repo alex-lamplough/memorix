@@ -1,5 +1,5 @@
 import express from 'express';
-import logger from './utils/logger';
+import logger from '../utils/logger.js';
 import { checkJwt, getUserFromToken, requireCompletedOnboarding } from '../middleware/auth-middleware.js';
 import { lookupMongoUser } from '../middleware/user-middleware.js';
 import quizController from '../controllers/quiz-controller.js';

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import logger from '../../utils/logger';
+import logger from '../utils/logger';
 import { todoService } from '../services/todo-service'
 
 // Icons

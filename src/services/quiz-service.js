@@ -1,5 +1,5 @@
 import api from './api';
-import logger from '../../utils/logger';
+import logger from '../utils/logger';
 import axios from 'axios';
 
 // Keep track of ongoing requests so they can be cancelled when navigating away

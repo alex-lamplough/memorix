@@ -1,5 +1,5 @@
 import { OpenAI } from 'openai';
-import logger from './utils/logger';
+import logger from '../utils/logger.js';
 import { config } from '../config/config.js';
 import { validateFlashcardRequest } from '../utils/validation.js';
 
@@ -11,7 +11,7 @@ try {
     logger.error('⚠️ OpenAI API key is not set. Flashcard generation will fail.');
     logger.error('Please set the OPENAI_API_KEY environment variable.');
   } else {
-    logger.debug('🤖 Initializing OpenAI client with API key:', { value: config.openai.apiKey.substring(0, 3 }) + '...' + config.openai.apiKey.substring(config.openai.apiKey.length - 3));
+    logger.debug('🤖 Initializing OpenAI client with API key:', { value: config.openai.apiKey.substring(0, 3) + '...' + config.openai.apiKey.substring(config.openai.apiKey.length - 3) });
   }
   
   openai = new OpenAI({

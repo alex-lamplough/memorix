@@ -6,7 +6,7 @@
  */
 
 import { exec } from 'child_process';
-import logger from './utils/logger';
+import logger from '../src/utils/logger.js';
 import crypto from 'crypto';
 import dotenv from 'dotenv';
 import fs from 'fs';

@@ -1,4 +1,4 @@
-import logger from './utils/logger';
+import logger from '../src/utils/logger.js';
 
 /**
  * Auth0 Action: Add Email to ID Token

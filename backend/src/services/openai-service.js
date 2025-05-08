@@ -1,5 +1,5 @@
 import OpenAI from 'openai';
-import logger from './utils/logger';
+import logger from '../utils/logger.js';
 
 // Initialize OpenAI client with API key from environment variable
 const openai = new OpenAI({

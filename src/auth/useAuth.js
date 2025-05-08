@@ -1,5 +1,5 @@
 import { useAuth0 } from '@auth0/auth0-react';
-import logger from '../../utils/logger';
+import logger from '../utils/logger';
 
 /**
  * Custom hook to provide simplified access to Auth0 authentication functions

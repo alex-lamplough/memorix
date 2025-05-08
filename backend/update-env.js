@@ -6,7 +6,7 @@
  */
 
 import fs from 'fs';
-import logger from './utils/logger';
+import logger from '../src/utils/logger.js';
 import path from 'path';
 import readline from 'readline';
 import { fileURLToPath } from 'url';

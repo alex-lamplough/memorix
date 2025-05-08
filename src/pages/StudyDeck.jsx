@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import logger from '../../utils/logger';
+import logger from '../utils/logger';
 import { useParams, useNavigate } from 'react-router-dom'
 import { flashcardService } from '../services/api'
 import { handleRequestError } from '../services/utils'

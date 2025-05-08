@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import logger from '../../utils/logger';
+import logger from '../utils/logger';
 import { Auth0Provider, useAuth0 } from '@auth0/auth0-react';
 import { auth0Config } from './auth0-config';
 
@@ -100,9 +100,9 @@ const AuthProvider = ({ children }) => {
   // Log Auth0 configuration for debugging
   logger.debug('🔐 Auth0Provider Configuration:');
   logger.debug('  Domain:', { value: domain });
-  logger.debug('  Client ID:', { value: clientId.substring(0, 5 }) + '...');
+  logger.debug('  Client ID:', { value: clientId.substring(0, 5) + '...' });
   logger.debug('  Redirect URI:', { value: window.location.origin });
-  logger.debug('  Auth Params:', { value: JSON.stringify(authorizationParams }));
+  logger.debug('  Auth Params:', { value: JSON.stringify(authorizationParams) });
   
   const onRedirectCallback = (appState) => {
     logger.debug('🔄 Auth0 redirect callback triggered', { value: appState });

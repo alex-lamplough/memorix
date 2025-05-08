@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import logger from '../../utils/logger';
+import logger from '../utils/logger';
 import { useParams, useNavigate } from 'react-router-dom';
 import FlashcardStudy from '../components/FlashcardStudy';
 import { flashcardService } from '../services/api';

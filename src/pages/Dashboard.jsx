@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
-import logger from '../../utils/logger';
+import logger from '../utils/logger';
 import { Link, useNavigate } from 'react-router-dom'
 import { useMediaQuery } from '@mui/material'
 import { Menu as MenuIcon } from '@mui/icons-material'

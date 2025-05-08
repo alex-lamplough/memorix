@@ -1,5 +1,5 @@
 import { StrictMode, useState, useEffect } from 'react'
-import logger from '../utils/logger';
+import logger from './utils/logger';
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import './index.css'

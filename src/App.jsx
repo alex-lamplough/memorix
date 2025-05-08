@@ -1,5 +1,5 @@
 import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom'
-import logger from '../utils/logger';
+import logger from './utils/logger';
 import { useState, useEffect, lazy, Suspense, useRef } from 'react'
 
 // Feature icons
@@ -51,7 +51,7 @@ const ContentCreators = lazy(() => import('./pages/ContentCreators'))
 import OnboardingGuard from './components/OnboardingGuard'
 
 // Assets
-import logoGreen from './assets/MemorixBannerLogo.png'
+import logoGreen from './assets/MemorixIcon.png'
 import facebookLogo from './assets/facebookLogo.png'
 import instagramLogo from './assets/instagramLogo.png'
 import xLogo from './assets/xLogo.png'

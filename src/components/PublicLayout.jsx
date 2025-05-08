@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { setPageTitle } from '../utils/title-utils';
-import logoGreen from '../assets/MemorixBannerLogo.png';
+import logoGreen from '../assets/MemorixIcon.png';
 import facebookLogo from '../assets/facebookLogo.png';
 import instagramLogo from '../assets/instagramLogo.png';
 import xLogo from '../assets/xLogo.png';

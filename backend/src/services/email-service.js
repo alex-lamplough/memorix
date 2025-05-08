@@ -1,5 +1,5 @@
 import sgMail from '@sendgrid/mail';
-import logger from './utils/logger';
+import logger from '../utils/logger.js';
 
 /**
  * Email service for sending various types of emails via SendGrid
@@ -89,7 +89,7 @@ class EmailService {
     const appUrl = process.env.APP_URL || 'https://getmemorix.app';
     
     // Use publicly hosted images from our own website
-    const logoUrl = `${appUrl}/email-assets/MemorixLogoImage.png`;
+    const logoUrl = `${appUrl}/email-assets/MemorixIcon.png`;
     const twitterIconUrl = `${appUrl}/email-assets/xLogo.png`;
     const instagramIconUrl = `${appUrl}/email-assets/instagramLogo.png`;
     const facebookIconUrl = `${appUrl}/email-assets/facebookLogo.png`;

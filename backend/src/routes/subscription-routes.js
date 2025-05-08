@@ -1,5 +1,5 @@
 import express from 'express';
-import logger from './utils/logger';
+import logger from '../utils/logger.js';
 import { expressjwt as jwt } from 'express-jwt';
 import jwksRsa from 'jwks-rsa';
 import { config } from '../config/config.js';

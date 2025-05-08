@@ -1,5 +1,5 @@
 import express from 'express';
-import logger from './utils/logger';
+import logger from '../utils/logger.js';
 import { checkJwt, getUserFromToken } from '../middleware/auth-middleware.js';
 import User from '../models/user-model.js';
 import { getUserProfile } from '../services/auth0-service.js';
@@ -16,8 +16,8 @@ router.get('/me', async (req, res, next) => {
   try {
     logger.debug(`==================== USER LOGIN/CREATION START ====================`);
     logger.debug(`🔍 Looking up user with Auth0 ID: ${req.user.auth0Id}`);
-    logger.debug(`🔑 Auth Middleware User Object:`, { value: JSON.stringify(req.user }));
-    logger.debug(`🔑 Auth Token Content:`, { value: JSON.stringify(req.auth }));
+    logger.debug(`🔑 Auth Middleware User Object:`, { value: JSON.stringify(req.user) });
+    logger.debug(`🔑 Auth Token Content:`, { value: JSON.stringify(req.auth) });
     
     let user = await User.findOne({ auth0Id: req.user.auth0Id });
     
@@ -29,7 +29,7 @@ router.get('/me', async (req, res, next) => {
       const auth0Id = userInfo.sub;
       
       // Log the token for debugging
-      logger.debug('📝 Auth0 token received:', { value: JSON.stringify(userInfo, null, 2 }));
+      logger.debug('📝 Auth0 token received:', { value: JSON.stringify(userInfo, null, 2) });
       logger.debug(`💡 NODE_ENV: ${process.env.NODE_ENV}`);
       
       // Try to get full profile from Auth0 Management API
@@ -37,7 +37,7 @@ router.get('/me', async (req, res, next) => {
       const auth0Profile = await getUserProfile(auth0Id);
       logger.debug('📝 Auth0 Profile API Response:', auth0Profile ? 'Success' : 'Failed');
       if (auth0Profile) {
-        logger.debug('📝 Auth0 Profile Data:', { value: JSON.stringify(auth0Profile, null, 2 }));
+        logger.debug('📝 Auth0 Profile Data:', { value: JSON.stringify(auth0Profile, null, 2) });
       }
       
       let email, name, picture;
@@ -145,7 +145,7 @@ router.get('/me', async (req, res, next) => {
       await user.save();
     }
     
-    logger.debug(`Response sending user:`, { value: JSON.stringify(user }));
+    logger.debug(`Response sending user:`, { value: JSON.stringify(user) });
     logger.debug(`==================== USER LOGIN/CREATION END ====================`);
     res.json(user);
   } catch (error) {
@@ -196,7 +196,7 @@ router.patch('/me', async (req, res, next) => {
   try {
     const { name, nickname, preferences, profile } = req.body;
     
-    logger.debug('🔄 PATCH /users/me - Request body:', { value: JSON.stringify(req.body, null, 2 }));
+    logger.debug('🔄 PATCH /users/me - Request body:', { value: JSON.stringify(req.body, null, 2) });
     
     let user = await User.findOne({ auth0Id: req.user.auth0Id });
     
@@ -204,10 +204,10 @@ router.patch('/me', async (req, res, next) => {
       return res.status(404).json({ error: 'User not found' });
     }
     
-    logger.debug('👤 Current user before update:', { JSON.stringify({
+    logger.debug('👤 Current user before update:', { value: JSON.stringify({
       name: user.name,
       preferences: user.preferences
-    }, null, 2 }));
+    }, null, 2) });
     
     // Update fields if provided
     if (name !== undefined) user.name = name;
@@ -218,8 +218,8 @@ router.patch('/me', async (req, res, next) => {
       // Initialize preferences if it doesn't exist
       if (!user.preferences) user.preferences = {};
       
-      logger.debug('🔧 Current preferences before update:', { value: JSON.stringify(user.preferences, null, 2 }));
-      logger.debug('📝 New preferences to apply:', { value: JSON.stringify(preferences, null, 2 }));
+      logger.debug('🔧 Current preferences before update:', { value: JSON.stringify(user.preferences, null, 2) });
+      logger.debug('📝 New preferences to apply:', { value: JSON.stringify(preferences, null, 2) });
       
       // For each preference field, handle boolean values specially
       Object.keys(preferences).forEach(key => {
@@ -236,7 +236,7 @@ router.patch('/me', async (req, res, next) => {
         }
       });
       
-      logger.debug('✅ Updated preferences:', { value: JSON.stringify(user.preferences, null, 2 }));
+      logger.debug('✅ Updated preferences:', { value: JSON.stringify(user.preferences, null, 2) });
     }
     
     // Update profile if provided
@@ -250,10 +250,10 @@ router.patch('/me', async (req, res, next) => {
     user.updatedAt = Date.now();
     await user.save();
     
-    logger.debug('👤 Updated user after save:', { JSON.stringify({
+    logger.debug('👤 Updated user after save:', { value: JSON.stringify({
       name: user.name,
       preferences: user.preferences
-    }, null, 2 }));
+    }, null, 2) });
     
     res.json(user);
   } catch (error) {

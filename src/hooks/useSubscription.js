@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import logger from '../../utils/logger';
+import logger from '../utils/logger';
 import { useAuth0 } from '@auth0/auth0-react';
 import subscriptionService from '../services/subscription-service';
 

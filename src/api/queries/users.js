@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import logger from '../../../utils/logger';
+import logger from '../../utils/logger';
 import apiClient from '../apiClient';
 
 // Query keys for caching
@@ -55,14 +55,14 @@ export const useUpdateUserPreferences = () => {
     mutationFn: async (preferences) => {
       try {
         // Enhanced logging to debug the exact payload being sent
-        logger.debug('🔍 Preferences update payload:', { value: JSON.stringify(preferences, null, 2 }));
-        logger.debug('🔄 Sending PATCH request to /users/me with preferences:', { value: Object.keys(preferences }).map(key => `${key}: ${preferences[key]}`).join(', '));
+        logger.debug('🔍 Preferences update payload:', { value: JSON.stringify(preferences, null, 2) });
+        logger.debug('🔄 Sending PATCH request to /users/me with preferences:', { value: Object.keys(preferences).map(key => `${key}: ${preferences[key]}`).join(', ') });
         
         // Use PATCH instead of PUT for partial updates
         const response = await apiClient.patch('/users/me', { preferences });
         
         // Log response for debugging
-        logger.debug('✅ Preferences update response:', { value: JSON.stringify(response.data.preferences, null, 2 }));
+        logger.debug('✅ Preferences update response:', { value: JSON.stringify(response.data.preferences, null, 2) });
         
         return response.data;
       } catch (error) {
@@ -79,11 +79,11 @@ export const useUpdateUserPreferences = () => {
       queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.USER_PROFILE] });
       
       // Log the updated user data
-      logger.debug('✅ Updated user data:', { value: data ? JSON.stringify(data.preferences, null, 2 }) : 'No data returned');
+      logger.debug('✅ Updated user data:', { value: data ? JSON.stringify(data.preferences, null, 2) : 'No data returned' });
     },
     // Log the actual payload being sent for debugging
     onMutate: (preferences) => {
-      logger.debug('🚀 Starting preferences update mutation with:', { value: JSON.stringify(preferences, null, 2 }));
+      logger.debug('🚀 Starting preferences update mutation with:', { value: JSON.stringify(preferences, null, 2) });
     },
   });
 };

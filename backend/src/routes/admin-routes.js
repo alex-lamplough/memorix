@@ -1,5 +1,5 @@
 import express from 'express';
-import logger from './utils/logger';
+import logger from '../utils/logger.js';
 import { expireSubscriptions } from '../cron/subscription-cron.js';
 
 const router = express.Router();

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import logger from './utils/logger';
+import logger from '../utils/logger.js';
 import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
@@ -72,7 +72,7 @@ export async function getManagementApiToken() {
     logger.error('❌ Error getting Management API token:', { value: error.message });
     if (error.response) {
       logger.error(`Status: ${error.response.status}`);
-      logger.error('Data:', { value: JSON.stringify(error.response.data }));
+      logger.error('Data:', { value: JSON.stringify(error.response.data) });
     }
     return null;
   }

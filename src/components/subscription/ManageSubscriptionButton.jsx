@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import logger from '../../../utils/logger';
+import logger from '../../utils/logger';
 import subscriptionService from '../../services/subscription-service';
 import { useNavigate } from 'react-router-dom';
 

@@ -5,7 +5,7 @@
  */
 
 import fetch from 'node-fetch';
-import logger from './utils/logger';
+import logger from '../src/utils/logger.js';
 import crypto from 'crypto';
 import dotenv from 'dotenv';
 

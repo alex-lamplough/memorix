@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import logger from '../../../utils/logger';
+import logger from '../../utils/logger';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthProvider';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';

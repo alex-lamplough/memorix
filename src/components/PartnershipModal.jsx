@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import logger from '../../utils/logger';
+import logger from '../utils/logger';
 import CloseIcon from '@mui/icons-material/Close';
 import axios from 'axios';
 

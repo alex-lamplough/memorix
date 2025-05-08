@@ -3,7 +3,7 @@
 A modern flashcard and quiz application powered by AI, designed to help users learn and remember any subject efficiently.
 
 <div align="center">
-  <img src="src/assets/MemorixBannerLogo.png" alt="Memorix Logo" width="200" />
+  <img src="src/assets/MemorixIcon.png" alt="Memorix Logo" width="200" />
 </div>
 
 ## Features

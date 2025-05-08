@@ -1,5 +1,5 @@
 import User from '../models/user-model.js';
-import logger from './utils/logger';
+import logger from '../utils/logger.js';
 import stripeService from '../services/stripe-service.js';
 import { config } from '../config/config.js';
 
@@ -15,7 +15,7 @@ export const handleStripeWebhook = async (req, res) => {
   logger.debug('Endpoint:', { value: req.originalUrl });
   logger.debug('Method:', { value: req.method });
   logger.debug('Signature:', sig ? 'present' : 'missing');
-  logger.debug('Webhook secret:', { value: webhookSecret ? `${webhookSecret.substring(0, 8 })}...` : 'missing');
+  logger.debug('Webhook secret:', { value: webhookSecret ? `${webhookSecret.substring(0, 8)}...` : 'missing' });
   
   let event;
   
@@ -387,7 +387,7 @@ async function handleSubscriptionCreated(subscription, event) {
         }
       };
       
-      logger.debug('About to save user with updated subscription:', { {
+      logger.debug('About to save user with updated subscription:', {
         id: user._id,
         email: user.email,
         plan: user.subscription.plan,
@@ -395,7 +395,7 @@ async function handleSubscriptionCreated(subscription, event) {
         currentPeriodEnd: user.subscription.currentPeriodEnd,
         nextBillingDate: user.subscription.nextBillingDate,
         billingInfo: `${amount} ${currency} per ${interval}`
-      } });
+      });
       
       await user.save();
       logger.debug(`✅ Updated user ${user.email} with subscription plan: ${planName}`);
@@ -727,11 +727,11 @@ async function handleInvoicePaymentSucceeded(invoice) {
             })
           : null;
         
-        logger.debug('Setting next billing date from invoice:', { {
+        logger.debug('Setting next billing date from invoice:', {
           invoiceId: invoice.id,
           periodEnd: invoice.period_end,
           formattedDate: nextBillingDate
-        } });
+        });
         
         user.subscription = {
           ...user.subscription,
@@ -863,10 +863,10 @@ async function handleCheckoutSessionCompleted(session, event) {
         });
         logger.debug('Retrieved subscription:', { value: subscription.id });
         logger.debug('Current period end timestamp:', { value: subscription.current_period_end });
-        logger.debug('Full subscription period info:', { {
+        logger.debug('Full subscription period info:', {
           current_period_start: subscription.current_period_start,
           current_period_end: subscription.current_period_end
-        } });
+        });
         
         // Default to Pro plan
         let planName = 'pro';
@@ -979,14 +979,14 @@ async function handleCheckoutSessionCompleted(session, event) {
           }
         };
         
-        logger.debug('About to save user with updated subscription data:', { {
+        logger.debug('About to save user with updated subscription data:', {
           id: user._id,
           email: user.email,
           plan: planName,
           status: subscription.status,
           currentPeriodEnd: currentPeriodEnd,
           nextBillingDate: nextBillingDate
-        } });
+        });
         
       } catch (error) {
         logger.error('Error retrieving subscription details:', error);
@@ -1007,11 +1007,10 @@ async function handleCheckoutSessionCompleted(session, event) {
  */
 async function determinePlanFromSubscription(subscription) {
   try {
-    logger.debug('Determining plan from subscription items:', { subscription.items.data.map(item => ({
-        priceId: item.price.id,
-        productId: item.price.product
-      } }))
-    );
+    logger.debug('Determining plan from subscription items:', subscription.items.data.map(item => ({
+      priceId: item.price.id,
+      productId: item.price.product
+    })));
     
     // Default to 'pro' plan if we can't determine
     let planName = 'pro';
@@ -1021,11 +1020,11 @@ async function determinePlanFromSubscription(subscription) {
     
     if (item) {
       const priceId = item.price.id;
-      logger.debug(`Matching price ID ${priceId} to known plan price IDs:`, { {
+      logger.debug(`Matching price ID ${priceId} to known plan price IDs:`, {
         proPlanPriceId: config.stripe.proPlanPriceId,
         creatorPlanPriceId: config.stripe.creatorPlanPriceId,
         enterprisePlanPriceId: config.stripe.enterprisePlanPriceId
-      } });
+      });
       
       // Match price ID to plan
       if (priceId === config.stripe.proPlanPriceId) {

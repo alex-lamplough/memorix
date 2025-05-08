@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import logger from '../../../utils/logger';
+import logger from '../../utils/logger';
 import apiClient from '../apiClient';
 
 // Query keys for caching

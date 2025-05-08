@@ -1,5 +1,5 @@
 import express from 'express';
-import logger from './utils/logger';
+import logger from './utils/logger.js';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
@@ -81,7 +81,7 @@ app.post('/api/subscriptions/webhook', (req, res) => {
 // Debug webhook route
 app.post('/api/stripe/debug-webhook', (req, res) => {
   logger.debug('Debug webhook received');
-  logger.debug('Headers:', { value: JSON.stringify(req.headers, null, 2 }));
+  logger.debug('Headers:', { value: JSON.stringify(req.headers, null, 2) });
   logger.debug('Body:', typeof req.body, req.body instanceof Buffer ? 'Is Buffer' : 'Not Buffer');
   return res.status(200).json({ received: true, debug: true });
 });

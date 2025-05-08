@@ -1,4 +1,4 @@
-import logger from '../../utils/logger';
+import logger from '../utils/logger';
 
 // utils.js - Utility functions for API handling, component lifecycles, etc.
 

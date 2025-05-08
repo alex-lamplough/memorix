@@ -3,7 +3,7 @@
  * Checks that all required environment variables are present
  */
 import { isProduction, isDevelopment, getEnvironmentName } from './env-utils';
-import logger from '../../utils/logger';
+import logger from '../utils/logger';
 
 // List of required environment variables
 const REQUIRED_ENV_VARS = [

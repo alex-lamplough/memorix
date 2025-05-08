@@ -14,7 +14,7 @@ import LogoutIcon from '@mui/icons-material/Logout'
 import MenuBookIcon from '@mui/icons-material/MenuBook'
 
 // Assets
-import logoWhite from '../assets/MemorixLogoImage.png'
+import logoWhite from '../assets/MemorixIcon.png'
 
 function SidebarItem({ icon, label, active, to, onClick, disabled, comingSoon }) {
   if (disabled) {

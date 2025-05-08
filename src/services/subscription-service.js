@@ -1,5 +1,5 @@
 import axios from 'axios';
-import logger from '../../utils/logger';
+import logger from '../utils/logger';
 
 // Base URL from environment variables or default to localhost
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';

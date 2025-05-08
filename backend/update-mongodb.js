@@ -1,5 +1,5 @@
 import fs from 'fs';
-import logger from './utils/logger';
+import logger from '../src/utils/logger.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import readline from 'readline';

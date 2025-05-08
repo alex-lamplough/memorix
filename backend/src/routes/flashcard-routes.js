@@ -1,5 +1,5 @@
 import express from 'express';
-import logger from './utils/logger';
+import logger from '../utils/logger.js';
 import mongoose from 'mongoose';
 import { checkJwt, getUserFromToken, requireCompletedOnboarding } from '../middleware/auth-middleware.js';
 import { lookupMongoUser } from '../middleware/user-middleware.js';
@@ -64,7 +64,7 @@ router.get('/favorites', authenticate(), lookupMongoUser, async (req, res, next)
       description: set.description,
       category: set.category,
       tags: set.tags,
-      cardCount: set.cards.length,
+      cardCount: set.cards ? set.cards.length : 0,
       createdBy: set.userId,
       isPublic: set.isPublic,
       createdAt: set.createdAt,
@@ -86,10 +86,10 @@ router.get('/', async (req, res, next) => {
     // Debug logging
     logger.debug('==== FLASHCARD GET REQUEST ====');
     logger.debug('Database name:', { value: mongoose.connection.name });
-    logger.debug('User from request:', { {
+    logger.debug('User from request:', {
       id: req.user.id,
       auth0Id: req.user.auth0Id
-    } });
+    });
     
     // Add more detailed checking
     if (!req.user || !req.user.id) {
@@ -109,11 +109,13 @@ router.get('/', async (req, res, next) => {
     if (flashcardSets.length === 0) {
       logger.debug('No flashcards found for this user, checking all sets in the database');
       const allSets = await FlashcardSet.find({}).select('_id title userId');
-      logger.debug('All sets in database:', { JSON.stringify(allSets.map(set => ({
+      
+      // Add null check to make sure set.cards exists before accessing length
+      logger.debug('All sets in database:', allSets.map(set => ({
         id: set._id,
         title: set.title,
-        userId: set.userId
-      } }))));
+        cards: set.cards ? set.cards.length : 0
+      })));
       
       // Try to find by Auth0 ID if MongoDB ID approach failed
       logger.debug('Attempting to find user in database by Auth0 ID');
@@ -133,7 +135,7 @@ router.get('/', async (req, res, next) => {
           // If we found flashcards with the database user ID, use them
           const formattedSets = setsByDbUser.map(set => ({
             ...set.toObject(),
-            cardCount: set.cards.length,
+            cardCount: set.cards ? set.cards.length : 0,
             progress: set.studyStats.masteryLevel || 0,
             lastStudied: set.studyStats.lastStudied || null,
             // Check if the current user has favorited this set
@@ -153,7 +155,7 @@ router.get('/', async (req, res, next) => {
       const setObj = set.toObject();
       return {
         ...setObj,
-        cardCount: set.cards.length,
+        cardCount: set.cards ? set.cards.length : 0,
         progress: set.studyStats.masteryLevel || 0,
         lastStudied: set.studyStats.lastStudied || null,
         // Check if the current user has favorited this set
@@ -269,8 +271,8 @@ router.get('/:id', async (req, res, next) => {
     }
     
     // Log for debugging
-    logger.debug('Get flashcard permission check:', { {
-      setUserId: flashcardSet.userId.toString( }),
+    logger.debug('Get flashcard permission check:', {
+      setUserId: flashcardSet.userId.toString(),
       reqUserId: req.user.id,
       reqUserAuth0Id: req.user.auth0Id,
       isPublic: flashcardSet.isPublic
@@ -362,8 +364,8 @@ router.put('/:id', async (req, res, next) => {
     }
     
     // Log for debugging
-    logger.debug('Update flashcard permission check:', { {
-      setUserId: flashcardSet.userId.toString( }),
+    logger.debug('Update flashcard permission check:', {
+      setUserId: flashcardSet.userId.toString(),
       reqUserId: req.user.id,
       reqUserAuth0Id: req.user.auth0Id
     });
@@ -415,8 +417,8 @@ router.delete('/:id', async (req, res, next) => {
     }
     
     // Log for debugging
-    logger.debug('Delete flashcard permission check:', { {
-      setUserId: flashcardSet.userId.toString( }),
+    logger.debug('Delete flashcard permission check:', {
+      setUserId: flashcardSet.userId.toString(),
       reqUserId: req.user.id,
       reqUserAuth0Id: req.user.auth0Id
     });
@@ -456,8 +458,8 @@ router.post('/:id/study', async (req, res, next) => {
     }
     
     // Log for debugging
-    logger.debug('Study session permission check:', { {
-      setUserId: flashcardSet.userId.toString( }),
+    logger.debug('Study session permission check:', {
+      setUserId: flashcardSet.userId.toString(),
       reqUserId: req.user.id,
       reqUserAuth0Id: req.user.auth0Id
     });
@@ -497,10 +499,10 @@ router.post('/:id/study', async (req, res, next) => {
       });
       
       // Calculate mastery level based on review history
-      const totalCards = flashcardSet.cards.length;
+      const totalCards = flashcardSet.cards ? flashcardSet.cards.length : 0;
       let masteredCards = 0;
       
-      flashcardSet.cards.forEach(card => {
+      flashcardSet.cards && flashcardSet.cards.forEach(card => {
         const history = card.reviewHistory || [];
         // Consider a card mastered if it has at least 3 reviews with performance > 3
         if (history.filter(h => h.performance > 3).length >= 3) {

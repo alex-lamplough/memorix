@@ -1,7 +1,7 @@
 // Auth0 configuration settings
 // This file reads Auth0 credentials from environment variables
 import { getEnvVariable, maskSensitiveValue, isProduction, isDevelopment, getEnvironmentName } from '../utils/env-utils';
-import logger from '../../utils/logger';
+import logger from '../utils/logger';
 
 // Get Auth0 config from environment variables
 const domain = import.meta.env.VITE_AUTH0_DOMAIN || '';

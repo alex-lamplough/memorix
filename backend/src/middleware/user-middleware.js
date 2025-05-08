@@ -1,5 +1,5 @@
 import User from '../models/user-model.js';
-import logger from './utils/logger';
+import logger from '../utils/logger.js';
 import mongoose from 'mongoose';
 
 /**
@@ -15,7 +15,7 @@ export const lookupMongoUser = async (req, res, next) => {
     }
     
     logger.debug(`🔍 Looking up MongoDB user with Auth0 ID: ${req.user.auth0Id}`);
-    logger.debug('Request user object before lookup:', { value: JSON.stringify(req.user }));
+    logger.debug('Request user object before lookup:', { value: JSON.stringify(req.user) });
     
     // Find the user in MongoDB by Auth0 ID
     const user = await User.findOne({ auth0Id: req.user.auth0Id });

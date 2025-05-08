@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import logger from '../../utils/logger';
+import logger from '../utils/logger';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from './useAuth';
 

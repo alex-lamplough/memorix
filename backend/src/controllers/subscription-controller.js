@@ -1,5 +1,5 @@
 import stripeService from '../services/stripe-service.js';
-import logger from './utils/logger';
+import logger from '../utils/logger.js';
 import User from '../models/user-model.js';
 import { config } from '../config/config.js';
 
@@ -11,7 +11,7 @@ export const createCheckoutSession = async (req, res) => {
     const { plan, couponCode } = req.body;
     const auth0Id = req.auth.sub;
     
-    logger.debug('Creating checkout session for:', { { plan, auth0Id, hasCoupon: !!couponCode } });
+    logger.debug('Creating checkout session for:', { plan, auth0Id, hasCoupon: !!couponCode });
     
     // Validate plan input
     if (!plan || !['pro', 'creator', 'enterprise'].includes(plan)) {
@@ -30,8 +30,8 @@ export const createCheckoutSession = async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
     
-    logger.debug('Found user:', { { 
-      id: user._id.toString( }),
+    logger.debug('Found user:', { 
+      id: user._id.toString(),
       email: user.email, 
       hasStripeCustomerId: !!user.stripeCustomerId
     });
@@ -66,7 +66,7 @@ export const createCheckoutSession = async (req, res) => {
     try {
       logger.debug('Creating or retrieving Stripe customer for user');
       const customer = await stripeService.createOrRetrieveCustomer(user);
-      logger.debug('Customer:', { { id: customer.id, isNew: !user.stripeCustomerId } });
+      logger.debug('Customer:', { id: customer.id, isNew: !user.stripeCustomerId });
       
       // If customer was created, save ID to user record
       if (!user.stripeCustomerId) {
@@ -90,20 +90,20 @@ export const createCheckoutSession = async (req, res) => {
       // Add coupon code if provided
       if (couponCode && couponCode.trim()) {
         sessionOptions.couponCode = couponCode.trim();
-        logger.debug('Applying coupon code to checkout session:', { value: couponCode.trim( }));
+        logger.debug('Applying coupon code to checkout session:', { value: couponCode.trim() });
       }
       
-      logger.debug('Creating checkout session with params:', { {
+      logger.debug('Creating checkout session with params:', {
         customerId: customer.id,
         priceId,
         successUrl: `${config.server.corsOrigin}/settings?subscription=success`,
         cancelUrl: `${config.server.corsOrigin}/settings?subscription=canceled`,
         hasCoupon: !!sessionOptions.couponCode
-      } });
+      });
       
       const session = await stripeService.createCheckoutSession(sessionOptions);
       
-      logger.debug('Checkout session created successfully:', { { sessionId: session.id } });
+      logger.debug('Checkout session created successfully:', { sessionId: session.id });
       return res.json({ sessionId: session.id, url: session.url });
     } catch (stripeError) {
       logger.error('Stripe error in checkout session creation:', stripeError.message);

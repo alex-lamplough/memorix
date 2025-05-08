@@ -2,7 +2,7 @@
 // This allows creating a new test mode customer when switching between live and test modes
 
 import mongoose from 'mongoose';
-import logger from './utils/logger';
+import logger from '../src/utils/logger.js';
 import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';

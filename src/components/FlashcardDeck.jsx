@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import logger from '../../utils/logger';
+import logger from '../utils/logger';
 import PropTypes from 'prop-types'
 
 // Icons
@@ -30,10 +30,10 @@ function FlashcardDeck({ flashcards, onCardComplete, reviewLaterCards = {}, onRe
   // Initialize cards on component mount or when flashcards prop changes
   useEffect(() => {
     if (flashcards && flashcards.length > 0) {
-      logger.debug("FlashcardDeck: Initializing cards from props:", { {
+      logger.debug("FlashcardDeck: Initializing cards from props:", {
         flashcardsLength: flashcards.length,
         firstCardQuestion: flashcards[0]?.question
-      } });
+      });
       
       // Store original cards for reference
       originalCardsRef.current = [...flashcards];
@@ -277,11 +277,11 @@ function FlashcardDeck({ flashcards, onCardComplete, reviewLaterCards = {}, onRe
       setCurrentCardIndex(0);
       updateProgress(0);
       
-      logger.debug('RESTARTING DECK - Reset complete', { {
+      logger.debug('RESTARTING DECK - Reset complete', {
         cardsLength: originalCardsCopy.length,
         isDeckCompleted: false,
         currentCardIndex: 0
-      } });
+      });
     }, 0);
   }
   
