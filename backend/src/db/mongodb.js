@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import logger from './utils/logger';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -20,10 +21,10 @@ const loadEnvLocal = () => {
       for (const key in envConfig) {
         process.env[key] = envConfig[key];
       }
-      console.log('✅ Loaded MongoDB connection string from .env.local');
+      logger.debug('✅ Loaded MongoDB connection string from .env.local');
     }
   } catch (err) {
-    console.error('Error loading .env.local:', err);
+    logger.error('Error loading .env.local:', { value: err });
   }
 };
 
@@ -42,12 +43,12 @@ export const getMongoConnectionString = () => {
   // Use specified database name from environment variable if available
   const envDbName = process.env.MONGODB_DATABASE;
   if (envDbName) {
-    console.log(`Using database name from MONGODB_DATABASE env variable: ${envDbName}`);
+    logger.debug(`Using database name from MONGODB_DATABASE env variable: ${envDbName}`);
   }
 
   // For MongoDB Atlas connection string
   if (baseUri.includes('mongodb+srv://')) {
-    console.log('Using MongoDB Atlas connection string');
+    logger.debug('Using MongoDB Atlas connection string');
     
     // If MONGODB_DATABASE is explicitly set, use it
     if (envDbName) {
@@ -80,7 +81,7 @@ export const getMongoConnectionString = () => {
     if ((isProduction && baseUri.includes('/memorixDev?')) || 
         (!isProduction && baseUri.includes('/memorix?'))) {
       
-      console.log(`Changing database to match environment: ${dbToUse}`);
+      logger.debug(`Changing database to match environment: ${dbToUse}`);
       
       // Replace the database name in the URI
       const beforeDb = baseUri.substring(0, baseUri.lastIndexOf('/', baseUri.indexOf('?')) + 1);
@@ -95,7 +96,7 @@ export const getMongoConnectionString = () => {
   
   // For standard MongoDB URLs (non-Atlas)
   const dbName = envDbName || (process.env.NODE_ENV === 'production' ? 'memorix' : 'memorixDev');
-  console.log(`Connecting to ${process.env.NODE_ENV || 'development'} database: ${dbName}`);
+  logger.debug(`Connecting to ${process.env.NODE_ENV || 'development'} database: ${dbName}`);
 
   if (baseUri.includes('mongodb://')) {
     // Extract the base URI without any database specification
@@ -117,7 +118,7 @@ export const getMongoConnectionString = () => {
   }
   
   // Not a standard MongoDB URI, warn and return as is
-  console.warn('Warning: MONGODB_URI does not appear to be a standard MongoDB connection string');
+  logger.warn('Warning: MONGODB_URI does not appear to be a standard MongoDB connection string');
   return baseUri;
 };
 
@@ -136,7 +137,7 @@ const initializeDatabase = async (db) => {
     // Create collections that don't exist
     for (const collection of requiredCollections) {
       if (!collectionNames.includes(collection)) {
-        console.log(`Creating collection: ${collection}`);
+        logger.debug(`Creating collection: ${collection}`);
         await db.db.createCollection(collection);
       }
     }
@@ -145,13 +146,13 @@ const initializeDatabase = async (db) => {
     for (const collection of requiredCollections) {
       if (collectionNames.includes(collection)) {
         const count = await db.db.collection(collection).countDocuments();
-        console.log(`Collection '${collection}' contains ${count} documents`);
+        logger.debug(`Collection '${collection}' contains ${count} documents`);
       }
     }
     
-    console.log('✅ Database initialization complete');
+    logger.debug('✅ Database initialization complete');
   } catch (error) {
-    console.error('Error initializing database:', error);
+    logger.error('Error initializing database:', error);
   }
 };
 
@@ -164,32 +165,31 @@ export const connectToMongoDB = async () => {
     const connectionString = getMongoConnectionString();
     
     // Add logging for debugging the connection string (sanitized)
-    console.log('Attempting to connect with URI:', 
-      connectionString.replace(/mongodb(\+srv)?:\/\/[^:]+:[^@]+@/, 'mongodb$1://username:password@')); 
+    logger.debug('Attempting to connect with URI:', { value: connectionString.replace(/mongodb(\+srv })?:\/\/[^:]+:[^@]+@/, 'mongodb$1://username:password@')); 
     
     const options = {
       serverSelectionTimeoutMS: 10000 // Timeout after 10 seconds
     };
     
     await mongoose.connect(connectionString, options);
-    console.log('✅ Connected to MongoDB successfully');
+    logger.debug('✅ Connected to MongoDB successfully');
     
     // Log connection details
     const db = mongoose.connection;
-    console.log(`Database name: ${db.name}`);
-    console.log(`Connection state: ${db.readyState === 1 ? 'connected' : 'not connected'}`);
+    logger.debug(`Database name: ${db.name}`);
+    logger.debug(`Connection state: ${db.readyState === 1 ? 'connected' : 'not connected'}`);
     
     // Initialize database with required collections
     await initializeDatabase(db);
     
     // Log all collections after initialization
     const collections = await db.db.listCollections().toArray();
-    console.log('Collections in database:', collections.length ? 
-      collections.map(c => c.name) : 'No collections found');
+    logger.debug('Collections in database:', { value: collections.length ? 
+      collections.map(c => c.name }) : 'No collections found');
     
     return db;
   } catch (error) {
-    console.error('❌ MongoDB connection error:', error);
+    logger.error('❌ MongoDB connection error:', error);
     throw error; // Re-throw to be handled by caller
   }
 };
@@ -201,10 +201,10 @@ export const connectToMongoDB = async () => {
 export const disconnectFromMongoDB = async () => {
   try {
     await mongoose.disconnect();
-    console.log('MongoDB connection closed');
+    logger.debug('MongoDB connection closed');
     return true;
   } catch (error) {
-    console.error('Error disconnecting from MongoDB:', error);
+    logger.error('Error disconnecting from MongoDB:', error);
     throw error;
   }
 };

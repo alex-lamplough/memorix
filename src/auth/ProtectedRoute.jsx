@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import logger from '../../utils/logger';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from './useAuth';
 
@@ -20,7 +21,7 @@ const ProtectedRoute = ({ element }) => {
           const token = await getToken();
           setIsTokenValid(!!token);
         } catch (error) {
-          console.error('Token verification error:', error);
+          logger.error('Token verification error:', error);
           setIsTokenValid(false);
         } finally {
           setIsVerifying(false);
@@ -46,7 +47,7 @@ const ProtectedRoute = ({ element }) => {
 
   // Redirect to login if not authenticated or token is invalid
   if (!isAuthenticated || !isTokenValid) {
-    console.log('Protected route access denied - redirecting to login');
+    logger.debug('Protected route access denied - redirecting to login');
     return <Navigate to="/" replace />;
   }
 

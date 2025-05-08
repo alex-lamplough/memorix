@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import logger from '../../utils/logger';
 import { useMediaQuery } from '@mui/material'
 import { Menu as MenuIcon } from '@mui/icons-material'
 import { useAuth0 } from '@auth0/auth0-react'
@@ -45,7 +46,7 @@ function FlashcardCard({ title, cards, lastStudied, progress, id, onDelete, isFa
         onToggleFavorite(id, newFavoriteStatus);
       }
     } catch (error) {
-      console.error('Error toggling favorite:', error);
+      logger.error('Error toggling favorite:', error);
       // Revert the UI state on error
       setFavorite(favorite);
     }
@@ -73,7 +74,7 @@ function FlashcardCard({ title, cards, lastStudied, progress, id, onDelete, isFa
       await onDelete(id);
       setIsDeleting(false);
     } catch (error) {
-      console.error('Error deleting flashcard set:', error);
+      logger.error('Error deleting flashcard set:', error);
       setIsDeleting(false);
     }
     setShowDeleteConfirm(false);

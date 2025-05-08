@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import logger from '../../utils/logger';
 import { useMediaQuery } from '@mui/material'
 import { Menu as MenuIcon } from '@mui/icons-material'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
@@ -98,7 +99,7 @@ function AccountSettings({ setActiveSection }) {
   // Initialize display name when user data is loaded
   useEffect(() => {
     if (user) {
-      console.log('Loading user profile:', user);
+      logger.debug('Loading user profile:', { value: user });
       // Prioritize profile.displayName, fallback to name if not available
       setDisplayName(user.profile?.displayName || user.name || '');
     }
@@ -106,7 +107,7 @@ function AccountSettings({ setActiveSection }) {
 
   // Debug logging when display name changes
   useEffect(() => {
-    console.log('Current display name state:', displayName);
+    logger.debug('Current display name state:', { value: displayName });
   }, [displayName]);
 
   const handleSaveChanges = async () => {
@@ -117,7 +118,7 @@ function AccountSettings({ setActiveSection }) {
     
     setIsSaving(true);
     try {
-      console.log('Saving profile update:', { profile: { displayName } });
+      logger.debug('Saving profile update:', { { profile: { displayName } } });
       await updateProfile.mutateAsync({ 
         profile: { displayName },
         // Also update the name field for backwards compatibility
@@ -125,7 +126,7 @@ function AccountSettings({ setActiveSection }) {
       });
       // Success is handled by the mutation
     } catch (error) {
-      console.error('Error saving profile changes:', error);
+      logger.error('Error saving profile changes:', error);
     } finally {
       setIsSaving(false);
     }
@@ -279,7 +280,7 @@ function CouponInput({ onApply, className = '' }) {
         setError(couponInfo.message || 'Invalid coupon code');
       }
     } catch (err) {
-      console.error('Error applying coupon:', err);
+      logger.error('Error applying coupon:', { value: err });
       setError(err.response?.data?.message || 'Invalid coupon code. Please try again.');
     } finally {
       setIsApplying(false);
@@ -359,8 +360,8 @@ function SubscriptionSettings() {
   
   // Add logging to debug the subscription data
   useEffect(() => {
-    console.log('User subscription data:', user?.subscription);
-    console.log('Subscription hook data:', subscription);
+    logger.debug('User subscription data:', { value: user?.subscription });
+    logger.debug('Subscription hook data:', { value: subscription });
   }, [user, subscription]);
   
   // Fetch detailed subscription information
@@ -370,10 +371,10 @@ function SubscriptionSettings() {
         try {
           setIsLoadingDetails(true);
           const details = await subscriptionService.getSubscriptionDetails();
-          console.log('Detailed subscription info:', details);
+          logger.debug('Detailed subscription info:', { value: details });
           setDetailedSubscription(details);
         } catch (error) {
-          console.error('Error fetching subscription details:', error);
+          logger.error('Error fetching subscription details:', error);
         } finally {
           setIsLoadingDetails(false);
         }
@@ -386,7 +387,7 @@ function SubscriptionSettings() {
   // Handle Stripe portal errors
   const handlePortalError = (errorMessage, errorCode) => {
     setPortalError(errorMessage);
-    console.error('Portal configuration issue:', errorMessage, errorCode);
+    logger.error('Portal configuration issue:', { value: errorMessage, errorCode });
   };
   
   if (isLoadingUser || isLoadingSubscription || isLoadingDetails) {
@@ -398,13 +399,13 @@ function SubscriptionSettings() {
   }
 
   // Debug log all potential sources of billing date
-  console.log('Billing date sources:', {
+  logger.debug('Billing date sources:', { {
     detailedNextBillingDate: detailedSubscription?.nextBillingDate,
     subscriptionRenewalDate: subscription?.renewalDate,
     userNextBillingDate: user.subscription?.nextBillingDate,
     subscriptionCurrentPeriodEnd: subscription?.currentPeriodEnd,
     userCurrentPeriodEnd: user.subscription?.currentPeriodEnd
-  });
+  } });
 
   // Extract and prioritize next billing date from available sources
   let nextBillingDate = null;
@@ -412,13 +413,13 @@ function SubscriptionSettings() {
   // Check all possible sources for next billing date in order of preference
   if (user.subscription?.nextBillingDate) {
     nextBillingDate = user.subscription.nextBillingDate;
-    console.log('Using nextBillingDate from user object');
+    logger.debug('Using nextBillingDate from user object');
   } else if (detailedSubscription?.nextBillingDate) {
     nextBillingDate = detailedSubscription.nextBillingDate;
-    console.log('Using nextBillingDate from detailed subscription');
+    logger.debug('Using nextBillingDate from detailed subscription');
   } else if (subscription?.renewalDate) {
     nextBillingDate = subscription.renewalDate;
-    console.log('Using renewalDate from subscription hook');
+    logger.debug('Using renewalDate from subscription hook');
   }
   
   // Check if subscription is scheduled for cancellation
@@ -428,7 +429,7 @@ function SubscriptionSettings() {
     user.subscription?.cancelAtPeriodEnd;
 
   // Final debug log of the next billing date value
-  console.log('Final nextBillingDate value:', nextBillingDate);
+  logger.debug('Final nextBillingDate value:', { value: nextBillingDate });
 
   // Update button text to show coupon applied when valid
   const getCheckoutButtonText = (plan) => {
@@ -835,7 +836,7 @@ function NotificationSettings() {
   // Initialize notification settings when user data is loaded
   useEffect(() => {
     if (user && user.preferences) {
-      console.log('Loading user preferences:', user.preferences);
+      logger.debug('Loading user preferences:', { value: user.preferences });
       
       // Extract values from user preferences, defaulting to true if not found
       const userPrefs = {
@@ -850,20 +851,20 @@ function NotificationSettings() {
           : true
       };
       
-      console.log('Setting notification preferences from DB:', userPrefs);
+      logger.debug('Setting notification preferences from DB:', { value: userPrefs });
       setNotifications(userPrefs);
     }
   }, [user]);
 
   // Debug log when notifications state changes
   useEffect(() => {
-    console.log('Current notification state:', notifications);
+    logger.debug('Current notification state:', { value: notifications });
   }, [notifications]);
 
   const handleToggle = (key) => {
     setNotifications(prev => {
       const newValue = !prev[key];
-      console.log(`Toggling ${key} from ${prev[key]} to ${newValue}`);
+      logger.debug(`Toggling ${key} from ${prev[key]} to ${newValue}`);
       
       return {
         ...prev,
@@ -882,10 +883,10 @@ function NotificationSettings() {
         contentUpdates: Boolean(notifications.contentUpdates)
       };
       
-      console.log('Saving notification preferences:', preferencesToSave);
+      logger.debug('Saving notification preferences:', { value: preferencesToSave });
       await updatePreferences.mutateAsync(preferencesToSave);
     } catch (error) {
-      console.error('Error saving notification preferences:', error);
+      logger.error('Error saving notification preferences:', error);
     } finally {
       setIsSaving(false);
     }

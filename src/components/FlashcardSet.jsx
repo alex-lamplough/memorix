@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import logger from '../../utils/logger';
 import { useNavigate } from 'react-router-dom'
 
 // Icons
@@ -34,7 +35,7 @@ function FlashcardSet({ title, cards, lastStudied, progress, id = 1, isFavorite 
         onToggleFavorite(id, newFavoriteStatus)
       }
     } catch (error) {
-      console.error('Error toggling favorite:', error)
+      logger.error('Error toggling favorite:', error)
       // Revert the UI state on error
       setFavorite(favorite)
     }

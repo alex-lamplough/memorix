@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import logger from '../../utils/logger';
 import { useParams, useNavigate } from 'react-router-dom';
 import FlashcardStudy from '../components/FlashcardStudy';
 import { flashcardService } from '../services/api';
@@ -75,7 +76,7 @@ function FlashcardStudyExample() {
         }
         
       } catch (err) {
-        console.error('Error fetching flashcard set:', err);
+        logger.error('Error fetching flashcard set:', { value: err });
         setError(err.message || 'Failed to load flashcard set');
       } finally {
         setIsLoading(false);
@@ -87,7 +88,7 @@ function FlashcardStudyExample() {
   
   // Handle card completion
   const handleCardComplete = (cardId, status) => {
-    console.log(`Card ${cardId} marked as ${status}`);
+    logger.debug(`Card ${cardId} marked as ${status}`);
     
     // Update learned cards
     if (status === 'learned') {
@@ -100,7 +101,7 @@ function FlashcardStudyExample() {
   
   // Handle review later toggle
   const handleReviewLaterToggle = (cardId, isMarkedForReview) => {
-    console.log(`Card ${cardId} ${isMarkedForReview ? 'marked' : 'unmarked'} for review later`);
+    logger.debug(`Card ${cardId} ${isMarkedForReview ? 'marked' : 'unmarked'} for review later`);
     
     // Update review later cards
     setReviewLaterCards(prev => {
@@ -116,12 +117,12 @@ function FlashcardStudyExample() {
   
   // Handle deck completion
   const handleDeckComplete = () => {
-    console.log('Deck completed!');
+    logger.debug('Deck completed!');
   };
   
   // Handle deck reset or review mode change
   const handleDeckReset = () => {
-    console.log('Deck restarted or mode changed');
+    logger.debug('Deck restarted or mode changed');
     // Reset our parent state to match the component's state
     setReviewLaterCards({});
     setLearnedCards({});

@@ -1,4 +1,5 @@
 import sgMail from '@sendgrid/mail';
+import logger from './utils/logger';
 
 /**
  * Email service for sending various types of emails via SendGrid
@@ -19,7 +20,7 @@ class EmailService {
       const apiKey = process.env.SENDGRID_API_KEY;
       
       if (!apiKey) {
-        console.warn('SendGrid API key not found in environment variables. Email sending will fail.');
+        logger.warn('SendGrid API key not found in environment variables. Email sending will fail.');
       } else {
         sgMail.setApiKey(apiKey);
         this.initialized = true;
@@ -38,11 +39,11 @@ class EmailService {
     this.initialize();
 
     try {
-      console.log(`📧 Sending welcome email to ${to}`);
+      logger.debug(`📧 Sending welcome email to ${to}`);
       
       // Skip sending for placeholder emails
       if (to.includes('@memorix-user.com')) {
-        console.log('⚠️ Skipping welcome email for placeholder email address');
+        logger.debug('⚠️ Skipping welcome email for placeholder email address');
         return { skipped: true, reason: 'Placeholder email' };
       }
       
@@ -62,12 +63,12 @@ class EmailService {
 
       // Send the email
       const response = await sgMail.send(msg);
-      console.log(`✅ Welcome email sent successfully to: ${to}`);
+      logger.debug(`✅ Welcome email sent successfully to: ${to}`);
       return response;
     } catch (error) {
-      console.error('❌ Error sending welcome email:', error);
+      logger.error('❌ Error sending welcome email:', error);
       if (error.response) {
-        console.error('SendGrid API error:', error.response.body);
+        logger.error('SendGrid API error:', { value: error.response.body });
       }
       // Fail gracefully in production
       if (process.env.NODE_ENV === 'production') {

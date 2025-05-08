@@ -1,4 +1,5 @@
 import { OpenAI } from 'openai';
+import logger from './utils/logger';
 import { config } from '../config/config.js';
 import { validateFlashcardRequest } from '../utils/validation.js';
 
@@ -7,18 +8,17 @@ let openai;
 try {
   // Check if API key is available
   if (!config.openai.apiKey) {
-    console.error('⚠️ OpenAI API key is not set. Flashcard generation will fail.');
-    console.error('Please set the OPENAI_API_KEY environment variable.');
+    logger.error('⚠️ OpenAI API key is not set. Flashcard generation will fail.');
+    logger.error('Please set the OPENAI_API_KEY environment variable.');
   } else {
-    console.log('🤖 Initializing OpenAI client with API key:', 
-      config.openai.apiKey.substring(0, 3) + '...' + config.openai.apiKey.substring(config.openai.apiKey.length - 3));
+    logger.debug('🤖 Initializing OpenAI client with API key:', { value: config.openai.apiKey.substring(0, 3 }) + '...' + config.openai.apiKey.substring(config.openai.apiKey.length - 3));
   }
   
   openai = new OpenAI({
     apiKey: config.openai.apiKey,
   });
 } catch (error) {
-  console.error('❌ Failed to initialize OpenAI client:', error);
+  logger.error('❌ Failed to initialize OpenAI client:', error);
 }
 
 /**
@@ -30,7 +30,7 @@ export const generateFlashcards = async (req, res) => {
   try {
     // Check if OpenAI client is properly initialized
     if (!openai || !config.openai.apiKey) {
-      console.error('❌ OpenAI client not initialized or API key missing');
+      logger.error('❌ OpenAI client not initialized or API key missing');
       return res.status(500).json({ 
         error: 'OpenAI client not available. Please check server configuration.'
       });
@@ -45,7 +45,7 @@ export const generateFlashcards = async (req, res) => {
     }
     
     console.log(`📝 Generating flashcards for: "${content.substring(0, 30)}..."`);
-    console.log(`🔢 Count: ${count}, Difficulty: ${difficulty}`);
+    logger.debug(`🔢 Count: ${count}, Difficulty: ${difficulty}`);
     
     // Prepare the prompt for OpenAI
     const prompt = `
@@ -61,7 +61,7 @@ Return an array of these objects.
     `.trim();
     
     // Call OpenAI API
-    console.log(`🚀 Calling OpenAI API with model: ${config.openai.model}`);
+    logger.debug(`🚀 Calling OpenAI API with model: ${config.openai.model}`);
     let response;
     try {
       response = await openai.chat.completions.create({
@@ -72,9 +72,9 @@ Return an array of these objects.
         ],
         temperature: config.openai.temperature || 0.7,
       });
-      console.log('✅ OpenAI API response received');
+      logger.debug('✅ OpenAI API response received');
     } catch (apiError) {
-      console.error('❌ OpenAI API error:', apiError);
+      logger.error('❌ OpenAI API error:', apiError);
       // Check for common OpenAI errors
       if (apiError.status === 401) {
         return res.status(500).json({ 
@@ -101,10 +101,10 @@ Return an array of these objects.
     try {
       // Attempt to parse JSON from the response
       flashcards = extractJsonFromResponse(generatedText);
-      console.log(`✅ Successfully parsed ${flashcards.length} flashcards`);
+      logger.debug(`✅ Successfully parsed ${flashcards.length} flashcards`);
     } catch (err) {
-      console.error('❌ Error parsing OpenAI response:', err);
-      console.error('Raw response:', generatedText);
+      logger.error('❌ Error parsing OpenAI response:', { value: err });
+      logger.error('Raw response:', { value: generatedText });
       return res.status(500).json({ 
         error: 'Failed to parse AI response',
         rawResponse: generatedText
@@ -120,7 +120,7 @@ Return an array of these objects.
     });
     
   } catch (error) {
-    console.error('❌ Flashcard generation error:', error);
+    logger.error('❌ Flashcard generation error:', error);
     return res.status(500).json({ 
       error: 'Failed to generate flashcards',
       message: error.message
@@ -137,7 +137,7 @@ export const generateTitle = async (req, res) => {
   try {
     // Check if OpenAI client is properly initialized
     if (!openai || !config.openai.apiKey) {
-      console.error('❌ OpenAI client not initialized or API key missing');
+      logger.error('❌ OpenAI client not initialized or API key missing');
       return res.status(500).json({ 
         error: 'OpenAI client not available. Please check server configuration.'
       });
@@ -178,7 +178,7 @@ Respond with just the title text, no additional formatting or explanation.
     return res.status(200).json({ title });
     
   } catch (error) {
-    console.error('❌ Title generation error:', error);
+    logger.error('❌ Title generation error:', error);
     return res.status(500).json({ 
       error: 'Failed to generate title',
       message: error.message
@@ -198,7 +198,7 @@ function extractJsonFromResponse(text) {
     try {
       return JSON.parse(jsonMatch[0]);
     } catch (err) {
-      console.error('Failed to parse JSON array match:', err);
+      logger.error('Failed to parse JSON array match:', { value: err });
     }
   }
   
@@ -214,7 +214,7 @@ function extractJsonFromResponse(text) {
         return JSON.parse(possibleJson[0]);
       }
     } catch (innerErr) {
-      console.error('Failed all JSON parsing attempts');
+      logger.error('Failed all JSON parsing attempts');
     }
     
     // If all attempts fail, throw an error

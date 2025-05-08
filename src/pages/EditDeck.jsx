@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import logger from '../../utils/logger';
 import { useParams, useNavigate } from 'react-router-dom'
 import { flashcardService } from '../services/api'
 import { handleRequestError } from '../services/utils'
@@ -43,7 +44,7 @@ function EditDeck() {
         setIsLoading(true)
         setError(null)
         
-        console.log(`Fetching flashcard set with ID: ${id}`)
+        logger.debug(`Fetching flashcard set with ID: ${id}`)
         const data = await flashcardService.getFlashcardSet(id)
         
         if (isMountedRef.current) {
@@ -52,7 +53,7 @@ function EditDeck() {
           retryCount.current = 0;
         }
       } catch (err) {
-        console.error('Error fetching flashcard set:', err)
+        logger.error('Error fetching flashcard set:', { value: err })
         
         // Check if it's a cancellation error - pass true to indicate this is a critical request
         if (!handleRequestError(err, 'Flashcard set fetch', true)) {
@@ -145,7 +146,7 @@ function EditDeck() {
       await flashcardService.updateFlashcardSet(id, flashcardSet)
       showSnackbarMessage('Flashcard set saved successfully!', 'success')
     } catch (err) {
-      console.error('Error saving flashcard set:', err)
+      logger.error('Error saving flashcard set:', { value: err })
       showSnackbarMessage('Failed to save changes. Please try again.', 'error')
     } finally {
       setIsSaving(false)

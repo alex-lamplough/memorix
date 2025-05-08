@@ -3,6 +3,7 @@
  */
 
 import mongoose from 'mongoose';
+import logger from './utils/logger';
 
 /**
  * Standard error handler for API responses
@@ -10,7 +11,7 @@ import mongoose from 'mongoose';
  * @param {Error} error - The error that occurred
  */
 export const handleError = (res, error) => {
-  console.error('API Error:', error);
+  logger.error('API Error:', error);
   
   // Mongoose validation error
   if (error instanceof mongoose.Error.ValidationError) {

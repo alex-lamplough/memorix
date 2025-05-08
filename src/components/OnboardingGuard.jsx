@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import logger from '../../utils/logger';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../auth/AuthProvider';
@@ -7,14 +8,14 @@ import apiClient from '../api/apiClient';
 // Query to check onboarding status
 const fetchOnboardingStatus = async () => {
   try {
-    console.log('Fetching onboarding status from API');
+    logger.debug('Fetching onboarding status from API');
     const response = await apiClient.get('/users/me/onboarding');
-    console.log('Onboarding status response:', response.data);
+    logger.debug('Onboarding status response:', { value: response.data });
     return response.data;
   } catch (error) {
     // Check if error is due to backend enforcing onboarding completion
     if (error.response && error.response.status === 403 && error.response.data.requiresOnboarding) {
-      console.error('Backend enforced onboarding required:', error.response.data);
+      logger.error('Backend enforced onboarding required:', { value: error.response.data });
       return { 
         completed: false, 
         requiresOnboarding: true, 
@@ -23,7 +24,7 @@ const fetchOnboardingStatus = async () => {
       };
     }
     
-    console.error('Error fetching onboarding status:', error);
+    logger.error('Error fetching onboarding status:', error);
     // Default to requiring onboarding if there's an error
     return { 
       completed: false, 
@@ -55,7 +56,7 @@ const OnboardingGuard = ({ children }) => {
           error.response.data && 
           error.response.data.requiresOnboarding) {
         
-        console.log('💫 Intercepted API error enforcing onboarding');
+        logger.debug('💫 Intercepted API error enforcing onboarding');
         
         // Invalidate the onboarding status cache to force a recheck
         queryClient.invalidateQueries({ queryKey: ['onboardingStatus'] });
@@ -97,7 +98,7 @@ const OnboardingGuard = ({ children }) => {
   // Force refetch onboarding status when navigating to a new page
   useEffect(() => {
     if (isAuthenticated && !loading && !skipOnboarding) {
-      console.log('Navigation detected, invalidating onboarding status cache');
+      logger.debug('Navigation detected, invalidating onboarding status cache');
       // Invalidate the cache to force a refetch
       queryClient.invalidateQueries({ queryKey: ['onboardingStatus'] });
     }
@@ -111,11 +112,11 @@ const OnboardingGuard = ({ children }) => {
     
     // Log onboarding status for debugging
     if (onboardingStatus) {
-      console.log('Current onboarding status:', onboardingStatus);
+      logger.debug('Current onboarding status:', { value: onboardingStatus });
       
       // If backend enforced onboarding, redirect immediately
       if (onboardingStatus.stage === 'enforced') {
-        console.log('Backend enforced onboarding, redirecting immediately');
+        logger.debug('Backend enforced onboarding, redirecting immediately');
         window.location.href = '/onboarding';
       }
     }
@@ -138,24 +139,24 @@ const OnboardingGuard = ({ children }) => {
 
   // If not authenticated, redirect to login
   if (!isAuthenticated) {
-    console.log('User not authenticated, redirecting to login');
+    logger.debug('User not authenticated, redirecting to login');
     return <Navigate to="/" state={{ from: location }} replace />;
   }
 
   // Handle error fetching onboarding status
   if (statusError) {
-    console.error('Error checking onboarding status, redirecting to onboarding for safety');
+    logger.error('Error checking onboarding status, redirecting to onboarding for safety');
     return <Navigate to="/onboarding" state={{ from: location }} replace />;
   }
 
   // If onboarding is required or status check failed, redirect to onboarding
   if (onboardingStatus?.requiresOnboarding || !onboardingStatus) {
-    console.log('Onboarding required, redirecting to onboarding page');
+    logger.debug('Onboarding required, redirecting to onboarding page');
     return <Navigate to="/onboarding" state={{ from: location }} replace />;
   }
 
   // User is authenticated and has completed onboarding, render children
-  console.log('Onboarding complete, allowing access to protected route');
+  logger.debug('Onboarding complete, allowing access to protected route');
   return children;
 };
 

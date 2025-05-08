@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import logger from '../../../utils/logger';
 import { loadStripe } from '@stripe/stripe-js';
 import subscriptionService from '../../services/subscription-service';
 
@@ -29,7 +30,7 @@ const CheckoutButton = ({ plan, text = 'Subscribe', className = '', couponCode =
       // Redirect to Stripe checkout
       window.location.href = url;
     } catch (err) {
-      console.error('Checkout error:', err);
+      logger.error('Checkout error:', { value: err });
       setError('Failed to start checkout process. Please try again.');
     } finally {
       setIsLoading(false);

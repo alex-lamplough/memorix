@@ -1,4 +1,5 @@
 import axios from 'axios';
+import logger from '../utils/logger';
 
 // Set default base URL for API requests
 const API_URL = import.meta.env.VITE_API_URL || '/api';
@@ -37,12 +38,12 @@ api.interceptors.request.use(
       }
       
       // Log the request for debugging
-      console.log(`API Request: ${config.method.toUpperCase()} ${config.url}`, {
+      logger.debug(`API Request: ${config.method.toUpperCase()} ${config.url}`, {
         headers: config.headers,
         data: config.data
       });
     } catch (error) {
-      console.error('Error getting auth token for request:', error);
+      logger.error('Error getting auth token for request:', error);
     }
     return config;
   },
@@ -52,20 +53,20 @@ api.interceptors.request.use(
 // Add response interceptor to log all responses and handle auth errors
 api.interceptors.response.use(
   (response) => {
-    console.log(`API Response: ${response.status} ${response.config.method.toUpperCase()} ${response.config.url}`, {
+    logger.debug(`API Response: ${response.status} ${response.config.method.toUpperCase()} ${response.config.url}`, {
       data: response.data
     });
     return response;
   },
   async (error) => {
     if (error.response) {
-      console.error(`API Error: ${error.response.status} ${error.config?.method?.toUpperCase()} ${error.config?.url}`, {
+      logger.error(`API Error: ${error.response.status} ${error.config?.method?.toUpperCase()} ${error.config?.url}`, {
         data: error.response.data
       });
       
       // Handle 401 Unauthorized errors (expired token)
       if (error.response.status === 401 && !isRedirectingToLogin) {
-        console.warn('Unauthorized request - token may be expired');
+        logger.warn('Unauthorized request - token may be expired');
         
         // If we're not already handling a token refresh
         if (!isRefreshing) {
@@ -73,11 +74,11 @@ api.interceptors.response.use(
           
           try {
             // Try to get a fresh token
-            console.log('Attempting to refresh token...');
+            logger.info('Attempting to refresh token...');
             const newToken = await getAccessToken();
             
             if (newToken) {
-              console.log('Token refreshed successfully, retrying request');
+              logger.info('Token refreshed successfully, retrying request');
               
               // Retry the original request with the new token
               const config = error.config;
@@ -86,11 +87,11 @@ api.interceptors.response.use(
               isRefreshing = false;
               return axios(config);
             } else {
-              console.error('Failed to refresh token, redirecting to login');
+              logger.error('Failed to refresh token, redirecting to login');
               handleAuthenticationFailure();
             }
           } catch (refreshError) {
-            console.error('Error refreshing token:', refreshError);
+            logger.error('Error refreshing token:', refreshError);
             handleAuthenticationFailure();
           } finally {
             isRefreshing = false;
@@ -98,7 +99,7 @@ api.interceptors.response.use(
         }
       }
     } else {
-      console.error('API request failed:', error.message);
+      logger.error('API request failed:', { message: error.message });
     }
     return Promise.reject(error);
   }
@@ -128,7 +129,7 @@ function handleAuthenticationFailure() {
   
   // Redirect to login after a short delay to allow message to be seen
   setTimeout(() => {
-    console.log('Redirecting to login page due to auth error');
+    logger.info('Redirecting to login page due to auth error');
     window.location.href = '/';
     isRedirectingToLogin = false;
   }, 2000);
@@ -153,7 +154,7 @@ const createCancellableRequest = (endpoint) => {
   // If this is a critical request already in progress, don't cancel it
   // Instead, return the existing controller
   if (isCriticalRequest && tokenMap.has(endpoint)) {
-    console.log(`Reusing existing critical request for: ${endpoint}`);
+    logger.debug(`Reusing existing critical request for: ${endpoint}`);
     const controller = tokenMap.get(endpoint);
     return {
       controller,
@@ -188,10 +189,10 @@ const createCancellableRequest = (endpoint) => {
 export const cancelAllRequests = () => {
   // Only cancel non-critical requests
   if (cancelTokens.size > 0) {
-    console.log(`Cancelling ${cancelTokens.size} pending flashcard API requests`);
+    logger.info(`Cancelling ${cancelTokens.size} pending flashcard API requests`);
     
     cancelTokens.forEach((controller, endpoint) => {
-      console.log(`Cancelling request to: ${endpoint}`);
+      logger.debug(`Cancelling request to: ${endpoint}`);
       controller.abort('Navigation cancelled the request');
     });
     
@@ -201,7 +202,7 @@ export const cancelAllRequests = () => {
   
   // Log information about preserved critical requests
   if (criticalTokens.size > 0) {
-    console.log(`Preserved ${criticalTokens.size} critical flashcard requests`);
+    logger.debug(`Preserved ${criticalTokens.size} critical flashcard requests`);
   }
 };
 
@@ -227,7 +228,7 @@ export const flashcardService = {
       return flashcardSets;
     } catch (error) {
       if (axios.isCancel(error)) {
-        console.log('Request cancelled:', error.message);
+        logger.debug('Request cancelled:', { message: error.message });
       }
       throw error;
     }
@@ -239,7 +240,7 @@ export const flashcardService = {
     
     // For critical requests, check if we already have a pending request
     if (pendingResponses.has(endpoint)) {
-      console.log(`Reusing pending response for: ${endpoint}`);
+      logger.debug(`Reusing pending response for: ${endpoint}`);
       try {
         return await pendingResponses.get(endpoint);
       } catch (error) {
@@ -267,7 +268,7 @@ export const flashcardService = {
         // Make sure to remove failed requests from the cache
         pendingResponses.delete(endpoint);
         if (axios.isCancel(error)) {
-          console.log('Request cancelled:', error.message);
+          logger.debug('Request cancelled:', { message: error.message });
         }
         throw error;
       }
@@ -290,7 +291,7 @@ export const flashcardService = {
       return response.data;
     } catch (error) {
       if (axios.isCancel(error)) {
-        console.log('Request cancelled:', error.message);
+        logger.debug('Request cancelled:', { message: error.message });
       }
       throw error;
     }
@@ -305,7 +306,7 @@ export const flashcardService = {
       return response.data;
     } catch (error) {
       if (axios.isCancel(error)) {
-        console.log('Request cancelled:', error.message);
+        logger.debug('Request cancelled:', { message: error.message });
       }
       throw error;
     }
@@ -320,7 +321,7 @@ export const flashcardService = {
       return response.data;
     } catch (error) {
       if (axios.isCancel(error)) {
-        console.log('Request cancelled:', error.message);
+        logger.debug('Request cancelled:', { message: error.message });
       }
       throw error;
     }
@@ -328,15 +329,15 @@ export const flashcardService = {
   
   // Get all favorite flashcard sets
   getFavorites: async () => {
-    console.log('Requesting flashcard favorites...');
+    logger.info('Requesting flashcard favorites...');
     const { controller, signal, cleanup } = createCancellableRequest('flashcards-favorites');
     try {
-      console.log('Making request to: /flashcards/favorites');
+      logger.debug('Making request to: /flashcards/favorites');
       
       try {
         // First try the standard path
         const response = await api.get('/flashcards/favorites', { signal });
-        console.log('Flashcard favorites response:', response.data);
+        logger.debug('Flashcard favorites response:', { data: response.data });
         cleanup();
         
         // Process the response to include cardCount
@@ -349,10 +350,10 @@ export const flashcardService = {
       } catch (initialError) {
         // If we get a 404, try with an alternative path format
         if (initialError.response && initialError.response.status === 404) {
-          console.log('First attempt failed with 404, trying alternative path...');
+          logger.info('First attempt failed with 404, trying alternative path...');
           // Some backends might expect /api/flashcards/favorites format
           const altResponse = await api.get('/api/flashcards/favorites', { signal });
-          console.log('Alternative path flashcard favorites response:', altResponse.data);
+          logger.debug('Alternative path flashcard favorites response:', { data: altResponse.data });
           
           // Process the response to include cardCount
           const flashcardSets = altResponse.data.map(set => ({
@@ -368,18 +369,20 @@ export const flashcardService = {
       }
     } catch (error) {
       if (axios.isCancel(error)) {
-        console.log('Request cancelled:', error.message);
+        logger.debug('Request cancelled:', { message: error.message });
       } else {
-        console.error('Error fetching flashcard favorites:', error);
+        logger.error('Error fetching flashcard favorites:', error);
         if (error.response) {
-          console.error('Error response data:', error.response.data);
-          console.error('Error response status:', error.response.status);
+          logger.error('Error response details:', {
+            data: error.response.data,
+            status: error.response.status
+          });
         }
       }
       
       // When all else fails, return an empty array rather than throwing
       // This prevents the UI from getting stuck in loading state
-      console.log('Returning empty array for flashcard favorites due to error');
+      logger.info('Returning empty array for flashcard favorites due to error');
       return [];
     } finally {
       cleanup();
@@ -395,7 +398,7 @@ export const flashcardService = {
       return response.data;
     } catch (error) {
       if (axios.isCancel(error)) {
-        console.log('Request cancelled:', error.message);
+        logger.debug('Request cancelled:', { message: error.message });
       }
       throw error;
     }
@@ -407,7 +410,7 @@ export const flashcardService = {
       const response = await api.post('/flashcards/generate', params);
       return response.data;
     } catch (error) {
-      console.error('Error generating flashcards:', error);
+      logger.error('Error generating flashcards:', error);
       throw error;
     }
   },
@@ -418,7 +421,7 @@ export const flashcardService = {
       const response = await api.post(`/flashcards/${id}/study`, sessionData);
       return response.data;
     } catch (error) {
-      console.error(`Error recording study session for set ${id}:`, error);
+      logger.error(`Error recording study session for set ${id}:`, error);
       throw error;
     }
   },
@@ -429,7 +432,7 @@ export const flashcardService = {
       const response = await api.get('/flashcards/public', { params });
       return response.data;
     } catch (error) {
-      console.error('Error fetching public flashcard sets:', error);
+      logger.error('Error fetching public flashcard sets:', error);
       throw error;
     }
   },
@@ -440,7 +443,7 @@ export const flashcardService = {
       const response = await api.get(`/flashcards/${id}/shared`);
       return response.data;
     } catch (error) {
-      console.error(`Error fetching shared flashcard set ${id}:`, error);
+      logger.error(`Error fetching shared flashcard set ${id}:`, error);
       throw error;
     }
   },
@@ -451,7 +454,7 @@ export const flashcardService = {
       const response = await api.post(`/flashcards/${id}/progress`, { progress });
       return response.data;
     } catch (error) {
-      console.error(`Error updating progress for flashcard set ${id}:`, error);
+      logger.error(`Error updating progress for flashcard set ${id}:`, error);
       throw error;
     }
   },
@@ -462,7 +465,7 @@ export const flashcardService = {
       const response = await api.get(`/flashcards/search?q=${encodeURIComponent(query)}`);
       return response.data;
     } catch (error) {
-      console.error(`Error searching flashcards: ${error.message}`);
+      logger.error(`Error searching flashcards: ${error.message}`);
       throw error;
     }
   },
@@ -473,7 +476,7 @@ export const flashcardService = {
       const response = await api.post(`/flashcards/${id}/share`, shareOptions);
       return response.data;
     } catch (error) {
-      console.error(`Error sharing flashcard set ${id}:`, error);
+      logger.error(`Error sharing flashcard set ${id}:`, error);
       throw error;
     }
   },
@@ -484,7 +487,7 @@ export const flashcardService = {
       const response = await api.get('/flashcards/shared');
       return response.data;
     } catch (error) {
-      console.error('Error fetching shared flashcard sets:', error);
+      logger.error('Error fetching shared flashcard sets:', error);
       throw error;
     }
   }
@@ -498,7 +501,7 @@ export const quizService = {
       const response = await api.get('/quizzes');
       return response.data;
     } catch (error) {
-      console.error('Error fetching quizzes:', error);
+      logger.error('Error fetching quizzes:', error);
       throw error;
     }
   },
@@ -509,7 +512,7 @@ export const quizService = {
       const response = await api.get(`/quizzes/${id}`);
       return response.data;
     } catch (error) {
-      console.error(`Error fetching quiz ${id}:`, error);
+      logger.error(`Error fetching quiz ${id}:`, error);
       throw error;
     }
   },
@@ -520,7 +523,7 @@ export const quizService = {
       const response = await api.post('/quizzes', quiz);
       return response.data;
     } catch (error) {
-      console.error('Error creating quiz:', error);
+      logger.error('Error creating quiz:', error);
       throw error;
     }
   },
@@ -531,7 +534,7 @@ export const quizService = {
       const response = await api.put(`/quizzes/${id}`, quiz);
       return response.data;
     } catch (error) {
-      console.error(`Error updating quiz ${id}:`, error);
+      logger.error(`Error updating quiz ${id}:`, error);
       throw error;
     }
   },
@@ -542,7 +545,7 @@ export const quizService = {
       const response = await api.delete(`/quizzes/${id}`);
       return response.data;
     } catch (error) {
-      console.error(`Error deleting quiz ${id}:`, error);
+      logger.error(`Error deleting quiz ${id}:`, error);
       throw error;
     }
   },
@@ -553,7 +556,7 @@ export const quizService = {
       const response = await api.get('/quizzes/public', { params });
       return response.data;
     } catch (error) {
-      console.error('Error fetching public quizzes:', error);
+      logger.error('Error fetching public quizzes:', error);
       throw error;
     }
   }

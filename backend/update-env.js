@@ -6,6 +6,7 @@
  */
 
 import fs from 'fs';
+import logger from './utils/logger';
 import path from 'path';
 import readline from 'readline';
 import { fileURLToPath } from 'url';
@@ -23,21 +24,21 @@ const envFilePath = path.join(__dirname, '.env');
 
 // Read current .env file
 if (!fs.existsSync(envFilePath)) {
-  console.error('❌ .env file not found in backend directory. Please create one first.');
+  logger.error('❌ .env file not found in backend directory. Please create one first.');
   process.exit(1);
 }
 
 const envContent = fs.readFileSync(envFilePath, 'utf8');
 let updatedContent = envContent;
 
-console.log('🔧 Update MongoDB Atlas connection string in .env file');
-console.log('Current content:');
+logger.debug('🔧 Update MongoDB Atlas connection string in .env file');
+logger.debug('Current content:');
 console.log(envContent);
-console.log('\n');
+logger.debug('\n');
 
 rl.question('Enter your MongoDB Atlas connection string: ', (mongoUri) => {
   if (!mongoUri) {
-    console.log('❌ No URI provided. Exiting without changes.');
+    logger.debug('❌ No URI provided. Exiting without changes.');
     rl.close();
     return;
   }
@@ -49,8 +50,8 @@ rl.question('Enter your MongoDB Atlas connection string: ', (mongoUri) => {
   // Write the updated content back to the file
   fs.writeFileSync(envFilePath, updatedContent);
   
-  console.log('✅ .env file updated successfully!');
-  console.log('✅ MongoDB URI has been updated.');
+  logger.debug('✅ .env file updated successfully!');
+  logger.debug('✅ MongoDB URI has been updated.');
   
   rl.close();
 }); 

@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import logger from '../../../utils/logger';
 import apiClient from '../apiClient';
 
 // Query keys for caching
@@ -24,7 +25,7 @@ export const useQuizzes = () => {
         
         return quizzes;
       } catch (error) {
-        console.error('Error fetching quizzes:', error);
+        logger.error('Error fetching quizzes:', error);
         throw error;
       }
     },
@@ -44,7 +45,7 @@ export const useQuiz = (id) => {
         const response = await apiClient.get(`/quizzes/${id}`);
         return response.data;
       } catch (error) {
-        console.error(`Error fetching quiz ${id}:`, error);
+        logger.error(`Error fetching quiz ${id}:`, error);
         throw error;
       }
     },
@@ -65,7 +66,7 @@ export const useCreateQuiz = () => {
         const response = await apiClient.post('/quizzes', quiz);
         return response.data;
       } catch (error) {
-        console.error('Error creating quiz:', error);
+        logger.error('Error creating quiz:', error);
         throw error;
       }
     },
@@ -87,7 +88,7 @@ export const useUpdateQuiz = () => {
         const response = await apiClient.put(`/quizzes/${id}`, quiz);
         return response.data;
       } catch (error) {
-        console.error(`Error updating quiz ${id}:`, error);
+        logger.error(`Error updating quiz ${id}:`, error);
         throw error;
       }
     },
@@ -110,7 +111,7 @@ export const useDeleteQuiz = () => {
         const response = await apiClient.delete(`/quizzes/${id}`);
         return response.data;
       } catch (error) {
-        console.error(`Error deleting quiz ${id}:`, error);
+        logger.error(`Error deleting quiz ${id}:`, error);
         throw error;
       }
     },
@@ -135,7 +136,7 @@ export const useToggleFavorite = () => {
         const response = await apiClient.patch(`/quizzes/${id}/favorite`, { isFavorite });
         return response.data;
       } catch (error) {
-        console.error(`Error toggling favorite status for quiz ${id}:`, error);
+        logger.error(`Error toggling favorite status for quiz ${id}:`, error);
         throw error;
       }
     },
@@ -165,7 +166,7 @@ export const useFavoriteQuizzes = () => {
         return quizzes;
       } catch (error) {
         if (error.response && error.response.status === 404) {
-          console.log('Favorites endpoint not found, trying alternative path...');
+          logger.debug('Favorites endpoint not found, trying alternative path...');
           try {
             // Some backends might expect /api/quizzes/favorites format
             const altResponse = await apiClient.get('/api/quizzes/favorites');
@@ -178,12 +179,12 @@ export const useFavoriteQuizzes = () => {
             
             return quizzes;
           } catch (altError) {
-            console.error('Error fetching from alternative path:', altError);
+            logger.error('Error fetching from alternative path:', altError);
             return [];
           }
         }
         
-        console.error('Error fetching favorite quizzes:', error);
+        logger.error('Error fetching favorite quizzes:', error);
         // Return empty array for better UI experience
         return [];
       }

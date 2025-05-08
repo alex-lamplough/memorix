@@ -1,8 +1,10 @@
+import logger from './utils/logger';
+
 /**
  * Global error handling middleware
  */
 export const errorHandler = (err, req, res, next) => {
-  console.error('Error:', err);
+  logger.error('Error:', { value: err });
 
   // Check if error is an Auth0 error
   if (err.name === 'UnauthorizedError') {

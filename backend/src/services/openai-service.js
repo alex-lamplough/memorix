@@ -1,4 +1,5 @@
 import OpenAI from 'openai';
+import logger from './utils/logger';
 
 // Initialize OpenAI client with API key from environment variable
 const openai = new OpenAI({
@@ -68,7 +69,7 @@ IMPORTANT: Make sure to wrap the array in a JSON object with the "cards" key.`;
     try {
       parsedResponse = JSON.parse(responseText);
     } catch (error) {
-      console.error('Failed to parse JSON response:', error);
+      logger.error('Failed to parse JSON response:', error);
       throw new Error('Invalid JSON response from OpenAI');
     }
     
@@ -108,7 +109,7 @@ IMPORTANT: Make sure to wrap the array in a JSON object with the "cards" key.`;
       reviewHistory: []
     }));
   } catch (error) {
-    console.error('Error generating flashcards:', error);
+    logger.error('Error generating flashcards:', error);
     throw error;
   }
 }
@@ -141,7 +142,7 @@ export async function generateFlashcardSetTitle(content) {
     
     return completion.choices[0].message.content.trim();
   } catch (error) {
-    console.error('Error generating flashcard set title:', error);
+    logger.error('Error generating flashcard set title:', error);
     throw error;
   }
 }

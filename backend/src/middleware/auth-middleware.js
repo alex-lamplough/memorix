@@ -1,4 +1,5 @@
 import { expressjwt } from 'express-jwt';
+import logger from './utils/logger';
 import jwksRsa from 'jwks-rsa';
 import dotenv from 'dotenv';
 import axios from 'axios';
@@ -8,9 +9,9 @@ dotenv.config();
 
 // Custom error handler for expressjwt
 const handleJwtError = (err, req, res, next) => {
-  console.error('❌ JWT validation error:', err.name, err.message);
+  logger.error('❌ JWT validation error:', { value: err.name, err.message });
   if (err.name === 'UnauthorizedError') {
-    console.error('Token details:', err.inner ? err.inner.message : 'No details available');
+    logger.error('Token details:', err.inner ? err.inner.message : 'No details available');
     return res.status(401).json({ 
       error: 'Invalid token',
       message: err.message,
@@ -35,17 +36,17 @@ const jwtCheck = expressjwt({
 
 // Wrapped JWT check with logging
 export const checkJwt = (req, res, next) => {
-  console.log('🔑 JWT validation starting');
-  console.log('🔍 JWT audience:', process.env.AUTH0_AUDIENCE);
-  console.log('🔍 JWT issuer:', `https://${process.env.AUTH0_DOMAIN}/`);
+  logger.debug('🔑 JWT validation starting');
+  logger.debug('🔍 JWT audience:', { value: process.env.AUTH0_AUDIENCE });
+  logger.debug('🔍 JWT issuer:', `https://${process.env.AUTH0_DOMAIN}/`);
   
   // Extract token for logging
   const authHeader = req.headers.authorization || '';
   if (authHeader.startsWith('Bearer ')) {
     const token = authHeader.substring(7);
-    console.log('🔑 Received token:', token.substring(0, 15) + '...' + token.substring(token.length - 5));
+    logger.debug('🔑 Received token:', { value: token.substring(0, 15 }) + '...' + token.substring(token.length - 5));
   } else {
-    console.log('❌ No Bearer token found in Authorization header');
+    logger.debug('❌ No Bearer token found in Authorization header');
   }
   
   // Apply the JWT middleware
@@ -53,7 +54,7 @@ export const checkJwt = (req, res, next) => {
     if (err) {
       return handleJwtError(err, req, res, next);
     }
-    console.log('✅ JWT validation successful');
+    logger.debug('✅ JWT validation successful');
     next();
   });
 };
@@ -74,7 +75,7 @@ export const authenticate = (options = {}) => {
       // Still try to check the token if it exists
       const authHeader = req.headers.authorization || '';
       if (!authHeader.startsWith('Bearer ')) {
-        console.log('ℹ️ No token provided, but authentication is optional');
+        logger.debug('ℹ️ No token provided, but authentication is optional');
         return next();
       }
     }
@@ -84,7 +85,7 @@ export const authenticate = (options = {}) => {
       if (err) {
         // If authentication is optional, proceed even with invalid token
         if (!required) {
-          console.log('⚠️ Invalid token provided, but authentication is optional');
+          logger.debug('⚠️ Invalid token provided, but authentication is optional');
           return next();
         }
         // Otherwise, handle the error
@@ -110,28 +111,28 @@ async function fetchUserProfile(userId, accessToken) {
     );
     return response.data;
   } catch (error) {
-    console.error('Error fetching user profile from Auth0:', error.message);
+    logger.error('Error fetching user profile from Auth0:', { value: error.message });
     return null;
   }
 }
 
 // Extract user information from token
 export const getUserFromToken = (req, res, next) => {
-  console.log('🔒 Auth middleware executing');
+  logger.debug('🔒 Auth middleware executing');
   
   if (!req.auth) {
-    console.error('❌ No auth object in request');
+    logger.error('❌ No auth object in request');
     return next();
   }
 
   // Log auth object for debugging
-  console.log('📝 Auth object from token:', JSON.stringify(req.auth, null, 2));
+  logger.debug('📝 Auth object from token:', { value: JSON.stringify(req.auth, null, 2 }));
 
   // Extract user info from the Auth0 token
   const { sub } = req.auth;
   
   if (!sub) {
-    console.error('❌ No sub claim in token');
+    logger.error('❌ No sub claim in token');
     return next();
   }
   
@@ -146,7 +147,7 @@ export const getUserFromToken = (req, res, next) => {
     // Include other user info as needed
   };
 
-  console.log('✅ Auth0 ID extracted from token:', sub);
+  logger.debug('✅ Auth0 ID extracted from token:', { value: sub });
   
   // NOTE: At this point, req.user.id is null. It should be set by a subsequent middleware
   // that looks up the MongoDB user by auth0Id and sets the correct MongoDB _id
@@ -167,15 +168,15 @@ export const requireCompletedOnboarding = async (req, res, next) => {
     
     // Check if the current path should bypass onboarding check
     if (bypassPaths.some(path => req.path.includes(path))) {
-      console.log(`🔄 Bypassing onboarding check for path: ${req.path}`);
+      logger.debug(`🔄 Bypassing onboarding check for path: ${req.path}`);
       return next();
     }
     
-    console.log(`🔍 Checking onboarding status for route: ${req.path}`);
+    logger.debug(`🔍 Checking onboarding status for route: ${req.path}`);
     
     // Ensure user is authenticated and we have user info
     if (!req.user || !req.user.auth0Id) {
-      console.error('❌ Cannot check onboarding: No authenticated user');
+      logger.error('❌ Cannot check onboarding: No authenticated user');
       return res.status(401).json({ error: 'Authentication required' });
     }
     
@@ -183,7 +184,7 @@ export const requireCompletedOnboarding = async (req, res, next) => {
     const user = await User.findOne({ auth0Id: req.user.auth0Id });
     
     if (!user) {
-      console.error(`❌ User not found for auth0Id: ${req.user.auth0Id}`);
+      logger.error(`❌ User not found for auth0Id: ${req.user.auth0Id}`);
       return res.status(404).json({ error: 'User not found' });
     }
     
@@ -192,10 +193,10 @@ export const requireCompletedOnboarding = async (req, res, next) => {
       user.profile?.profileCompleted === true || 
       user.profile?.onboardingStage === 'completed';
     
-    console.log(`👤 User ${user._id} onboarding status: ${onboardingCompleted ? 'Completed' : 'Incomplete'}`);
+    logger.debug(`👤 User ${user._id} onboarding status: ${onboardingCompleted ? 'Completed' : 'Incomplete'}`);
     
     if (!onboardingCompleted) {
-      console.log(`🚫 Blocking access to ${req.path} - onboarding incomplete`);
+      logger.debug(`🚫 Blocking access to ${req.path} - onboarding incomplete`);
       return res.status(403).json({ 
         error: 'Onboarding required',
         message: 'You must complete onboarding before accessing this resource',
@@ -204,10 +205,10 @@ export const requireCompletedOnboarding = async (req, res, next) => {
       });
     }
     
-    console.log(`✅ Onboarding check passed for ${req.path}`);
+    logger.debug(`✅ Onboarding check passed for ${req.path}`);
     next();
   } catch (error) {
-    console.error('❌ Error in onboarding middleware:', error);
+    logger.error('❌ Error in onboarding middleware:', error);
     next(error);
   }
 }; 

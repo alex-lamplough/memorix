@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import logger from '../../../utils/logger';
 import subscriptionService from '../../services/subscription-service';
 import { useNavigate } from 'react-router-dom';
 
@@ -29,7 +30,7 @@ const ManageSubscriptionButton = ({
       // Redirect to Stripe customer portal
       window.location.href = url;
     } catch (err) {
-      console.error('Portal error:', err);
+      logger.error('Portal error:', { value: err });
       
       // Check if this is a Stripe configuration error
       const errorMessage = err.response?.data?.message || err.message || '';

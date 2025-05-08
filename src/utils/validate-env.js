@@ -3,6 +3,7 @@
  * Checks that all required environment variables are present
  */
 import { isProduction, isDevelopment, getEnvironmentName } from './env-utils';
+import logger from '../../utils/logger';
 
 // List of required environment variables
 const REQUIRED_ENV_VARS = [
@@ -71,25 +72,25 @@ export const validateEnvironment = () => {
 
   // Log any missing required variables
   if (missing.length > 0) {
-    console.error('❌ Missing required environment variables:');
+    logger.error('❌ Missing required environment variables:');
     missing.forEach(varName => {
-      console.error(`   - ${varName}`);
+      logger.error(`   - ${varName}`);
     });
-    console.error('');
-    console.error('Please run "npm run setup" to configure these variables.');
+    logger.error('');
+    logger.error('Please run "npm run setup" to configure these variables.');
   }
 
   // Log any missing recommended variables
   if (warnings.length > 0) {
-    console.warn('⚠️ Missing recommended environment variables:');
+    logger.warn('⚠️ Missing recommended environment variables:');
     warnings.forEach(varName => {
-      console.warn(`   - ${varName}`);
+      logger.warn(`   - ${varName}`);
     });
   }
 
   // If all required variables are present, log success
   if (missing.length === 0) {
-    console.log('✅ Environment validation passed');
+    logger.debug('✅ Environment validation passed');
     return true;
   }
 

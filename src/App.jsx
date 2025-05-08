@@ -1,4 +1,5 @@
 import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom'
+import logger from '../utils/logger';
 import { useState, useEffect, lazy, Suspense, useRef } from 'react'
 
 // Feature icons
@@ -451,7 +452,7 @@ function PricingSection() {
       const symbol = formatter.format(0).replace(/\d/g, '').trim();
       setCurrencySymbol(symbol);
     } catch (error) {
-      console.error('Error setting currency symbol:', error);
+      logger.error('Error setting currency symbol:', error);
       // Default to £ if there's an error
       setCurrencySymbol('£');
     }
@@ -802,7 +803,7 @@ function App() {
         cancelAllTodoRequests();
       }
       
-      console.log('Cancelled all pending requests due to navigation');
+      logger.debug('Cancelled all pending requests due to navigation');
     };
     
     // Cancel requests when the location changes

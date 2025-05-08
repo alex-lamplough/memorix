@@ -1,4 +1,5 @@
 import { useAuth0 } from '@auth0/auth0-react';
+import logger from '../../utils/logger';
 
 /**
  * Custom hook to provide simplified access to Auth0 authentication functions
@@ -50,7 +51,7 @@ export function useAuth() {
       const token = await getAccessTokenSilently();
       return token;
     } catch (error) {
-      console.error('Error getting access token', error);
+      logger.error('Error getting access token', error);
       return null;
     }
   };

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import logger from '../../utils/logger';
 import { Auth0Provider, useAuth0 } from '@auth0/auth0-react';
 import { auth0Config } from './auth0-config';
 
@@ -29,7 +30,7 @@ const UserSync = ({ children }) => {
   // Log Auth0 errors
   useEffect(() => {
     if (error) {
-      console.error('Auth0 Error:', error);
+      logger.error('Auth0 Error:', error);
     }
   }, [error]);
   
@@ -39,7 +40,7 @@ const UserSync = ({ children }) => {
       if (isAuthenticated && user) {
         try {
           setSyncStatus({ status: 'syncing', error: null });
-          console.log('🔄 Syncing user with database:', user.sub);
+          logger.debug('🔄 Syncing user with database:', { value: user.sub });
           
           // Get the access token to make authenticated API requests
           const token = await getAccessTokenSilently();
@@ -56,24 +57,24 @@ const UserSync = ({ children }) => {
           
           if (response.ok) {
             const userData = await response.json();
-            console.log('✅ User synchronized with database:', userData._id);
+            logger.debug('✅ User synchronized with database:', { value: userData._id });
             setSyncStatus({ status: 'synced', error: null });
             
             // Check if user profile needs update
             if (userData.needsProfileUpdate) {
-              console.log('⚠️ User profile needs update. Please complete your profile.');
+              logger.debug('⚠️ User profile needs update. Please complete your profile.');
               // Here you could redirect to a profile completion page if needed
             }
           } else {
             const errorData = await response.json().catch(() => ({}));
-            console.error('❌ Failed to sync user with database:', response.status, errorData);
+            logger.error('❌ Failed to sync user with database:', { value: response.status, errorData });
             setSyncStatus({ 
               status: 'error', 
               error: `API Error: ${response.status} ${errorData.error || 'Unknown error'}` 
             });
           }
         } catch (error) {
-          console.error('❌ Error syncing user with database:', error);
+          logger.error('❌ Error syncing user with database:', error);
           setSyncStatus({ 
             status: 'error', 
             error: error.message || 'Unknown error syncing user' 
@@ -97,14 +98,14 @@ const AuthProvider = ({ children }) => {
   const { domain, clientId, authorizationParams, useRefreshTokens, cacheLocation } = auth0Config;
   
   // Log Auth0 configuration for debugging
-  console.log('🔐 Auth0Provider Configuration:');
-  console.log('  Domain:', domain);
-  console.log('  Client ID:', clientId.substring(0, 5) + '...');
-  console.log('  Redirect URI:', window.location.origin);
-  console.log('  Auth Params:', JSON.stringify(authorizationParams));
+  logger.debug('🔐 Auth0Provider Configuration:');
+  logger.debug('  Domain:', { value: domain });
+  logger.debug('  Client ID:', { value: clientId.substring(0, 5 }) + '...');
+  logger.debug('  Redirect URI:', { value: window.location.origin });
+  logger.debug('  Auth Params:', { value: JSON.stringify(authorizationParams }));
   
   const onRedirectCallback = (appState) => {
-    console.log('🔄 Auth0 redirect callback triggered', appState);
+    logger.debug('🔄 Auth0 redirect callback triggered', { value: appState });
     
     // Check if the user is newly registered (needs onboarding)
     // We'll determine this by seeing if they have just been created
@@ -112,7 +113,7 @@ const AuthProvider = ({ children }) => {
     const isNewUser = localStorage.getItem('isNewRegistration') === 'true';
     
     if (isNewUser) {
-      console.log('🆕 New user detected, redirecting to onboarding');
+      logger.debug('🆕 New user detected, redirecting to onboarding');
       localStorage.removeItem('isNewRegistration');
       
       // After authentication, redirect to the onboarding page

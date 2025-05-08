@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import logger from '../../utils/logger';
 import { useParams, useNavigate } from 'react-router-dom'
 import { flashcardService } from '../services/api'
 import { handleRequestError } from '../services/utils'
@@ -58,7 +59,7 @@ function StudyDeck() {
         setIsLoading(true)
         setError(null)
         
-        console.log(`Fetching flashcard set with ID: ${id}`)
+        logger.debug(`Fetching flashcard set with ID: ${id}`)
         const data = await flashcardService.getFlashcardSet(id)
         
         if (isMountedRef.current) {
@@ -116,7 +117,7 @@ function StudyDeck() {
           retryCount.current = 0;
         }
       } catch (err) {
-        console.error('Error fetching flashcard set:', err)
+        logger.error('Error fetching flashcard set:', { value: err })
         
         // Check if it's a cancellation error - pass true to indicate this is a critical request
         if (!handleRequestError(err, 'Flashcard set fetch', true)) {
@@ -154,7 +155,7 @@ function StudyDeck() {
       const studyDuration = Math.floor((Date.now() - studyStartTime) / 1000) // in seconds
       
       if (studyDuration > 10) { // Only record if studied for more than 10 seconds
-        console.log(`Recording study session: ${studyDuration} seconds`)
+        logger.debug(`Recording study session: ${studyDuration} seconds`)
         recordStudySession(studyDuration)
       }
     }
@@ -239,7 +240,7 @@ function StudyDeck() {
   
   // Handle deck navigation events
   const handleDeckEvent = (event) => {
-    console.log('StudyDeck received deck event:', event);
+    logger.debug('StudyDeck received deck event:', { value: event });
     
     switch (event.type) {
       case 'deck_completed':
@@ -249,7 +250,7 @@ function StudyDeck() {
         recordSessionOnExit();
         break;
       case 'deck_restarted':
-        console.log('Restarting deck in StudyDeck component');
+        logger.debug('Restarting deck in StudyDeck component');
         // Always reset the timer when deck is restarted, not just if it was completed
         setStudyStartTime(Date.now());
         setElapsedTime(0);
@@ -287,9 +288,9 @@ function StudyDeck() {
         learnedCards: Object.keys(learnedCards)
       });
       
-      console.log('Study session recorded successfully', response);
+      logger.debug('Study session recorded successfully', { value: response });
     } catch (err) {
-      console.error('Error recording study session:', err);
+      logger.error('Error recording study session:', { value: err });
     }
   }
   

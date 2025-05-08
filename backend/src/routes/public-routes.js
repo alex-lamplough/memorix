@@ -1,4 +1,5 @@
 import express from 'express';
+import logger from './utils/logger';
 import mongoose from 'mongoose';
 import FlashcardSet from '../models/flashcard-set-model.js';
 import Quiz from '../models/quiz-model.js';
@@ -50,7 +51,7 @@ router.get('/flashcards', async (req, res, next) => {
     
     res.json(formattedSets);
   } catch (error) {
-    console.error('Error fetching public flashcards:', error);
+    logger.error('Error fetching public flashcards:', error);
     next(error);
   }
 });
@@ -100,7 +101,7 @@ router.get('/quizzes', async (req, res, next) => {
     
     res.json(formattedQuizzes);
   } catch (error) {
-    console.error('Error fetching public quizzes:', error);
+    logger.error('Error fetching public quizzes:', error);
     next(error);
   }
 });
@@ -132,7 +133,7 @@ router.get('/flashcards/:id', async (req, res, next) => {
     
     res.json(flashcardSet);
   } catch (error) {
-    console.error('Error getting public flashcard set:', error);
+    logger.error('Error getting public flashcard set:', error);
     next(error);
   }
 });
@@ -164,7 +165,7 @@ router.get('/quizzes/:id', async (req, res, next) => {
     
     res.json(quiz);
   } catch (error) {
-    console.error('Error getting public quiz:', error);
+    logger.error('Error getting public quiz:', error);
     next(error);
   }
 });

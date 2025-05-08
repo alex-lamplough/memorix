@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import logger from '../../utils/logger';
 import CloseIcon from '@mui/icons-material/Close';
 import axios from 'axios';
 
@@ -121,7 +122,7 @@ const PartnershipModal = ({ isOpen, onClose }) => {
     try {
       const response = await axios.post(`${API_URL}/partnerships`, formData);
       
-      console.log('Partnership request submitted:', response.data);
+      logger.debug('Partnership request submitted:', { value: response.data });
       setSubmitSuccess(true);
       
       // Reset form after short delay
@@ -132,7 +133,7 @@ const PartnershipModal = ({ isOpen, onClose }) => {
       }, 3000);
       
     } catch (error) {
-      console.error('Error submitting partnership request:', error);
+      logger.error('Error submitting partnership request:', error);
       setSubmitError(
         error.response?.data?.message || 
         'Failed to submit your request. Please try again later.'

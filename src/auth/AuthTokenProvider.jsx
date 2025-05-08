@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
+import logger from '../../utils/logger';
 import { useAuth0 } from '@auth0/auth0-react';
 import { setAuthTokenGetter as setOldAuthTokenGetter } from '../services/api';
 import { setAuthTokenGetter, refreshAuthToken } from '../api/apiClient';
@@ -38,17 +39,17 @@ const AuthTokenProvider = ({ children }) => {
       if (error.error === 'login_required' || 
           error.error === 'consent_required' || 
           error.error === 'interaction_required') {
-        console.error('Session expired or login required:', error.error);
+        logger.error('Session expired or login required:', { value: error.error });
         
         // If we've had multiple failures, attempt logout
         if (tokenErrorCount > 2) {
-          console.warn('Multiple token failures detected, logging out');
+          logger.warn('Multiple token failures detected, logging out');
           setTimeout(() => {
             logout({ returnTo: window.location.origin });
           }, 500);
         }
       } else {
-        console.error('Error in AuthTokenProvider getting token:', error);
+        logger.error('Error in AuthTokenProvider getting token:', error);
       }
       return null;
     }
@@ -61,7 +62,7 @@ const AuthTokenProvider = ({ children }) => {
     setOldAuthTokenGetter(tokenGetter); // For backward compatibility
     
     // Log that the token provider is initialized
-    console.log('🔐 Auth token provider initialized');
+    logger.debug('🔐 Auth token provider initialized');
     
     // Force refresh token immediately if authenticated
     if (isAuthenticated) {
@@ -73,14 +74,14 @@ const AuthTokenProvider = ({ children }) => {
   useEffect(() => {
     const checkInterval = setInterval(() => {
       if (isAuthenticated) {
-        console.log('Performing periodic token check');
+        logger.debug('Performing periodic token check');
         refreshAuthToken()
-          .then(() => console.log('Token check successful'))
+          .then(() => logger.debug('Token check successful'))
           .catch(error => {
-            console.warn('Token check failed:', error);
+            logger.warn('Token check failed:', error);
             // Reset UI state if token is expired
             if (error?.error === 'login_required') {
-              console.error('Session expired during token check');
+              logger.error('Session expired during token check');
               
               // Show a warning to the user
               const message = document.createElement('div');

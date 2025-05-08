@@ -1,4 +1,5 @@
 import Todo from '../models/todo-model.js';
+import logger from './utils/logger';
 import { handleError } from '../utils/error-handlers.js';
 
 // Create a new todo item
@@ -27,18 +28,18 @@ export const getTodos = async (req, res) => {
     const userId = req.user.id || req.user.auth0Id;
     const { status, priority, sort, limit = 50, skip = 0 } = req.query;
     
-    console.log('Get todos request:', { userId, query: req.query });
+    logger.debug('Get todos request:', { { userId, query: req.query } });
     
     // Build filter object
     const filter = { userId };
     
     // Add optional filters if provided
     if (status) {
-      console.log('Status filter provided:', status);
+      logger.debug('Status filter provided:', { value: status });
       // Check if status contains multiple values
       if (status.includes(',')) {
         const statusValues = status.split(',').map(s => s.trim());
-        console.log('Multiple status values:', statusValues);
+        logger.debug('Multiple status values:', { value: statusValues });
         filter.status = { $in: statusValues };
       } else {
         filter.status = status;
@@ -46,7 +47,7 @@ export const getTodos = async (req, res) => {
     }
     if (priority) filter.priority = priority;
     
-    console.log('Final filter:', filter);
+    logger.debug('Final filter:', { value: filter });
     
     // Build sort object
     let sortObj = {};
@@ -61,7 +62,7 @@ export const getTodos = async (req, res) => {
       sortObj = { isCompleted: 1, dueDate: 1, priority: -1 };
     }
     
-    console.log('Sort object:', sortObj);
+    logger.debug('Sort object:', { value: sortObj });
     
     // Get todos with pagination
     const todos = await Todo.find(filter)
@@ -70,7 +71,7 @@ export const getTodos = async (req, res) => {
       .limit(parseInt(limit))
       .exec();
     
-    console.log(`Found ${todos.length} todos with filter`);
+    logger.debug(`Found ${todos.length} todos with filter`);
     
     // Get total count for pagination
     const totalCount = await Todo.countDocuments(filter);
@@ -84,7 +85,7 @@ export const getTodos = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error in getTodos:', error);
+    logger.error('Error in getTodos:', error);
     handleError(res, error);
   }
 };

@@ -1,4 +1,5 @@
 import api from './api';
+import logger from '../../utils/logger';
 import axios from 'axios';
 
 // Keep track of ongoing requests so they can be cancelled when navigating away
@@ -22,7 +23,7 @@ const createCancellableRequest = (endpoint) => {
   // If this is a critical request already in progress, don't cancel it
   // Instead, return the existing controller
   if (isCriticalRequest && tokenMap.has(endpoint)) {
-    console.log(`Reusing existing critical request for: ${endpoint}`);
+    logger.debug(`Reusing existing critical request for: ${endpoint}`);
     const controller = tokenMap.get(endpoint);
     return {
       controller,
@@ -57,10 +58,10 @@ const createCancellableRequest = (endpoint) => {
 export const cancelAllRequests = () => {
   // Only cancel non-critical requests
   if (cancelTokens.size > 0) {
-    console.log(`Cancelling ${cancelTokens.size} pending quiz API requests`);
+    logger.debug(`Cancelling ${cancelTokens.size} pending quiz API requests`);
     
     cancelTokens.forEach((controller, endpoint) => {
-      console.log(`Cancelling request to: ${endpoint}`);
+      logger.debug(`Cancelling request to: ${endpoint}`);
       controller.abort('Navigation cancelled the request');
     });
     
@@ -70,7 +71,7 @@ export const cancelAllRequests = () => {
   
   // Log information about preserved critical requests
   if (criticalTokens.size > 0) {
-    console.log(`Preserved ${criticalTokens.size} critical quiz requests`);
+    logger.debug(`Preserved ${criticalTokens.size} critical quiz requests`);
   }
 };
 
@@ -87,9 +88,9 @@ export const quizService = {
       return response.data;
     } catch (error) {
       if (axios.isCancel(error)) {
-        console.log('Request cancelled:', error.message);
+        logger.debug('Request cancelled:', { value: error.message });
       } else {
-        console.error('Error fetching quizzes:', error);
+        logger.error('Error fetching quizzes:', error);
       }
       throw error;
     }
@@ -101,7 +102,7 @@ export const quizService = {
     
     // For critical requests, check if we already have a pending request
     if (pendingResponses.has(endpoint)) {
-      console.log(`Reusing pending response for: ${endpoint}`);
+      logger.debug(`Reusing pending response for: ${endpoint}`);
       try {
         return await pendingResponses.get(endpoint);
       } catch (error) {
@@ -129,9 +130,9 @@ export const quizService = {
         // Make sure to remove failed requests from the cache
         pendingResponses.delete(endpoint);
         if (axios.isCancel(error)) {
-          console.log('Request cancelled:', error.message);
+          logger.debug('Request cancelled:', { value: error.message });
         } else {
-          console.error(`Error fetching quiz ${id}:`, error);
+          logger.error(`Error fetching quiz ${id}:`, error);
         }
         throw error;
       }
@@ -154,9 +155,9 @@ export const quizService = {
       return response.data;
     } catch (error) {
       if (axios.isCancel(error)) {
-        console.log('Request cancelled:', error.message);
+        logger.debug('Request cancelled:', { value: error.message });
       } else {
-        console.error('Error creating quiz:', error);
+        logger.error('Error creating quiz:', error);
       }
       throw error;
     }
@@ -171,9 +172,9 @@ export const quizService = {
       return response.data;
     } catch (error) {
       if (axios.isCancel(error)) {
-        console.log('Request cancelled:', error.message);
+        logger.debug('Request cancelled:', { value: error.message });
       } else {
-        console.error(`Error updating quiz ${id}:`, error);
+        logger.error(`Error updating quiz ${id}:`, error);
       }
       throw error;
     }
@@ -188,9 +189,9 @@ export const quizService = {
       return response.data;
     } catch (error) {
       if (axios.isCancel(error)) {
-        console.log('Request cancelled:', error.message);
+        logger.debug('Request cancelled:', { value: error.message });
       } else {
-        console.error(`Error toggling favorite status for quiz ${id}:`, error);
+        logger.error(`Error toggling favorite status for quiz ${id}:`, error);
       }
       throw error;
     }
@@ -198,27 +199,27 @@ export const quizService = {
   
   // Get all favorite quizzes
   getFavorites: async () => {
-    console.log('Requesting quiz favorites...');
+    logger.debug('Requesting quiz favorites...');
     const { controller, signal, cleanup } = createCancellableRequest('quizzes-favorites');
     try {
-      console.log('Making request to: /quizzes/favorites');
+      logger.debug('Making request to: /quizzes/favorites');
       
       try {
         // First try the standard path
         const response = await api.get('/quizzes/favorites', { signal });
-        console.log('Quiz favorites response:', response.data);
+        logger.debug('Quiz favorites response:', { value: response.data });
         cleanup();
         return response.data;
       } catch (initialError) {
         // If we get a 404, try with an alternative path format
         if (initialError.response && initialError.response.status === 404) {
-          console.log('First attempt failed with 404, trying alternative path...');
+          logger.debug('First attempt failed with 404, trying alternative path...');
           // Use the original path without duplicating /api/
           const altResponse = await api.get('/quizzes/favorites', { 
             signal,
             baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5001/api'
           });
-          console.log('Alternative path quiz favorites response:', altResponse.data);
+          logger.debug('Alternative path quiz favorites response:', { value: altResponse.data });
           return altResponse.data;
         }
         
@@ -227,18 +228,18 @@ export const quizService = {
       }
     } catch (error) {
       if (axios.isCancel(error)) {
-        console.log('Request cancelled:', error.message);
+        logger.debug('Request cancelled:', { value: error.message });
       } else {
-        console.error('Error fetching favorite quizzes:', error);
+        logger.error('Error fetching favorite quizzes:', error);
         if (error.response) {
-          console.error('Error response data:', error.response.data);
-          console.error('Error response status:', error.response.status);
+          logger.error('Error response data:', { value: error.response.data });
+          logger.error('Error response status:', { value: error.response.status });
         }
       }
       
       // When all else fails, return an empty array rather than throwing
       // This prevents the UI from getting stuck in loading state
-      console.log('Returning empty array for quiz favorites due to error');
+      logger.debug('Returning empty array for quiz favorites due to error');
       return [];
     } finally {
       cleanup();
@@ -249,19 +250,19 @@ export const quizService = {
   deleteQuiz: async (id) => {
     const { controller, signal, cleanup } = createCancellableRequest(`quizzes-delete-${id}`);
     try {
-      console.log(`Attempting to delete quiz with ID: ${id}`);
+      logger.debug(`Attempting to delete quiz with ID: ${id}`);
       const response = await api.delete(`/quizzes/${id}`, { signal });
       cleanup();
-      console.log(`Delete quiz response:`, response.data);
+      logger.debug(`Delete quiz response:`, { value: response.data });
       return response.data;
     } catch (error) {
       if (axios.isCancel(error)) {
-        console.log('Request cancelled:', error.message);
+        logger.debug('Request cancelled:', { value: error.message });
       } else {
-        console.error(`Error deleting quiz ${id}:`, error);
+        logger.error(`Error deleting quiz ${id}:`, error);
         if (error.response) {
-          console.error('Error response data:', error.response.data);
-          console.error('Error response status:', error.response.status);
+          logger.error('Error response data:', { value: error.response.data });
+          logger.error('Error response status:', { value: error.response.status });
         }
       }
       throw error;
@@ -277,9 +278,9 @@ export const quizService = {
       return response.data;
     } catch (error) {
       if (axios.isCancel(error)) {
-        console.log('Request cancelled:', error.message);
+        logger.debug('Request cancelled:', { value: error.message });
       } else {
-        console.error('Error fetching public quizzes:', error);
+        logger.error('Error fetching public quizzes:', error);
       }
       throw error;
     }

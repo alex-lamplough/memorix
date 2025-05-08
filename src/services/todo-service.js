@@ -1,4 +1,5 @@
 import api from './api';
+import logger from '../../utils/logger';
 
 // Track active todos API requests
 let activeRequests = [];
@@ -6,11 +7,11 @@ let activeRequests = [];
 // Cancel all pending requests
 const cancelAllRequests = () => {
   const count = activeRequests.length;
-  console.log(`Cancelling ${count} pending todo API requests`);
+  logger.debug(`Cancelling ${count} pending todo API requests`);
   
   activeRequests.forEach(controller => {
     controller.abort();
-    console.log('Cancelling request to: todos');
+    logger.debug('Cancelling request to: todos');
   });
   
   // Clear the array
@@ -38,7 +39,7 @@ export const todoService = {
       });
       
       const query = queryParams.toString() ? `?${queryParams.toString()}` : '';
-      console.log('Todo service - fetching with query:', query);
+      logger.debug('Todo service - fetching with query:', { value: query });
       
       const response = await api.get(`/todos${query}`, {
         signal: controller.signal
@@ -47,12 +48,12 @@ export const todoService = {
       // Remove this controller from active requests
       activeRequests = activeRequests.filter(req => req !== controller);
       
-      console.log('Todo service - response data:', response.data);
+      logger.debug('Todo service - response data:', { value: response.data });
       return response.data;
     } catch (error) {
       // Don't log cancellation errors as they're expected
       if (error.name !== 'CanceledError' && error.name !== 'AbortError') {
-        console.error('Error fetching todos:', error);
+        logger.error('Error fetching todos:', error);
       }
       throw error;
     }
@@ -64,7 +65,7 @@ export const todoService = {
       const response = await api.get(`/todos/${id}`);
       return response.data;
     } catch (error) {
-      console.error(`Error fetching todo ${id}:`, error);
+      logger.error(`Error fetching todo ${id}:`, error);
       throw error;
     }
   },
@@ -75,7 +76,7 @@ export const todoService = {
       const response = await api.post('/todos', todoData);
       return response.data;
     } catch (error) {
-      console.error('Error creating todo:', error);
+      logger.error('Error creating todo:', error);
       throw error;
     }
   },
@@ -86,7 +87,7 @@ export const todoService = {
       const response = await api.put(`/todos/${id}`, todoData);
       return response.data;
     } catch (error) {
-      console.error(`Error updating todo ${id}:`, error);
+      logger.error(`Error updating todo ${id}:`, error);
       throw error;
     }
   },
@@ -97,7 +98,7 @@ export const todoService = {
       const response = await api.patch(`/todos/${id}/toggle`);
       return response.data;
     } catch (error) {
-      console.error(`Error toggling todo ${id}:`, error);
+      logger.error(`Error toggling todo ${id}:`, error);
       throw error;
     }
   },
@@ -108,7 +109,7 @@ export const todoService = {
       const response = await api.delete(`/todos/${id}`);
       return response.data;
     } catch (error) {
-      console.error(`Error deleting todo ${id}:`, error);
+      logger.error(`Error deleting todo ${id}:`, error);
       throw error;
     }
   },
@@ -119,7 +120,7 @@ export const todoService = {
       const response = await api.delete('/todos/completed');
       return response.data;
     } catch (error) {
-      console.error('Error deleting completed todos:', error);
+      logger.error('Error deleting completed todos:', error);
       throw error;
     }
   },
@@ -130,7 +131,7 @@ export const todoService = {
       const response = await api.get('/todos/stats');
       return response.data;
     } catch (error) {
-      console.error('Error fetching todo stats:', error);
+      logger.error('Error fetching todo stats:', error);
       throw error;
     }
   }

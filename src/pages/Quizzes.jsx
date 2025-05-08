@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import logger from '../../utils/logger';
 import { useMediaQuery } from '@mui/material'
 import { Menu as MenuIcon } from '@mui/icons-material'
 
@@ -52,7 +53,7 @@ function QuizCard({ title, description, questionCount, difficulty, time, tags, i
         onToggleFavorite(id, newFavoriteStatus)
       }
     } catch (error) {
-      console.error('Error toggling favorite:', error)
+      logger.error('Error toggling favorite:', error)
       // Revert the UI state on error
       setFavorite(favorite)
     }
@@ -69,7 +70,7 @@ function QuizCard({ title, description, questionCount, difficulty, time, tags, i
       
       setIsDeleting(false)
     } catch (error) {
-      console.error('Error deleting quiz:', error)
+      logger.error('Error deleting quiz:', error)
       setIsDeleting(false)
     }
     setShowDeleteConfirm(false)

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
+import logger from '../../utils/logger';
 import { Link, useNavigate } from 'react-router-dom'
 import { useMediaQuery } from '@mui/material'
 import { Menu as MenuIcon } from '@mui/icons-material'
@@ -59,7 +60,7 @@ function FlashcardCard({ title, cards, lastStudied, progress, id, onDelete }) {
     try {
       await onDelete(id);
     } catch (error) {
-      console.error('Error deleting flashcard set:', error);
+      logger.error('Error deleting flashcard set:', error);
       alert('Failed to delete flashcard set. Please try again.');
     } finally {
       setShowDeleteConfirm(false);
@@ -295,7 +296,7 @@ function RecentActivity({ flashcardSets, quizSets }) {
         setIsLoading(false);
       }
     } catch (error) {
-      console.error('Error processing activity data:', error);
+      logger.error('Error processing activity data:', error);
       if (isMountedRef.current) {
         setIsLoading(false);
       }

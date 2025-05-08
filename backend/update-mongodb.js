@@ -1,4 +1,5 @@
 import fs from 'fs';
+import logger from './utils/logger';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import readline from 'readline';
@@ -22,7 +23,7 @@ const updateEnvFile = (mongoUri) => {
       envContent = fs.readFileSync(envPath, 'utf8');
     }
   } catch (err) {
-    console.error('Error reading .env file:', err);
+    logger.error('Error reading .env file:', { value: err });
   }
 
   // Parse existing content into key-value pairs
@@ -51,20 +52,20 @@ const updateEnvFile = (mongoUri) => {
 
   // Write to .env file
   fs.writeFileSync(envPath, newEnvContent);
-  console.log('✅ .env file updated successfully with MongoDB URI');
+  logger.debug('✅ .env file updated successfully with MongoDB URI');
 };
 
-console.log('📋 This utility will update your MongoDB connection string in the .env file.');
-console.log('🔗 Please enter your Railway MongoDB connection string:');
+logger.debug('📋 This utility will update your MongoDB connection string in the .env file.');
+logger.debug('🔗 Please enter your Railway MongoDB connection string:');
 
 rl.question('MongoDB URI: ', (mongoUri) => {
   if (!mongoUri) {
-    console.log('❌ No MongoDB URI provided. Exiting without changes.');
+    logger.debug('❌ No MongoDB URI provided. Exiting without changes.');
     rl.close();
     return;
   }
   
   updateEnvFile(mongoUri);
-  console.log('🚀 Your MongoDB connection is set up! Run "npm run dev" to start the server.');
+  logger.debug('🚀 Your MongoDB connection is set up! Run "npm run dev" to start the server.');
   rl.close();
 }); 

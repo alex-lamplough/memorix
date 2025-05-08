@@ -1,4 +1,5 @@
 import express from 'express';
+import logger from './utils/logger';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
@@ -58,30 +59,30 @@ app.use(morgan('combined'));
 
 // Set up webhook routes
 app.post('/webhook', (req, res) => {
-  console.log('Webhook received at /webhook');
+  logger.debug('Webhook received at /webhook');
   return handleStripeWebhook(req, res);
 });
 
 app.post('/api/webhook', (req, res) => {
-  console.log('Webhook received at /api/webhook');
+  logger.debug('Webhook received at /api/webhook');
   return handleStripeWebhook(req, res);
 });
 
 app.post('/api/stripe/webhook', (req, res) => {
-  console.log('Webhook received at /api/stripe/webhook');
+  logger.debug('Webhook received at /api/stripe/webhook');
   return handleStripeWebhook(req, res);
 });
 
 app.post('/api/subscriptions/webhook', (req, res) => {
-  console.log('Webhook received at /api/subscriptions/webhook');
+  logger.debug('Webhook received at /api/subscriptions/webhook');
   return handleStripeWebhook(req, res);
 });
 
 // Debug webhook route
 app.post('/api/stripe/debug-webhook', (req, res) => {
-  console.log('Debug webhook received');
-  console.log('Headers:', JSON.stringify(req.headers, null, 2));
-  console.log('Body:', typeof req.body, req.body instanceof Buffer ? 'Is Buffer' : 'Not Buffer');
+  logger.debug('Debug webhook received');
+  logger.debug('Headers:', { value: JSON.stringify(req.headers, null, 2 }));
+  logger.debug('Body:', typeof req.body, req.body instanceof Buffer ? 'Is Buffer' : 'Not Buffer');
   return res.status(200).json({ received: true, debug: true });
 });
 
@@ -121,26 +122,26 @@ const setupServer = () => {
   const PORT = process.env.PORT || 5001;
   
   const server = app.listen(PORT, () => {
-    console.log(`🚀 Server running on port ${PORT}`);
-    console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`🔒 CORS allowed origins:`, config.server.corsOrigin);
-    console.log(`✅ Stripe webhook endpoints configured at:`);
-    console.log(`   - /webhook`);
-    console.log(`   - /api/webhook`);
-    console.log(`   - /api/stripe/webhook`);
-    console.log(`   - /api/subscriptions/webhook`);
-    console.log(`   - Webhook secret: ${config.stripe.webhookSecret ? 'configured' : 'missing'}`);
+    logger.debug(`🚀 Server running on port ${PORT}`);
+    logger.debug(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
+    logger.debug(`🔒 CORS allowed origins:`, { value: config.server.corsOrigin });
+    logger.debug(`✅ Stripe webhook endpoints configured at:`);
+    logger.debug(`   - /webhook`);
+    logger.debug(`   - /api/webhook`);
+    logger.debug(`   - /api/stripe/webhook`);
+    logger.debug(`   - /api/subscriptions/webhook`);
+    logger.debug(`   - Webhook secret: ${config.stripe.webhookSecret ? 'configured' : 'missing'}`);
   }).on('error', (err) => {
     if (err.code === 'EADDRINUSE') {
-      console.log(`⚠️ Port ${PORT} is already in use, trying port ${PORT + 1}...`);
+      logger.debug(`⚠️ Port ${PORT} is already in use, trying port ${PORT + 1}...`);
       // Try another port
       app.listen(PORT + 1, () => {
-        console.log(`🚀 Server running on port ${PORT + 1}`);
-        console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
-        console.log(`🔒 CORS allowed origins:`, config.server.corsOrigin);
+        logger.debug(`🚀 Server running on port ${PORT + 1}`);
+        logger.debug(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
+        logger.debug(`🔒 CORS allowed origins:`, { value: config.server.corsOrigin });
       });
     } else {
-      console.error('Server error:', err);
+      logger.error('Server error:', { value: err });
     }
   });
 };
@@ -151,6 +152,6 @@ connectToMongoDB()
     setupServer();
   })
   .catch((err) => {
-    console.error('Failed to connect to MongoDB', err);
+    logger.error('Failed to connect to MongoDB', { value: err });
     process.exit(1);
   }); 

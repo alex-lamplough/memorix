@@ -3,14 +3,15 @@
  */
 
 import dotenv from 'dotenv';
+import logger from './utils/logger';
 dotenv.config();
 
 // Log environment detection
-console.log('Loading configuration:');
-console.log(`- Environment: ${process.env.NODE_ENV || 'development'}`);
-console.log(`- STRIPE_SECRET_KEY available: ${!!process.env.STRIPE_SECRET_KEY}`);
-console.log(`- STRIPE_PRO_PLAN available: ${!!process.env.STRIPE_PRO_PLAN}`);
-console.log(`- STRIPE_CREATOR_PLAN available: ${!!process.env.STRIPE_CREATOR_PLAN}`);
+logger.debug('Loading configuration:');
+logger.debug(`- Environment: ${process.env.NODE_ENV || 'development'}`);
+logger.debug(`- STRIPE_SECRET_KEY available: ${!!process.env.STRIPE_SECRET_KEY}`);
+logger.debug(`- STRIPE_PRO_PLAN available: ${!!process.env.STRIPE_PRO_PLAN}`);
+logger.debug(`- STRIPE_CREATOR_PLAN available: ${!!process.env.STRIPE_CREATOR_PLAN}`);
 
 // Server configuration
 const serverConfig = {
