@@ -6,7 +6,6 @@ import morgan from 'morgan';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import handleStripeWebhook from './controllers/stripe-webhook-controller.js';
-import { initSubscriptionCronJobs } from './cron/subscription-cron.js';
 import { config } from './config/config.js';
 
 // Import routes
@@ -19,7 +18,6 @@ import quizRoutes from './routes/quiz-routes.js';
 import publicRoutes from './routes/public-routes.js';
 import partnershipRoutes from './routes/partnership-routes.js';
 import subscriptionRoutes from './routes/subscription-routes.js';
-import adminRoutes from './routes/admin-routes.js';
 import { errorHandler } from './middleware/error-middleware.js';
 import { connectToMongoDB } from './db/mongodb.js';
 
@@ -88,8 +86,6 @@ app.post('/api/stripe/debug-webhook', (req, res) => {
 
 // Function to set up and start the server
 const setupServer = () => {
-  // Initialize cron jobs
-  initSubscriptionCronJobs();
   
   // Public API routes that don't require authentication
   app.use('/api/public', publicRoutes);
@@ -103,7 +99,6 @@ const setupServer = () => {
   app.use('/api/todos', todoRoutes);
   app.use('/api/quizzes', quizRoutes);
   app.use('/api/subscriptions', subscriptionRoutes);
-  app.use('/api/admin', adminRoutes);
 
   // Health check endpoint
   app.get('/api/health', (req, res) => {
