@@ -2,8 +2,44 @@ import Stripe from 'stripe';
 import { config } from '../config/config.js';
 
 // Initialize Stripe with the secret key
-console.log('Stripe Secret Key at init:', config.stripe.secretKey);
-const stripe = new Stripe(config.stripe.secretKey);
+console.log('Initializing Stripe service:');
+const isProduction = process.env.NODE_ENV === 'production';
+console.log(`- Running in ${isProduction ? 'production' : 'development'} mode`);
+
+// Check for required configuration
+if (!config.stripe.secretKey) {
+  console.error('CRITICAL ERROR: Stripe secret key is missing in configuration');
+  console.error('Please ensure STRIPE_SECRET_KEY is set in environment variables');
+} else {
+  console.log(`- Using Stripe key: ${config.stripe.secretKey.substring(0, 6)}...`);
+}
+
+if (!config.stripe.proPlanPriceId) {
+  console.error('CRITICAL ERROR: Pro plan price ID is missing in configuration');
+  console.error('Please ensure STRIPE_PRO_PLAN is set in environment variables');
+} else {
+  console.log(`- Pro plan price ID: ${config.stripe.proPlanPriceId}`);
+}
+
+if (!config.stripe.creatorPlanPriceId) {
+  console.error('CRITICAL ERROR: Creator plan price ID is missing in configuration');
+  console.error('Please ensure STRIPE_CREATOR_PLAN is set in environment variables');
+} else {
+  console.log(`- Creator plan price ID: ${config.stripe.creatorPlanPriceId}`);
+}
+
+// Initialize stripe with proper error handling
+let stripe = null;
+try {
+  if (config.stripe.secretKey) {
+    stripe = new Stripe(config.stripe.secretKey);
+    console.log('Stripe service initialized successfully');
+  } else {
+    console.error('Failed to initialize Stripe - secret key missing or invalid');
+  }
+} catch (error) {
+  console.error('Error initializing Stripe client:', error.message);
+}
 
 /**
  * Creates a Stripe customer if it doesn't exist
@@ -56,6 +92,12 @@ export const createCheckoutSession = async ({
   couponCode = null
 }) => {
   try {
+    // Validate required parameters
+    if (!customerId) throw new Error('Customer ID is required for creating a checkout session');
+    if (!priceId) throw new Error('Price ID is required for creating a checkout session');
+    if (!successUrl) throw new Error('Success URL is required for creating a checkout session');
+    if (!cancelUrl) throw new Error('Cancel URL is required for creating a checkout session');
+    
     console.log('Creating checkout session with params:', {
       customer: customerId,
       priceId,
@@ -66,8 +108,8 @@ export const createCheckoutSession = async ({
     
     // Check if we have Stripe initialized correctly
     if (!stripe) {
-      console.error('Stripe object is not initialized properly');
-      throw new Error('Stripe is not initialized');
+      console.error('Stripe object is not initialized properly - check environment variables');
+      throw new Error('Stripe is not initialized - missing API key');
     }
     
     // Log the Stripe secret key (first 6 chars only for security)
@@ -104,26 +146,40 @@ export const createCheckoutSession = async ({
       console.log(`Applied coupon code: ${couponCode}`);
     }
     
-    const session = await stripe.checkout.sessions.create(sessionOptions);
+    // Create the checkout session with Stripe
+    try {
+      const session = await stripe.checkout.sessions.create(sessionOptions);
 
-    console.log('Successfully created checkout session:', {
-      id: session.id,
-      url: session.url
-    });
-    
-    return session;
+      console.log('Successfully created checkout session:', {
+        id: session.id,
+        url: session.url
+      });
+      
+      return session;
+    } catch (stripeApiError) {
+      console.error('Stripe API error in createCheckoutSession:', stripeApiError.message);
+      console.error('Error details:', stripeApiError.message);
+      
+      if (stripeApiError.type) {
+        console.error('Stripe error type:', stripeApiError.type);
+      }
+      if (stripeApiError.code) {
+        console.error('Stripe error code:', stripeApiError.code);
+      }
+      if (stripeApiError.param) {
+        console.error('Invalid parameter:', stripeApiError.param);
+      }
+      
+      // Rethrow with more context for better debugging
+      const enhancedError = new Error(`Stripe API error: ${stripeApiError.message}`);
+      enhancedError.original = stripeApiError;
+      enhancedError.code = stripeApiError.code;
+      enhancedError.type = stripeApiError.type;
+      enhancedError.param = stripeApiError.param;
+      throw enhancedError;
+    }
   } catch (error) {
     console.error('Error in createCheckoutSession:', error);
-    console.error('Error details:', error.message);
-    if (error.type) {
-      console.error('Stripe error type:', error.type);
-    }
-    if (error.code) {
-      console.error('Stripe error code:', error.code);
-    }
-    if (error.param) {
-      console.error('Invalid parameter:', error.param);
-    }
     throw error;
   }
 };
@@ -337,5 +393,8 @@ export const stripeService = {
   handleWebhookEvent,
   getCustomerSubscriptions,
 };
+
+// Log final status of Stripe service
+console.log(`Stripe service export ready, client ${stripe ? 'is initialized' : 'failed to initialize'}`);
 
 export default stripeService; 

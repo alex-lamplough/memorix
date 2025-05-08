@@ -12,6 +12,15 @@ export const createCheckoutSession = async (req, res) => {
     
     console.log('Creating checkout session for:', { plan, auth0Id, hasCoupon: !!couponCode });
     
+    // Validate plan input
+    if (!plan || !['pro', 'creator', 'enterprise'].includes(plan)) {
+      console.error('Invalid plan selected:', plan);
+      return res.status(400).json({ 
+        error: 'Invalid plan selected',
+        message: 'The selected subscription plan is not valid' 
+      });
+    }
+    
     // Find user by Auth0 ID
     const user = await User.findOne({ auth0Id });
     
@@ -45,54 +54,88 @@ export const createCheckoutSession = async (req, res) => {
     // Check if we have a valid price ID
     if (!priceId) {
       console.error('Missing price ID in config. Check env variable for the selected plan.');
-      return res.status(500).json({ error: 'Missing price configuration' });
+      console.error(`Config has proPlanPriceId: ${!!config.stripe.proPlanPriceId}, creatorPlanPriceId: ${!!config.stripe.creatorPlanPriceId}`);
+      return res.status(500).json({ 
+        error: 'Missing price configuration',
+        message: 'The subscription plan is not configured correctly. Please contact support.'
+      });
     }
     
     // Create or retrieve Stripe customer
-    console.log('Creating or retrieving Stripe customer for user');
-    const customer = await stripeService.createOrRetrieveCustomer(user);
-    console.log('Customer:', { id: customer.id, isNew: !user.stripeCustomerId });
-    
-    // If customer was created, save ID to user record
-    if (!user.stripeCustomerId) {
-      console.log('Updating user with new Stripe customer ID');
-      user.stripeCustomerId = customer.id;
-      await user.save();
-    }
-    
-    // Create session options
-    const sessionOptions = {
-      customerId: customer.id,
-      priceId,
-      successUrl: `${config.server.corsOrigin}/settings?subscription=success`,
-      cancelUrl: `${config.server.corsOrigin}/settings?subscription=canceled`,
-      metadata: {
-        userId: user._id.toString(),
-        plan
+    try {
+      console.log('Creating or retrieving Stripe customer for user');
+      const customer = await stripeService.createOrRetrieveCustomer(user);
+      console.log('Customer:', { id: customer.id, isNew: !user.stripeCustomerId });
+      
+      // If customer was created, save ID to user record
+      if (!user.stripeCustomerId) {
+        console.log('Updating user with new Stripe customer ID');
+        user.stripeCustomerId = customer.id;
+        await user.save();
       }
-    };
-    
-    // Add coupon code if provided
-    if (couponCode && couponCode.trim()) {
-      sessionOptions.couponCode = couponCode.trim();
-      console.log('Applying coupon code to checkout session:', couponCode.trim());
+      
+      // Create session options
+      const sessionOptions = {
+        customerId: customer.id,
+        priceId,
+        successUrl: `${config.server.corsOrigin}/settings?subscription=success`,
+        cancelUrl: `${config.server.corsOrigin}/settings?subscription=canceled`,
+        metadata: {
+          userId: user._id.toString(),
+          plan
+        }
+      };
+      
+      // Add coupon code if provided
+      if (couponCode && couponCode.trim()) {
+        sessionOptions.couponCode = couponCode.trim();
+        console.log('Applying coupon code to checkout session:', couponCode.trim());
+      }
+      
+      console.log('Creating checkout session with params:', {
+        customerId: customer.id,
+        priceId,
+        successUrl: `${config.server.corsOrigin}/settings?subscription=success`,
+        cancelUrl: `${config.server.corsOrigin}/settings?subscription=canceled`,
+        hasCoupon: !!sessionOptions.couponCode
+      });
+      
+      const session = await stripeService.createCheckoutSession(sessionOptions);
+      
+      console.log('Checkout session created successfully:', { sessionId: session.id });
+      return res.json({ sessionId: session.id, url: session.url });
+    } catch (stripeError) {
+      console.error('Stripe error in checkout session creation:', stripeError.message);
+      console.error(stripeError);
+      
+      // Handle specific Stripe errors
+      if (stripeError.type === 'StripeInvalidRequestError') {
+        if (stripeError.param === 'coupon') {
+          return res.status(400).json({ 
+            error: 'Invalid coupon code',
+            message: 'The coupon code provided is invalid or has expired'
+          });
+        } else if (stripeError.message.includes('price')) {
+          return res.status(400).json({ 
+            error: 'Invalid price configuration',
+            message: 'The subscription price is not configured correctly'
+          });
+        }
+      }
+      
+      // Generic Stripe error
+      return res.status(400).json({ 
+        error: 'Payment processing error',
+        message: 'There was an issue setting up your payment. Please try again later.',
+        code: stripeError.code || stripeError.type || 'unknown_error'
+      });
     }
-    
-    console.log('Creating checkout session with params:', {
-      customerId: customer.id,
-      priceId,
-      successUrl: `${config.server.corsOrigin}/settings?subscription=success`,
-      cancelUrl: `${config.server.corsOrigin}/settings?subscription=canceled`,
-      hasCoupon: !!sessionOptions.couponCode
-    });
-    
-    const session = await stripeService.createCheckoutSession(sessionOptions);
-    
-    console.log('Checkout session created successfully:', { sessionId: session.id });
-    return res.json({ sessionId: session.id, url: session.url });
   } catch (error) {
-    console.error('Error creating checkout session:', error);
-    return res.status(500).json({ error: 'Failed to create checkout session', message: error.message });
+    console.error('Unexpected error creating checkout session:', error);
+    return res.status(500).json({ 
+      error: 'Failed to create checkout session', 
+      message: 'An unexpected error occurred while setting up your payment. Please try again later.'
+    });
   }
 };
 

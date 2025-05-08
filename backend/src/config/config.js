@@ -5,6 +5,13 @@
 import dotenv from 'dotenv';
 dotenv.config();
 
+// Log environment detection
+console.log('Loading configuration:');
+console.log(`- Environment: ${process.env.NODE_ENV || 'development'}`);
+console.log(`- STRIPE_SECRET_KEY available: ${!!process.env.STRIPE_SECRET_KEY}`);
+console.log(`- STRIPE_PRO_PLAN available: ${!!process.env.STRIPE_PRO_PLAN}`);
+console.log(`- STRIPE_CREATOR_PLAN available: ${!!process.env.STRIPE_CREATOR_PLAN}`);
+
 // Server configuration
 const serverConfig = {
   port: process.env.PORT || 5001,

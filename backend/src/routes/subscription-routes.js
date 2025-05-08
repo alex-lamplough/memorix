@@ -16,16 +16,21 @@ router.use(checkJwt);
 router.get('/current', async (req, res) => {
   try {
     const auth0Id = req.auth.sub;
+    console.log(`Fetching subscription for user: ${auth0Id}`);
     
     // Find user by Auth0 ID
     const user = await User.findOne({ auth0Id });
     
     if (!user) {
+      console.error(`User not found for auth0Id: ${auth0Id}`);
       return res.status(404).json({ error: 'User not found' });
     }
     
+    console.log(`Found user: ${user._id.toString()}, has subscription: ${!!user.subscription}, has stripeId: ${!!user.stripeCustomerId}`);
+    
     // If user has no subscription, return free plan
     if (!user.subscription || !user.subscription.stripeSubscriptionId) {
+      console.log(`User ${user._id.toString()} has no subscription, returning free plan`);
       return res.json({
         status: 'active',
         plan: 'free',
@@ -34,28 +39,78 @@ router.get('/current', async (req, res) => {
     }
     
     // Get subscription details from Stripe
-    const subscription = await stripeService.getSubscription(user.subscription.stripeSubscriptionId);
-    
-    // Format the renewal date (current period end) for frontend display
-    let renewalDateFormatted = null;
-    if (subscription.current_period_end) {
-      const renewalDate = new Date(subscription.current_period_end * 1000);
-      renewalDateFormatted = renewalDate.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
+    try {
+      // Make sure Stripe is initialized
+      if (!stripeService.stripe) {
+        console.error('Stripe service not initialized. Check environment variables.');
+        return res.status(500).json({
+          error: 'Subscription service unavailable',
+          message: 'The subscription service is currently unavailable. Please try again later.',
+          code: 'service_unavailable'
+        });
+      }
+      
+      console.log(`Fetching subscription ${user.subscription.stripeSubscriptionId} from Stripe`);
+      const subscription = await stripeService.getSubscription(user.subscription.stripeSubscriptionId);
+      console.log(`Stripe subscription fetched: ${subscription.id}, status: ${subscription.status}`);
+      
+      // Format the renewal date (current period end) for frontend display
+      let renewalDateFormatted = null;
+      if (subscription.current_period_end) {
+        const renewalDate = new Date(subscription.current_period_end * 1000);
+        renewalDateFormatted = renewalDate.toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        });
+      }
+      
+      return res.json({
+        status: subscription.status,
+        plan: user.subscription.plan,
+        renewalDate: renewalDateFormatted,
+        cancelAtPeriodEnd: subscription.cancel_at_period_end
+      });
+    } catch (stripeError) {
+      console.error(`Stripe error fetching subscription: ${stripeError.message}`);
+      console.error(stripeError);
+      
+      // If the subscription doesn't exist in Stripe anymore, update the user record
+      if (stripeError.code === 'resource_missing') {
+        console.log(`Subscription ${user.subscription.stripeSubscriptionId} no longer exists in Stripe, resetting user to free plan`);
+        user.subscription = null;
+        await user.save();
+        
+        return res.json({
+          status: 'inactive',
+          plan: 'free',
+          renewalDate: null
+        });
+      }
+      
+      // For other Stripe errors, return a meaningful error but don't crash
+      return res.status(400).json({ 
+        error: 'Subscription information is temporarily unavailable',
+        message: 'There was an issue retrieving your subscription details from our payment provider.',
+        code: stripeError.code || 'unknown_error',
+        // Add more debugging info in development
+        debug: process.env.NODE_ENV !== 'production' ? {
+          error: stripeError.message,
+          type: stripeError.type
+        } : undefined
       });
     }
-    
-    return res.json({
-      status: subscription.status,
-      plan: user.subscription.plan,
-      renewalDate: renewalDateFormatted,
-      cancelAtPeriodEnd: subscription.cancel_at_period_end
-    });
   } catch (error) {
-    console.error('Error fetching subscription:', error);
-    return res.status(500).json({ error: 'Failed to fetch subscription information' });
+    console.error('Unexpected error fetching subscription:', error);
+    return res.status(500).json({ 
+      error: 'Failed to fetch subscription information',
+      message: 'An unexpected error occurred. Our team has been notified.',
+      // Add more debugging info in development
+      debug: process.env.NODE_ENV !== 'production' ? {
+        error: error.message,
+        stack: error.stack
+      } : undefined
+    });
   }
 });
 
