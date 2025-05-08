@@ -50,7 +50,6 @@ const ContentCreators = lazy(() => import('./pages/ContentCreators'))
 import OnboardingGuard from './components/OnboardingGuard'
 
 // Assets
-import logoWhite from './assets/MemorixLogoWhite.png'
 import logoGreen from './assets/MemorixBannerLogo.png'
 import facebookLogo from './assets/facebookLogo.png'
 import instagramLogo from './assets/instagramLogo.png'
@@ -378,7 +377,7 @@ const pricingPlans = [
   },
   {
     name: 'Pro',
-    price: '9.99',
+    price: '7.99',
     period: 'per month',
     description: 'For serious students and educators',
     features: [
@@ -396,7 +395,7 @@ const pricingPlans = [
   },
   {
     name: 'Creator',
-    price: '29.99',
+    price: '17.99',
     period: 'per month',
     description: 'For content creators and educators',
     features: [
@@ -546,7 +545,7 @@ const faqs = [
   },
   {
     q: 'Is Memorix free to use?',
-    a: 'We offer a free tier with access to community cards, basic analytics, and standard support. Our Pro subscription (£9.99/month) unlocks unlimited flashcard creation, advanced analytics, priority support, and more. We also have upcoming Creator and Enterprise plans for content creators and organizations.',
+    a: 'We offer a free tier with access to community cards, basic analytics, and standard support. Our Pro subscription (£7.99/month) unlocks unlimited flashcard creation, advanced analytics, priority support, and more. We also have upcoming Creator and Enterprise plans for content creators and organizations.',
   },
   {
     q: 'How accurate are the AI-generated flashcards?',

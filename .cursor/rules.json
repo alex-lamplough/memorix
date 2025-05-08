@@ -99,7 +99,7 @@
       "good_examples": [
         "import { useState, useEffect } from 'react'",
         "import BoltIcon from '@mui/icons-material/Bolt'",
-        "import logoWhite from './assets/MemorixLogoWhite.png'"
+        "import logoWhite from './assets/MemorixBannerLogo.png'"
       ]
     },
     {

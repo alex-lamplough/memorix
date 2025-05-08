@@ -12,8 +12,9 @@ const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
  * @param {string} props.plan - Plan ID ('pro', 'team', etc.)
  * @param {string} props.text - Button text
  * @param {string} props.className - Additional CSS classes
+ * @param {string} props.couponCode - Optional coupon code to apply to checkout
  */
-const CheckoutButton = ({ plan, text = 'Subscribe', className = '' }) => {
+const CheckoutButton = ({ plan, text = 'Subscribe', className = '', couponCode = '' }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -22,8 +23,8 @@ const CheckoutButton = ({ plan, text = 'Subscribe', className = '' }) => {
       setIsLoading(true);
       setError(null);
 
-      // Get checkout session from backend
-      const { url } = await subscriptionService.createCheckoutSession(plan);
+      // Get checkout session from backend with optional coupon
+      const { url } = await subscriptionService.createCheckoutSession(plan, couponCode);
       
       // Redirect to Stripe checkout
       window.location.href = url;

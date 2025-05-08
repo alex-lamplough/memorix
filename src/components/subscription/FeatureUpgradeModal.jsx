@@ -70,7 +70,7 @@ const FeatureUpgradeModal = ({
           <div className="flex flex-col gap-3">
             <CheckoutButton
               plan="pro"
-              text="Upgrade to Pro - £9.99/month"
+              text="Upgrade to Pro - £7.99/month"
               className="bg-[#00ff94] text-[#18092a] font-medium px-4 py-3 rounded-lg hover:bg-[#00ff94]/90 transition-colors w-full"
             />
             

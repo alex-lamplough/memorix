@@ -79,12 +79,64 @@ function Terms() {
           </section>
 
           <section className="mb-8">
-            <h2 className="text-xl font-semibold mb-3 text-[#00ff94]">Subscription Terms</h2>
+            <h2 className="text-xl font-semibold mb-3 text-[#00ff94]">Subscription Plans and Payment</h2>
             <p>
-              Certain features of our Services may require a subscription. By subscribing to these features, you agree to pay the applicable fees as they become due. Subscriptions automatically renew unless canceled before the renewal date.
+              We offer several subscription tiers to access premium features of our Services:
+            </p>
+            <ul className="list-disc pl-6 space-y-2 mt-2">
+              <li>
+                <span className="font-medium">Free Plan:</span> Basic access with limited features including community cards, basic analytics, and standard support.
+              </li>
+              <li>
+                <span className="font-medium">Pro Plan (£7.99/month):</span> Includes all Free plan features plus unlimited flashcard & quiz creation, advanced analytics, priority support, downloadable content, and export reports.
+              </li>
+              <li>
+                <span className="font-medium">Creator Plan:</span> Currently under development, will include additional features for content creators.
+              </li>
+              <li>
+                <span className="font-medium">Enterprise Plan:</span> Currently under development, will include features for organizations and teams.
+              </li>
+            </ul>
+            <p className="mt-3">
+              By subscribing to a premium plan, you agree to pay the applicable fees as they become due. All subscriptions automatically renew on a monthly basis until canceled.
+            </p>
+            <p className="mt-3">
+              We use Stripe as our payment processor. By providing payment information, you represent that you are authorized to use the payment method and agree to have your payment method charged the applicable subscription fees.
             </p>
             <p className="mt-3">
               We reserve the right to change our subscription fees upon reasonable notice. Such notice may be provided at any time by posting the changes to the Memorix website or via email.
+            </p>
+          </section>
+          
+          <section className="mb-8">
+            <h2 className="text-xl font-semibold mb-3 text-[#00ff94]">Promotional Offers and Coupons</h2>
+            <p>
+              We may occasionally offer promotional discounts or coupon codes that can be applied to subscription purchases. The following terms apply to all promotions and coupon usage:
+            </p>
+            <ul className="list-disc pl-6 space-y-1 mt-2">
+              <li>Coupon codes are valid only for the specified time period or until revoked by Memorix</li>
+              <li>Coupon codes cannot be combined with other offers unless explicitly stated</li>
+              <li>We reserve the right to verify eligibility for coupon codes and to cancel any subscription obtained through unauthorized coupon use</li>
+              <li>Promotional pricing applies only for the specified duration of the offer, after which standard pricing will apply</li>
+              <li>Refunds will not be provided for the difference between promotional and standard pricing once a promotion ends</li>
+            </ul>
+          </section>
+
+          <section className="mb-8">
+            <h2 className="text-xl font-semibold mb-3 text-[#00ff94]">Subscription Changes and Cancellation</h2>
+            <p>
+              You may cancel your subscription at any time through your account settings page or by contacting us. If you cancel, you will continue to have access to your subscription benefits until the end of your current billing period, after which your account will revert to the Free plan.
+            </p>
+            <p className="mt-3">
+              <span className="font-medium">Plan Changes:</span> Currently, we do not support prorated billing when switching between subscription plans. To change your subscription plan:
+            </p>
+            <ul className="list-disc pl-6 space-y-1 mt-2">
+              <li><span className="font-medium">Upgrading:</span> To upgrade to a higher tier, cancel your current subscription, wait until the end of your billing period, then sign up for the new plan.</li>
+              <li><span className="font-medium">Downgrading to Free:</span> Simply cancel your current subscription. You'll automatically be moved to the Free plan once your billing period ends.</li>
+              <li><span className="font-medium">Downgrading to another paid plan:</span> Cancel your current subscription, wait until the end of your billing period, then sign up for the new plan.</li>
+            </ul>
+            <p className="mt-3">
+              <span className="font-medium">Refunds:</span> We do not generally provide refunds for subscription fees, except in cases where required by law or at our sole discretion. If you believe you have been charged in error, please contact us at support@getmemorix.app.
             </p>
           </section>
 
@@ -118,7 +170,7 @@ function Terms() {
           <section className="mb-8">
             <h2 className="text-xl font-semibold mb-3 text-[#00ff94]">Governing Law</h2>
             <p>
-              These Terms shall be governed by and construed in accordance with the laws of [Jurisdiction], without regard to its conflict of law provisions.
+              These Terms shall be governed by and construed in accordance with the laws of the United Kingdom, without regard to its conflict of law provisions.
             </p>
           </section>
 

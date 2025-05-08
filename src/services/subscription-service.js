@@ -38,13 +38,31 @@ const getCurrentSubscription = async () => {
 };
 
 /**
+ * Get detailed subscription information including Stripe metadata
+ * @returns {Promise<Object>} Detailed subscription information
+ */
+const getSubscriptionDetails = async () => {
+  try {
+    const response = await subscriptionApi.get('/details');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching subscription details:', error);
+    throw error;
+  }
+};
+
+/**
  * Create a checkout session for subscription
- * @param {string} plan - Plan type ('pro')
+ * @param {string} plan - Plan type ('pro', 'creator', 'enterprise')
+ * @param {string} couponCode - Optional coupon code to apply
  * @returns {Promise<Object>} Session details with URL
  */
-const createCheckoutSession = async (plan) => {
+const createCheckoutSession = async (plan, couponCode = '') => {
   try {
-    const response = await subscriptionApi.post('/create-checkout-session', { plan });
+    const response = await subscriptionApi.post('/create-checkout-session', { 
+      plan,
+      couponCode: couponCode.trim() // Send coupon code if provided
+    });
     return response.data;
   } catch (error) {
     console.error('Error creating checkout session:', error);
@@ -62,6 +80,34 @@ const createPortalSession = async () => {
     return response.data;
   } catch (error) {
     console.error('Error creating portal session:', error);
+    throw error;
+  }
+};
+
+/**
+ * Cancel subscription at the end of the current billing period
+ * @returns {Promise<Object>} Updated subscription information
+ */
+const cancelSubscription = async () => {
+  try {
+    const response = await subscriptionApi.post('/cancel');
+    return response.data;
+  } catch (error) {
+    console.error('Error canceling subscription:', error);
+    throw error;
+  }
+};
+
+/**
+ * Reactivate a subscription that was set to cancel
+ * @returns {Promise<Object>} Updated subscription information
+ */
+const reactivateSubscription = async () => {
+  try {
+    const response = await subscriptionApi.post('/reactivate');
+    return response.data;
+  } catch (error) {
+    console.error('Error reactivating subscription:', error);
     throw error;
   }
 };
@@ -136,11 +182,37 @@ const isFeatureAvailable = (subscription, feature) => {
   return featureMap[plan].includes(feature);
 };
 
+/**
+ * Validate a coupon code with Stripe
+ * @param {string} couponCode - Coupon code to validate 
+ * @returns {Promise<Object>} Coupon details including validity and discount information
+ */
+const validateCoupon = async (couponCode) => {
+  try {
+    if (!couponCode || !couponCode.trim()) {
+      throw new Error('No coupon code provided');
+    }
+    
+    const response = await subscriptionApi.post('/validate-coupon', { 
+      couponCode: couponCode.trim() 
+    });
+    
+    return response.data;
+  } catch (error) {
+    console.error('Error validating coupon:', error);
+    throw error;
+  }
+};
+
 export const subscriptionService = {
   getCurrentSubscription,
+  getSubscriptionDetails,
   createCheckoutSession,
   createPortalSession,
-  isFeatureAvailable
+  cancelSubscription,
+  reactivateSubscription,
+  isFeatureAvailable,
+  validateCoupon
 };
 
 export default subscriptionService; 
