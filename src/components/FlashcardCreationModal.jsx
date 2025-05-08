@@ -63,6 +63,7 @@ const FlashcardCreationModal = ({ open, onClose }) => {
   const [showSnackbar, setShowSnackbar] = useState(false)
   const [snackbarMessage, setSnackbarMessage] = useState('')
   const [snackbarSeverity, setSnackbarSeverity] = useState('success')
+  const [isGenerating, setIsGenerating] = useState(false)
   
   // Use React Query mutation for creating flashcard sets
   const createMutation = useCreateFlashcardSet();
@@ -116,6 +117,9 @@ const FlashcardCreationModal = ({ open, onClose }) => {
     }
     
     try {
+      // Set generating state to true to show loading indicator
+      setIsGenerating(true)
+      
       // Call backend API to generate flashcards using our service
       const data = await flashcardService.generateFlashcards({
         content: aiPrompt,
@@ -137,6 +141,9 @@ const FlashcardCreationModal = ({ open, onClose }) => {
     } catch (error) {
       logger.error('Error generating flashcards:', error)
       showSnackbarMessage('Failed to generate flashcards. Please try again.', 'error')
+    } finally {
+      // Set generating state back to false when done
+      setIsGenerating(false)
     }
   }
   
@@ -785,28 +792,54 @@ const FlashcardCreationModal = ({ open, onClose }) => {
                     </Grid>
                   </Grid>
                   
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    onClick={generateCardsWithAI}
-                    disabled={!aiPrompt || isLoading}
-                    startIcon={isLoading ? <CircularProgress size={20} /> : <AutoAwesomeIcon />}
-                    sx={{
-                      bgcolor: '#00ff94',
-                      color: '#18092a',
-                      fontWeight: 'bold',
-                      '&:hover': {
-                        bgcolor: '#00cc75',
-                      },
-                      '&.Mui-disabled': {
-                        bgcolor: 'rgba(0, 255, 148, 0.3)',
-                        color: 'rgba(24, 9, 42, 0.7)',
-                      },
-                      mb: 2
-                    }}
-                  >
-                    {isLoading ? 'Generating...' : 'Generate Flashcards'}
-                  </Button>
+                  <Box sx={{ textAlign: 'center', mt: 2, mb: 3 }}>
+                    <Button
+                      variant="contained"
+                      onClick={generateCardsWithAI}
+                      startIcon={isGenerating ? <CircularProgress size={20} color="inherit" /> : <AutoAwesomeIcon />}
+                      disabled={!aiPrompt || isGenerating}
+                      sx={{
+                        background: 'linear-gradient(45deg, rgba(0, 255, 148, 0.2), rgba(0, 255, 148, 0.1))',
+                        color: '#00ff94',
+                        borderRadius: '28px',
+                        padding: '12px 24px',
+                        fontSize: '1rem',
+                        textTransform: 'none',
+                        border: '1px solid rgba(0, 255, 148, 0.3)',
+                        '&:hover': {
+                          background: 'linear-gradient(45deg, rgba(0, 255, 148, 0.3), rgba(0, 255, 148, 0.2))',
+                          boxShadow: '0 0 15px rgba(0, 255, 148, 0.5)'
+                        },
+                        '&:disabled': {
+                          color: 'rgba(255, 255, 255, 0.3)',
+                          background: 'rgba(255, 255, 255, 0.05)',
+                          border: '1px solid rgba(255, 255, 255, 0.1)'
+                        }
+                      }}
+                    >
+                      {isGenerating ? 'Generating...' : 'Generate Flashcards'}
+                    </Button>
+                  </Box>
+                  
+                  {isGenerating && (
+                    <Box sx={{ 
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      alignItems: 'center', 
+                      justifyContent: 'center', 
+                      mt: 4, 
+                      mb: 4, 
+                      animation: 'pulse 2s infinite'
+                    }}>
+                      <CircularProgress size={50} sx={{ color: '#00ff94', mb: 2 }} />
+                      <Typography variant="h6" align="center">
+                        Generating your flashcards...
+                      </Typography>
+                      <Typography variant="body2" align="center" sx={{ color: 'rgba(255, 255, 255, 0.7)', mt: 1 }}>
+                        This might take a moment. Our AI is crafting high-quality flashcards based on your input.
+                      </Typography>
+                    </Box>
+                  )}
                   
                   {/* Generated cards section */}
                   {aiGeneratedCards.length > 0 && (

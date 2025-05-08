@@ -7,6 +7,7 @@ import mongoose from 'mongoose';
 import { authenticate } from '../middleware/auth-middleware.js';
 import Quiz from '../models/quiz-model.js';
 import User from '../models/user-model.js';
+import openaiService from '../services/openai-service.js';
 
 const router = express.Router();
 
@@ -171,6 +172,50 @@ router.patch('/:id/favorite', authenticate(), lookupMongoUser, async (req, res, 
   } catch (error) {
     logger.error('Error toggling favorite status:', error);
     next(error);
+  }
+});
+
+// Generate quiz questions using AI
+router.post('/generate', authenticate(), async (req, res, next) => {
+  try {
+    const { content, count = 5, difficulty = 'medium' } = req.body;
+    
+    if (!content) {
+      return res.status(400).json({ error: 'Content is required' });
+    }
+    
+    logger.debug(`Generating quiz questions with: content length=${content.length}, count=${count}, difficulty=${difficulty}`);
+    
+    try {
+      // Generate questions using OpenAI
+      const questions = await openaiService.generateQuizQuestions(content, count, difficulty);
+      
+      // Generate a title for the quiz
+      const title = await openaiService.generateQuizTitle(content);
+      
+      // Log success
+      logger.debug(`Successfully generated ${questions.length} quiz questions`);
+      
+      // Return the generated questions and title
+      res.json({
+        questions,
+        title,
+        count: questions.length
+      });
+    } catch (openaiError) {
+      logger.error('OpenAI service error:', { value: openaiError.message });
+      return res.status(500).json({ 
+        error: 'Failed to generate quiz questions',
+        message: openaiError.message,
+        details: process.env.NODE_ENV === 'development' ? openaiError.stack : undefined
+      });
+    }
+  } catch (error) {
+    logger.error('Unexpected error in quiz generation route:', { value: error.message });
+    res.status(500).json({ 
+      error: 'Failed to generate quiz questions',
+      message: error.message 
+    });
   }
 });
 

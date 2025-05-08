@@ -197,6 +197,29 @@ export const quizService = {
     }
   },
   
+  // Generate quiz questions using AI
+  generateQuestions: async (params) => {
+    const { controller, signal, cleanup } = createCancellableRequest('quizzes-generate');
+    try {
+      logger.debug('Generating quiz questions with AI:', { 
+        contentLength: params.content?.length || 0,
+        count: params.count || 5,
+        difficulty: params.difficulty || 'medium'
+      });
+      
+      const response = await api.post('/quizzes/generate', params, { signal });
+      cleanup();
+      return response.data;
+    } catch (error) {
+      if (axios.isCancel(error)) {
+        logger.debug('Request cancelled:', { value: error.message });
+      } else {
+        logger.error('Error generating quiz questions:', error);
+      }
+      throw error;
+    }
+  },
+  
   // Get all favorite quizzes
   getFavorites: async () => {
     logger.debug('Requesting quiz favorites...');
