@@ -35,9 +35,18 @@ const openaiDefaults = {
   apiKey: process.env.OPENAI_API_KEY
 };
 
-// Add Stripe API key to the config file
-// This is a placeholder. The actual file structure may vary.
-// If the file doesn't exist, we'll create the structure.
+// Stripe configuration
+const stripeConfig = {
+  secretKey: process.env.STRIPE_SECRET_KEY,
+  publishableKey: process.env.STRIPE_PUBLISHABLE_KEY,
+  webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
+  // Price IDs for different subscription plans
+  proPlanPriceId: process.env.STRIPE_PRO_PLAN,
+  creatorPlanPriceId: process.env.STRIPE_CREATOR_PLAN,
+  enterprisePlanPriceId: process.env.STRIPE_ENTERPRISE_PLAN,
+  // Trial configuration
+  trialPeriodDays: parseInt(process.env.STRIPE_TRIAL_PERIOD_DAYS || '14', 10)
+};
 
 // Export the complete config
 export const config = {
@@ -45,12 +54,7 @@ export const config = {
   database: dbConfig,
   auth0: auth0Config,
   openai: openaiDefaults,
-  stripe: {
-    secretKey: process.env.STRIPE_SECRET_KEY,
-    publishableKey: process.env.STRIPE_PUBLISHABLE_KEY,
-    webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
-    proPlanPriceId: process.env.STRIPE_PRO_PLAN_PRICE_ID,
-  }
+  stripe: stripeConfig
 };
 
 // Also export a default for modules that might use default import

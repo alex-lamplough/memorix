@@ -26,6 +26,78 @@ const userSchema = new mongoose.Schema({
     type: String,
     sparse: true
   },
+  // Complete Stripe data storage
+  stripeData: {
+    customer: {
+      id: String,
+      created: Date,
+      email: String,
+      name: String,
+      phone: String,
+      address: Object,
+      defaultPaymentMethod: String,
+      currency: String,
+      isDeleted: Boolean,
+      deletedAt: Date,
+      createdAt: Date,
+      updatedAt: Date
+    },
+    subscription: {
+      id: String,
+      status: String,
+      currentPeriodStart: Date,
+      currentPeriodEnd: Date,
+      cancelAtPeriodEnd: Boolean,
+      cancelAt: Date,
+      canceledAt: Date,
+      trialStart: Date,
+      trialEnd: Date,
+      // Billing details for UI
+      amount: Number,
+      currency: String,
+      interval: String,
+      billingCycleAnchor: Date,
+      items: [{
+        id: String,
+        priceId: String,
+        productId: String,
+        quantity: Number,
+        unitAmount: Number,
+        recurring: Object
+      }],
+      isDeleted: Boolean,
+      endedAt: Date,
+      createdAt: Date,
+      updatedAt: Date
+    },
+    paymentMethods: [{
+      id: String,
+      type: String,
+      card: {
+        brand: String,
+        last4: String,
+        expMonth: Number,
+        expYear: Number
+      },
+      isDetached: Boolean,
+      detachedAt: Date,
+      createdAt: Date,
+      updatedAt: Date
+    }],
+    invoices: [{
+      id: String,
+      subscriptionId: String,
+      amountPaid: Number,
+      amountRemaining: Number,
+      currency: String,
+      status: String,
+      failureMessage: String,
+      paidAt: Date,
+      periodStart: Date,
+      periodEnd: Date,
+      createdAt: Date
+    }]
+  },
   subscription: {
     plan: {
       type: String,
@@ -43,7 +115,22 @@ const userSchema = new mongoose.Schema({
       type: Boolean,
       default: false
     },
-    trialEnd: Date
+    trialEnd: Date,
+    // Billing details for UI display
+    amount: Number,
+    currency: String,
+    interval: String,
+    formattedAmount: {
+      type: String,
+      get: function() {
+        if (!this.amount) return null;
+        return new Intl.NumberFormat('en-US', {
+          style: 'currency',
+          currency: this.currency || 'gbp',
+          minimumFractionDigits: 2
+        }).format(this.amount / 100);
+      }
+    }
   },
   profile: {
     displayName: String,
@@ -106,6 +193,28 @@ userSchema.virtual('flashcardSets', {
   ref: 'FlashcardSet',
   localField: '_id',
   foreignField: 'userId'
+});
+
+// Virtual for formatted next billing date
+userSchema.virtual('subscription.nextBillingDate').get(function() {
+  if (!this.subscription?.currentPeriodEnd) return null;
+  
+  return this.subscription.currentPeriodEnd.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+});
+
+// Virtual for getting payment amount with currency
+userSchema.virtual('subscription.paymentAmount').get(function() {
+  if (!this.subscription?.amount) return null;
+  
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: this.subscription.currency || 'gbp',
+    minimumFractionDigits: 2
+  }).format(this.subscription.amount / 100);
 });
 
 // Pre-save hook to update timestamps

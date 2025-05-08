@@ -4,8 +4,9 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
-import { handleStripeWebhook } from './routes/subscription-routes.js';
+import handleStripeWebhook from './controllers/stripe-webhook-controller.js';
 import { initSubscriptionCronJobs } from './cron/subscription-cron.js';
+import { config } from './config/config.js';
 
 // Import routes
 import flashcardRoutes from './routes/flashcard-routes.js';
@@ -27,43 +28,62 @@ dotenv.config();
 // Create Express app
 const app = express();
 
-// Set up middleware
-app.use(helmet()); // Security headers
+// Setup middleware to parse raw body for Stripe webhooks
+// This middleware must come BEFORE express.json() and bodyParser middleware
+const stripeWebhookPath = '/webhook';
+const apiStripeWebhookPath = '/api/stripe/webhook';
+const apiWebhookPath = '/api/webhook';
+const apiSubscriptionsWebhookPath = '/api/subscriptions/webhook';
 
-// Configure CORS to allow multiple origins
-const allowedOrigins = [
-  'http://localhost:5173',
-  'http://localhost:5174',
-  'http://localhost:3000',
-  'http://localhost:5001',
-  process.env.CORS_ORIGIN
-].filter(Boolean); // Remove any undefined or empty values
+app.use((req, res, next) => {
+  if (
+    req.originalUrl === stripeWebhookPath ||
+    req.originalUrl === apiStripeWebhookPath ||
+    req.originalUrl === apiWebhookPath ||
+    req.originalUrl === apiSubscriptionsWebhookPath
+  ) {
+    express.raw({ type: 'application/json' })(req, res, next);
+  } else {
+    express.json()(req, res, next);
+  }
+});
 
+// Standard middleware 
 app.use(cors({
-  origin: function(origin, callback) {
-    // Allow requests with no origin (like mobile apps, curl, Postman)
-    if (!origin) return callback(null, true);
-    
-    if (allowedOrigins.indexOf(origin) !== -1 || !origin) {
-      callback(null, true);
-    } else {
-      console.log('Blocked by CORS:', origin);
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
+  origin: config.server.corsOrigin,
   credentials: true
 }));
+app.use(helmet());
+app.use(morgan('combined'));
 
-app.use(morgan('dev')); // Logging
+// Set up webhook routes
+app.post('/webhook', (req, res) => {
+  console.log('Webhook received at /webhook');
+  return handleStripeWebhook(req, res);
+});
 
-// Special route for Stripe webhook that needs raw body
-app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), handleStripeWebhook);
+app.post('/api/webhook', (req, res) => {
+  console.log('Webhook received at /api/webhook');
+  return handleStripeWebhook(req, res);
+});
 
-// Also keep the original for backward compatibility
-app.post('/api/subscriptions/webhook', express.raw({ type: 'application/json' }), handleStripeWebhook);
+app.post('/api/stripe/webhook', (req, res) => {
+  console.log('Webhook received at /api/stripe/webhook');
+  return handleStripeWebhook(req, res);
+});
 
-// Parse JSON request body for all other routes
-app.use(express.json()); // Parse JSON request body
+app.post('/api/subscriptions/webhook', (req, res) => {
+  console.log('Webhook received at /api/subscriptions/webhook');
+  return handleStripeWebhook(req, res);
+});
+
+// Debug webhook route
+app.post('/api/stripe/debug-webhook', (req, res) => {
+  console.log('Debug webhook received');
+  console.log('Headers:', JSON.stringify(req.headers, null, 2));
+  console.log('Body:', typeof req.body, req.body instanceof Buffer ? 'Is Buffer' : 'Not Buffer');
+  return res.status(200).json({ received: true, debug: true });
+});
 
 // Function to set up and start the server
 const setupServer = () => {
@@ -103,7 +123,13 @@ const setupServer = () => {
   const server = app.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
     console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`🔒 CORS allowed origins:`, allowedOrigins);
+    console.log(`🔒 CORS allowed origins:`, config.server.corsOrigin);
+    console.log(`✅ Stripe webhook endpoints configured at:`);
+    console.log(`   - /webhook`);
+    console.log(`   - /api/webhook`);
+    console.log(`   - /api/stripe/webhook`);
+    console.log(`   - /api/subscriptions/webhook`);
+    console.log(`   - Webhook secret: ${config.stripe.webhookSecret ? 'configured' : 'missing'}`);
   }).on('error', (err) => {
     if (err.code === 'EADDRINUSE') {
       console.log(`⚠️ Port ${PORT} is already in use, trying port ${PORT + 1}...`);
@@ -111,7 +137,7 @@ const setupServer = () => {
       app.listen(PORT + 1, () => {
         console.log(`🚀 Server running on port ${PORT + 1}`);
         console.log(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
-        console.log(`🔒 CORS allowed origins:`, allowedOrigins);
+        console.log(`🔒 CORS allowed origins:`, config.server.corsOrigin);
       });
     } else {
       console.error('Server error:', err);

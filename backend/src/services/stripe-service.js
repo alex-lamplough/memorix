@@ -52,7 +52,8 @@ export const createCheckoutSession = async ({
   priceId,
   successUrl,
   cancelUrl,
-  metadata = {}
+  metadata = {},
+  couponCode = null
 }) => {
   try {
     console.log('Creating checkout session with params:', {
@@ -60,6 +61,7 @@ export const createCheckoutSession = async ({
       priceId,
       success_url: successUrl,
       cancel_url: cancelUrl,
+      hasCoupon: !!couponCode
     });
     
     // Check if we have Stripe initialized correctly
@@ -76,7 +78,8 @@ export const createCheckoutSession = async ({
     // Log the price ID being used
     console.log(`Using price ID: ${priceId}`);
     
-    const session = await stripe.checkout.sessions.create({
+    // Create session options
+    const sessionOptions = {
       customer: customerId,
       payment_method_types: ['card'],
       line_items: [
@@ -89,7 +92,19 @@ export const createCheckoutSession = async ({
       success_url: successUrl,
       cancel_url: cancelUrl,
       metadata,
-    });
+    };
+    
+    // Add coupon if provided
+    if (couponCode) {
+      sessionOptions.discounts = [
+        {
+          coupon: couponCode,
+        },
+      ];
+      console.log(`Applied coupon code: ${couponCode}`);
+    }
+    
+    const session = await stripe.checkout.sessions.create(sessionOptions);
 
     console.log('Successfully created checkout session:', {
       id: session.id,
@@ -164,6 +179,68 @@ export const cancelSubscription = async (subscriptionId) => {
 };
 
 /**
+ * Updates a subscription
+ * @param {string} subscriptionId - Stripe subscription ID
+ * @param {Object} updateParams - Parameters to update
+ * @returns {Promise<Object>} Updated subscription
+ */
+export const updateSubscription = async (subscriptionId, updateParams) => {
+  try {
+    const subscription = await stripe.subscriptions.update(subscriptionId, updateParams);
+    return subscription;
+  } catch (error) {
+    console.error('Error in updateSubscription:', error);
+    throw error;
+  }
+};
+
+/**
+ * Retrieves a customer
+ * @param {string} customerId - Stripe customer ID
+ * @returns {Promise<Object>} Customer details
+ */
+export const getCustomer = async (customerId) => {
+  try {
+    const customer = await stripe.customers.retrieve(customerId);
+    return customer;
+  } catch (error) {
+    console.error('Error in getCustomer:', error);
+    throw error;
+  }
+};
+
+/**
+ * Updates a customer
+ * @param {string} customerId - Stripe customer ID
+ * @param {Object} updateParams - Parameters to update
+ * @returns {Promise<Object>} Updated customer
+ */
+export const updateCustomer = async (customerId, updateParams) => {
+  try {
+    const customer = await stripe.customers.update(customerId, updateParams);
+    return customer;
+  } catch (error) {
+    console.error('Error in updateCustomer:', error);
+    throw error;
+  }
+};
+
+/**
+ * Retrieves a payment method
+ * @param {string} paymentMethodId - Stripe payment method ID
+ * @returns {Promise<Object>} Payment method details
+ */
+export const getPaymentMethod = async (paymentMethodId) => {
+  try {
+    const paymentMethod = await stripe.paymentMethods.retrieve(paymentMethodId);
+    return paymentMethod;
+  } catch (error) {
+    console.error('Error in getPaymentMethod:', error);
+    throw error;
+  }
+};
+
+/**
  * Handles Stripe webhook events
  * @param {string} payload - Raw request body
  * @param {string} signature - Stripe signature header
@@ -171,7 +248,7 @@ export const cancelSubscription = async (subscriptionId) => {
  */
 export const handleWebhookEvent = async (payload, signature) => {
   try {
-    console.log('Verifying webhook signature with secret:', config.stripe.webhookSecret ? `${config.stripe.webhookSecret.substring(0, 6)}...` : 'missing');
+    console.log('Verifying webhook signature...');
     
     if (!config.stripe.webhookSecret) {
       throw new Error('Webhook secret is not configured');
@@ -181,35 +258,84 @@ export const handleWebhookEvent = async (payload, signature) => {
       throw new Error('No Stripe signature found in headers');
     }
     
+    // Check if payload is a Buffer or string
+    let rawBody = payload;
+    if (typeof payload !== 'string' && !Buffer.isBuffer(payload)) {
+      console.log('Payload is not a string or Buffer. Type:', typeof payload);
+      if (payload instanceof Uint8Array) {
+        rawBody = Buffer.from(payload);
+      } else if (typeof payload === 'object') {
+        // If it's an object, stringify it (this is a fallback and not ideal)
+        console.log('WARNING: Payload is an object, stringifying it. This is not ideal for signature verification.');
+        rawBody = JSON.stringify(payload);
+      } else {
+        throw new Error(`Unexpected payload type: ${typeof payload}`);
+      }
+    }
+    
+    // Log payload snippet for debugging
+    if (Buffer.isBuffer(rawBody)) {
+      console.log('Payload snippet (Buffer):', rawBody.toString('utf8').substring(0, 50) + '...');
+    } else if (typeof rawBody === 'string') {
+      console.log('Payload snippet (String):', rawBody.substring(0, 50) + '...');
+    }
+    
     // Verify and construct the event
+    console.log('Using webhook secret:', config.stripe.webhookSecret.substring(0, 8) + '...');
+    console.log('Signature header:', signature.substring(0, 20) + '...');
+    
     const event = stripe.webhooks.constructEvent(
-      payload,
+      rawBody,
       signature,
       config.stripe.webhookSecret
     );
     
     console.log('Webhook event successfully verified:', event.id, event.type);
     
-    // Log the event data for debugging
-    console.log('Event data:', JSON.stringify(event.data.object).substring(0, 500) + '...');
-    
+    // Return the event
     return event;
   } catch (error) {
     console.error('Error in handleWebhookEvent:', error.message);
     if (error.type === 'StripeSignatureVerificationError') {
       console.error('Webhook signature verification failed');
+      console.error('Expected signature starts with:', error.expected ? error.expected.substring(0, 20) + '...' : 'unknown');
+      console.error('Received signature starts with:', error.signature ? error.signature.substring(0, 20) + '...' : 'unknown');
     }
     throw error;
   }
 };
 
+/**
+ * Retrieves all subscriptions for a customer
+ * @param {string} customerId - Stripe customer ID
+ * @returns {Promise<Object>} List of subscriptions
+ */
+export const getCustomerSubscriptions = async (customerId) => {
+  try {
+    const subscriptions = await stripe.subscriptions.list({
+      customer: customerId,
+      status: 'all'
+    });
+    return subscriptions;
+  } catch (error) {
+    console.error('Error in getCustomerSubscriptions:', error);
+    throw error;
+  }
+};
+
 export const stripeService = {
+  stripe,
   createOrRetrieveCustomer,
   createCheckoutSession,
   createPortalSession,
   getSubscription,
   cancelSubscription,
+  updateSubscription,
+  getCustomer,
+  updateCustomer,
+  getPaymentMethod,
   handleWebhookEvent,
+  getCustomerSubscriptions,
 };
 
 export default stripeService; 
