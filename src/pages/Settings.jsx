@@ -222,7 +222,7 @@ function SubscriptionGuidelines() {
       <h3 className="text-lg font-semibold mb-3 text-amber-400">Important Subscription Information</h3>
       
       <div className="space-y-4 text-sm text-white/80">
-        <div>
+      <div>
           <h4 className="font-medium text-amber-300 mb-1">Upgrading Your Plan</h4>
           <p>To upgrade to a higher tier plan (e.g., from Pro to Creator):</p>
           <ol className="list-decimal ml-5 mt-2 space-y-1">
@@ -757,7 +757,7 @@ function SubscriptionSettings() {
               <h4 className="font-bold">Creator Plan</h4>
               <p className="text-white/70 text-sm">For content creators and educators</p>
             </div>
-            <span className="bg-[#a259ff]/20 px-3 py-1 rounded-full text-xs text-[#a259ff]">Coming Soon</span>
+              <span className="bg-[#a259ff]/20 px-3 py-1 rounded-full text-xs text-[#a259ff]">Coming Soon</span>
           </div>
           <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm text-white/70">
             <div className="flex items-center gap-2">
