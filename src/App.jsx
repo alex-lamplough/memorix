@@ -31,7 +31,6 @@ import useSubscription from './hooks/useSubscription'
 // Lazy load page components
 // These components are only loaded when they are needed
 const Dashboard = lazy(() => import('./pages/Dashboard'))
-const Progress = lazy(() => import('./pages/Progress'))
 const Favorites = lazy(() => import('./pages/Favorites'))
 const Quizzes = lazy(() => import('./pages/Quizzes'))
 const Flashcards = lazy(() => import('./pages/Flashcards'))
@@ -41,7 +40,6 @@ const ShareFeature = lazy(() => import('./pages/ShareFeature'))
 const StudyDeck = lazy(() => import('./pages/StudyDeck'))
 const EditDeck = lazy(() => import('./pages/EditDeck'))
 const EditQuiz = lazy(() => import('./pages/EditQuiz'))
-const FlashcardStudyExample = lazy(() => import('./pages/FlashcardStudyExample'))
 const OnboardingForm = lazy(() => import('./components/onboarding/OnboardingForm'))
 const Privacy = lazy(() => import('./pages/Privacy'))
 const Terms = lazy(() => import('./pages/Terms'))
@@ -856,8 +854,6 @@ function App() {
         <Route path="/privacy" element={<Privacy />} />
         <Route path="/terms" element={<Terms />} />
         <Route path="/partnerships" element={<ContentCreators />} />
-        <Route path="/flashcard-study-example" element={<FlashcardStudyExample />} />
-        <Route path="/flashcard-study-example/:id" element={<FlashcardStudyExample />} />
         <Route path="/" element={
           <div className="min-h-screen bg-gradient-to-b from-[#2E0033] via-[#260041] to-[#1b1b2f] text-white relative overflow-x-hidden">
             <div className="absolute top-0 left-0 w-full h-full bg-[url('/src/assets/noise-pattern.png')] opacity-[0.02] pointer-events-none mix-blend-overlay"></div>

@@ -5,7 +5,6 @@ export { default as FlashcardSetCard } from './FlashcardSetCard'
 export { default as FlashcardSet } from './FlashcardSet'
 export { default as FlashcardCreationModal } from './FlashcardCreationModal'
 export { default as FlashcardDeck } from './FlashcardDeck'
-export { default as FlashcardStudy } from './FlashcardStudy'
 export { default as FlashcardModal } from './FlashcardModal'
 export { default as Flashcard } from './Flashcard'
 
