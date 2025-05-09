@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import logger from '../utils/logger';
-import { todoService } from '../services/todo-service'
+import { useTodos, useCreateTodo, useUpdateTodo, useDeleteTodo, useToggleTodoComplete } from '../api/queries/todos'
 
 // Icons
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline'
@@ -19,9 +19,6 @@ import CalendarTodayIcon from '@mui/icons-material/CalendarToday'
 import HighlightOffIcon from '@mui/icons-material/HighlightOff'
 
 function Todo() {
-  const [todos, setTodos] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [newTodo, setNewTodo] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const [filter, setFilter] = useState('all'); // 'all', 'active', 'completed'
@@ -30,68 +27,30 @@ function Todo() {
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [newTodoPriority, setNewTodoPriority] = useState('medium');
   const isMountedRef = useRef(true);
-  const fetchTimeoutRef = useRef(null);
   
-  // Fetch todos from API
+  // Use React Query hooks
+  const { 
+    data: todosData, 
+    isLoading, 
+    error 
+  } = useTodos();
+  
+  // React Query mutations
+  const { mutate: createTodo } = useCreateTodo();
+  const { mutate: updateTodo } = useUpdateTodo();
+  const { mutate: deleteTodo } = useDeleteTodo();
+  const { mutate: toggleTodoComplete } = useToggleTodoComplete();
+  
+  // Extract todos from query data or use empty array
+  const todos = todosData?.todos || [];
+  
+  // Cleanup on unmount
   useEffect(() => {
     isMountedRef.current = true;
-    
-    const fetchTodos = async () => {
-      if (!isMountedRef.current) return;
-      
-      try {
-        setIsLoading(true);
-        setError(null);
-        
-        const queryParams = {
-          sort: sortOrder
-        };
-        
-        // Add status filter if not "all"
-        if (filter === 'active') {
-          queryParams.status = 'pending,in-progress';
-          logger.debug('Fetching active todos with filter:', { value: queryParams });
-        } else if (filter === 'completed') {
-          queryParams.status = 'completed';
-          logger.debug('Fetching completed todos with filter:', { value: queryParams });
-        } else {
-          logger.debug('Fetching all todos with filter:', { value: queryParams });
-        }
-        
-        const response = await todoService.getAllTodos(queryParams);
-        
-        if (isMountedRef.current) {
-          logger.debug('API response:', { value: response });
-          setTodos(response.todos);
-        }
-      } catch (err) {
-        logger.error('Error fetching todos:', { value: err });
-        if (isMountedRef.current) {
-          setError('Failed to load your todo items');
-        }
-      } finally {
-        if (isMountedRef.current) {
-          setIsLoading(false);
-        }
-      }
-    };
-    
-    // Debounce the fetch to prevent multiple simultaneous calls
-    if (fetchTimeoutRef.current) {
-      clearTimeout(fetchTimeoutRef.current);
-    }
-    
-    fetchTimeoutRef.current = setTimeout(() => {
-      fetchTodos();
-    }, 50);
-    
     return () => {
       isMountedRef.current = false;
-      if (fetchTimeoutRef.current) {
-        clearTimeout(fetchTimeoutRef.current);
-      }
     };
-  }, [filter, sortOrder]);
+  }, []);
   
   const handleAddTodo = async () => {
     if (newTodo.trim() === '') return;
@@ -105,49 +64,48 @@ function Todo() {
         priority: newTodoPriority
       };
       
-      const createdTodo = await todoService.createTodo(todoData);
-      
-      // Update the local state
-      setTodos(prevTodos => [...prevTodos, createdTodo]);
-      setNewTodo('');
-      // Reset priority to medium after adding
-      setNewTodoPriority('medium');
+      // Use React Query mutation
+      createTodo(todoData, {
+        onSuccess: () => {
+          setNewTodo('');
+          // Reset priority to medium after adding
+          setNewTodoPriority('medium');
+        },
+        onError: (err) => {
+          logger.error('Error adding todo:', { value: err });
+        },
+        onSettled: () => {
+          setIsAdding(false);
+        }
+      });
     } catch (err) {
       logger.error('Error adding todo:', { value: err });
-      setError('Failed to add todo');
-    } finally {
       setIsAdding(false);
     }
   };
   
-  const toggleTodo = async (id) => {
+  const handleToggleTodo = async (id) => {
     try {
-      // Optimistically update UI
-      setTodos(todos.map(todo => 
-        todo._id === id ? { ...todo, isCompleted: !todo.isCompleted } : todo
-      ));
+      // Find the current todo
+      const todo = todos.find(todo => todo._id === id);
+      if (!todo) return;
       
-      // Make API call
-      await todoService.toggleTodoCompletion(id);
+      // Use React Query mutation
+      toggleTodoComplete({ 
+        id, 
+        isCompleted: !todo.isCompleted 
+      });
     } catch (err) {
       logger.error('Error toggling todo:', { value: err });
-      // Revert the optimistic update
-      setTodos(prevTodos => [...prevTodos]);
     }
   };
   
-  const deleteTodo = async (id) => {
+  const handleDeleteTodo = async (id) => {
     try {
-      // Optimistically update UI
-      setTodos(todos.filter(todo => todo._id !== id));
-      
-      // Make API call
-      await todoService.deleteTodo(id);
+      // Use React Query mutation
+      deleteTodo(id);
     } catch (err) {
       logger.error('Error deleting todo:', { value: err });
-      // Fetch todos again in case the delete failed
-      const response = await todoService.getAllTodos();
-      setTodos(response.todos);
     }
   };
   
@@ -167,20 +125,23 @@ function Todo() {
     if (!editingTodo || editingTodo.title.trim() === '') return;
     
     try {
-      // Make API call
-      const updatedTodo = await todoService.updateTodo(editingTodo._id, {
-        title: editingTodo.title,
-        description: editingTodo.description,
-        priority: editingTodo.priority
+      // Use React Query mutation
+      updateTodo({ 
+        id: editingTodo._id, 
+        todo: {
+          title: editingTodo.title,
+          description: editingTodo.description,
+          priority: editingTodo.priority
+        }
+      }, {
+        onSuccess: () => {
+          // Exit edit mode
+          setEditingTodo(null);
+        },
+        onError: (err) => {
+          logger.error('Error updating todo:', { value: err });
+        }
       });
-      
-      // Update local state
-      setTodos(todos.map(todo => 
-        todo._id === updatedTodo._id ? updatedTodo : todo
-      ));
-      
-      // Exit edit mode
-      setEditingTodo(null);
     } catch (err) {
       logger.error('Error updating todo:', { value: err });
     }
@@ -194,20 +155,26 @@ function Todo() {
     setSortOrder(newSort);
   };
   
-  const deleteCompletedTodos = async () => {
-    try {
-      // Optimistically update UI
-      setTodos(todos.filter(todo => !todo.isCompleted));
-      
-      // Make API call
-      await todoService.deleteCompletedTodos();
-    } catch (err) {
-      logger.error('Error deleting completed todos:', { value: err });
-      // Fetch todos again in case the delete failed
-      const response = await todoService.getAllTodos();
-      setTodos(response.todos);
+  // Filter and sort todos based on current settings
+  const filteredTodos = todos.filter(todo => {
+    if (filter === 'all') return true;
+    if (filter === 'active') return !todo.isCompleted;
+    if (filter === 'completed') return todo.isCompleted;
+    return true;
+  }).sort((a, b) => {
+    if (sortOrder === 'dueDate:asc') {
+      return new Date(a.dueDate || '9999-12-31') - new Date(b.dueDate || '9999-12-31');
+    } else if (sortOrder === 'dueDate:desc') {
+      return new Date(b.dueDate || '1970-01-01') - new Date(a.dueDate || '1970-01-01');
+    } else if (sortOrder === 'priority:high') {
+      const priorityOrder = { high: 0, medium: 1, low: 2 };
+      return priorityOrder[a.priority || 'medium'] - priorityOrder[b.priority || 'medium'];
+    } else if (sortOrder === 'priority:low') {
+      const priorityOrder = { high: 0, medium: 1, low: 2 };
+      return priorityOrder[b.priority || 'medium'] - priorityOrder[a.priority || 'medium'];
     }
-  };
+    return 0;
+  });
   
   const formatDate = (dateString) => {
     if (!dateString) return null;
@@ -249,314 +216,234 @@ function Todo() {
               <ArrowDropDownIcon fontSize="small" />
             </button>
             
-            {/* Dropdown menu */}
             {showFilterDropdown && (
-              <div className="absolute right-0 mt-2 bg-[#18092a] rounded-lg border border-gray-800/30 shadow-lg p-2 z-10">
-                <button 
-                  className={`w-full text-left px-3 py-1.5 rounded-lg text-sm ${filter === 'all' ? 'bg-[#00ff94]/10 text-[#00ff94]' : 'hover:bg-white/5'}`}
-                  onClick={() => {
-                    handleFilterChange('all');
-                    setShowFilterDropdown(false);
-                  }}
-                >
-                  All
-                </button>
-                <button 
-                  className={`w-full text-left px-3 py-1.5 rounded-lg text-sm ${filter === 'active' ? 'bg-[#00ff94]/10 text-[#00ff94]' : 'hover:bg-white/5'}`}
-                  onClick={() => {
-                    handleFilterChange('active');
-                    setShowFilterDropdown(false);
-                  }}
-                >
-                  Active
-                </button>
-                <button 
-                  className={`w-full text-left px-3 py-1.5 rounded-lg text-sm ${filter === 'completed' ? 'bg-[#00ff94]/10 text-[#00ff94]' : 'hover:bg-white/5'}`}
-                  onClick={() => {
-                    handleFilterChange('completed');
-                    setShowFilterDropdown(false);
-                  }}
-                >
-                  Completed
-                </button>
+              <div className="absolute right-0 top-full mt-1 bg-[#18092a] border border-gray-800/50 rounded-lg shadow-xl w-40 z-10">
+                <div className="py-1">
+                  <button
+                    onClick={() => {
+                      handleFilterChange('all')
+                      setShowFilterDropdown(false)
+                    }}
+                    className={`flex items-center gap-2 w-full px-4 py-2 text-sm ${filter === 'all' ? 'text-[#00ff94]' : 'text-white/80'} hover:bg-white/5 text-left`}
+                  >
+                    <span>All</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      handleFilterChange('active')
+                      setShowFilterDropdown(false)
+                    }}
+                    className={`flex items-center gap-2 w-full px-4 py-2 text-sm ${filter === 'active' ? 'text-[#00ff94]' : 'text-white/80'} hover:bg-white/5 text-left`}
+                  >
+                    <span>Active</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      handleFilterChange('completed')
+                      setShowFilterDropdown(false)
+                    }}
+                    className={`flex items-center gap-2 w-full px-4 py-2 text-sm ${filter === 'completed' ? 'text-[#00ff94]' : 'text-white/80'} hover:bg-white/5 text-left`}
+                  >
+                    <span>Completed</span>
+                  </button>
+                </div>
               </div>
             )}
           </div>
           
           {/* Sort button */}
           <button 
-            className="text-white/70 hover:text-white p-1.5 rounded-lg hover:bg-white/5 transition-colors"
-            onClick={() => handleSortChange(sortOrder === 'dueDate:asc' ? 'priority:desc' : 'dueDate:asc')}
+            className="flex items-center gap-1 text-white/70 hover:text-white p-1.5 rounded-lg hover:bg-white/5 transition-colors"
+            onClick={() => {
+              const nextSort = 
+                sortOrder === 'dueDate:asc' ? 'dueDate:desc' :
+                sortOrder === 'dueDate:desc' ? 'priority:high' :
+                sortOrder === 'priority:high' ? 'priority:low' : 'dueDate:asc';
+              handleSortChange(nextSort);
+            }}
           >
             <SortIcon fontSize="small" />
+            <span className="text-sm hidden sm:inline">
+              {sortOrder.includes('dueDate') ? 
+                (sortOrder.includes(':asc') ? 'Date ↑' : 'Date ↓') : 
+                (sortOrder.includes('high') ? 'Priority ↑' : 'Priority ↓')
+              }
+            </span>
           </button>
-          
-          {/* Clear completed (conditionally rendered) */}
-          {todos.some(todo => todo.isCompleted) && (
-            <button 
-              className="text-white/70 hover:text-white p-1.5 rounded-lg hover:bg-white/5 transition-colors"
-              onClick={deleteCompletedTodos}
-            >
-              <HighlightOffIcon fontSize="small" />
-            </button>
-          )}
         </div>
       </div>
       
-      {/* Add todo input */}
-      <div className="flex flex-col gap-2 mb-6">
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={newTodo}
-            onChange={(e) => setNewTodo(e.target.value)}
-            placeholder="Add a new task..."
-            className="flex-1 bg-[#18092a]/80 text-white rounded-lg px-4 py-2.5 border border-gray-800/50 focus:outline-none focus:border-[#00ff94]/50 text-sm"
-            onKeyDown={(e) => e.key === 'Enter' && handleAddTodo()}
-            disabled={isAdding}
-          />
-          <button 
-            onClick={handleAddTodo}
-            disabled={isAdding || newTodo.trim() === ''}
-            className={`px-3 py-2 rounded-lg border ${
-              isAdding || newTodo.trim() === '' 
-                ? 'bg-gray-700/20 text-white/40 border-gray-800/30 cursor-not-allowed' 
-                : 'bg-[#00ff94]/10 text-[#00ff94] hover:bg-[#00ff94]/20 border-[#00ff94]/30'
-            } transition-colors`}
-          >
-            {isAdding ? (
-              <AutorenewIcon fontSize="small" className="animate-spin" />
-            ) : (
-              <AddIcon fontSize="small" />
-            )}
-          </button>
-        </div>
+      {/* Add todo form */}
+      <div className="mb-6 flex gap-2">
+        <input
+          type="text"
+          value={newTodo}
+          onChange={(e) => setNewTodo(e.target.value)}
+          placeholder="Add a new task..."
+          className="flex-1 bg-[#2E0033]/30 text-white rounded-lg px-4 py-2 border border-gray-800/50 focus:outline-none focus:border-[#00ff94]/50 focus:ring-1 focus:ring-[#00ff94]/30"
+          onKeyDown={(e) => e.key === 'Enter' && handleAddTodo()}
+        />
         
-        {/* Priority selector for new todo */}
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-white/60">Priority:</span>
-          <div className="flex gap-1">
-            <button
-              onClick={() => setNewTodoPriority('low')}
-              className={`px-2 py-0.5 text-xs rounded-full ${
-                newTodoPriority === 'low' 
-                  ? 'bg-blue-500/20 text-blue-400 border border-blue-400/30' 
-                  : 'bg-[#18092a]/80 text-white/50 border border-gray-800/30 hover:bg-blue-500/10'
-              }`}
-              disabled={isAdding}
-            >
-              Low
-            </button>
-            <button
-              onClick={() => setNewTodoPriority('medium')}
-              className={`px-2 py-0.5 text-xs rounded-full ${
-                newTodoPriority === 'medium' 
-                  ? 'bg-green-500/20 text-green-400 border border-green-400/30' 
-                  : 'bg-[#18092a]/80 text-white/50 border border-gray-800/30 hover:bg-green-500/10'
-              }`}
-              disabled={isAdding}
-            >
-              Medium
-            </button>
-            <button
-              onClick={() => setNewTodoPriority('high')}
-              className={`px-2 py-0.5 text-xs rounded-full ${
-                newTodoPriority === 'high' 
-                  ? 'bg-orange-500/20 text-orange-400 border border-orange-400/30' 
-                  : 'bg-[#18092a]/80 text-white/50 border border-gray-800/30 hover:bg-orange-500/10'
-              }`}
-              disabled={isAdding}
-            >
-              High
-            </button>
-            <button
-              onClick={() => setNewTodoPriority('urgent')}
-              className={`px-2 py-0.5 text-xs rounded-full ${
-                newTodoPriority === 'urgent' 
-                  ? 'bg-red-500/20 text-red-400 border border-red-400/30' 
-                  : 'bg-[#18092a]/80 text-white/50 border border-gray-800/30 hover:bg-red-500/10'
-              }`}
-              disabled={isAdding}
-            >
-              Urgent
-            </button>
-          </div>
-        </div>
+        {/* Priority selector */}
+        <select
+          value={newTodoPriority}
+          onChange={(e) => setNewTodoPriority(e.target.value)}
+          className="bg-[#2E0033]/30 text-white rounded-lg px-3 py-2 border border-gray-800/50 focus:outline-none focus:border-[#00ff94]/50 focus:ring-1 focus:ring-[#00ff94]/30"
+        >
+          <option value="low">Low</option>
+          <option value="medium">Medium</option>
+          <option value="high">High</option>
+        </select>
+        
+        <button
+          onClick={handleAddTodo}
+          disabled={isAdding || newTodo.trim() === ''}
+          className={`px-4 py-2 rounded-lg flex items-center gap-1 ${
+            isAdding || newTodo.trim() === '' 
+              ? 'bg-gray-700/50 text-gray-400 cursor-not-allowed' 
+              : 'bg-[#00ff94]/10 text-[#00ff94] hover:bg-[#00ff94]/20 transition-colors border border-[#00ff94]/30'
+          }`}
+        >
+          {isAdding ? (
+            <>
+              <div className="w-4 h-4 border-2 border-white/20 border-t-[#00ff94] rounded-full animate-spin"></div>
+              <span>Adding...</span>
+            </>
+          ) : (
+            <>
+              <AddIcon fontSize="small" />
+              <span>Add</span>
+            </>
+          )}
+        </button>
       </div>
       
-      {/* Loading state */}
-      {isLoading && (
-        <div className="flex items-center justify-center py-8">
-          <HourglassEmptyIcon className="animate-pulse text-[#00ff94]" />
-          <span className="ml-2 text-white/70">Loading todos...</span>
+      {/* Todo list */}
+      {isLoading ? (
+        <div className="py-8 text-center">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#00ff94] mb-4"></div>
+          <p className="text-white/70">Loading your todos...</p>
         </div>
-      )}
-      
-      {/* Error state */}
-      {error && !isLoading && (
-        <div className="text-center py-4 text-red-400">
-          <p>{error}</p>
-          <button 
-            onClick={() => window.location.reload()} 
-            className="mt-2 text-white/70 hover:text-white underline text-sm"
-          >
-            Try again
-          </button>
+      ) : error ? (
+        <div className="py-8 text-center bg-red-500/10 rounded-xl border border-red-500/30">
+          <p className="text-white/90 mb-2">Error loading todos</p>
+          <p className="text-white/70 text-sm">{error?.message || 'Please try again later'}</p>
         </div>
-      )}
-      
-      {/* Todos list */}
-      {!isLoading && !error && (
+      ) : filteredTodos.length === 0 ? (
+        <div className="py-8 text-center bg-[#2E0033]/30 rounded-xl border border-gray-800/50">
+          <HourglassEmptyIcon className="text-white/40 text-4xl mb-3" />
+          <p className="text-white/70">
+            {filter === 'all' 
+              ? 'No todos yet. Add your first task above!' 
+              : filter === 'active' 
+                ? 'No active todos. Great job!' 
+                : 'No completed todos yet. Complete some tasks!'}
+          </p>
+        </div>
+      ) : (
         <div className="space-y-3">
-          {todos.length === 0 ? (
-            <p className="text-white/50 text-center py-4">No tasks yet. Add one above!</p>
-          ) : (
-            todos.map(todo => (
-              <div 
-                key={todo._id} 
-                className={`flex items-center justify-between p-3 rounded-lg border ${
-                  todo.isCompleted 
-                    ? 'border-gray-800/20 bg-white/5 text-white/50' 
-                    : 'border-gray-800/30 bg-[#18092a]/80'
-                }`}
-              >
-                {editingTodo && editingTodo._id === todo._id ? (
-                  // Edit mode
-                  <div className="flex-1 flex flex-col gap-2">
-                    <input
-                      type="text"
-                      value={editingTodo.title}
-                      onChange={(e) => setEditingTodo({...editingTodo, title: e.target.value})}
-                      className="w-full bg-[#15052a]/80 text-white rounded-lg px-3 py-1.5 border border-gray-800/50 focus:outline-none focus:border-[#00ff94]/50 text-sm"
-                      autoFocus
-                    />
+          {filteredTodos.map(todo => (
+            <div 
+              key={todo._id} 
+              className={`bg-[#2E0033]/30 rounded-lg p-4 border border-gray-800/50 ${
+                todo.isCompleted ? 'opacity-60' : ''
+              }`}
+            >
+              {editingTodo && editingTodo._id === todo._id ? (
+                // Edit mode
+                <div className="space-y-3">
+                  <input
+                    type="text"
+                    value={editingTodo.title}
+                    onChange={(e) => setEditingTodo({...editingTodo, title: e.target.value})}
+                    className="w-full bg-[#18092a]/60 text-white rounded-lg px-4 py-2 border border-gray-800/50 focus:outline-none focus:border-[#00ff94]/50 focus:ring-1 focus:ring-[#00ff94]/30"
+                  />
+                  
+                  <div className="flex gap-2">
+                    <select
+                      value={editingTodo.priority || 'medium'}
+                      onChange={(e) => setEditingTodo({...editingTodo, priority: e.target.value})}
+                      className="bg-[#18092a]/60 text-white rounded-lg px-3 py-2 border border-gray-800/50 focus:outline-none focus:border-[#00ff94]/50 focus:ring-1 focus:ring-[#00ff94]/30"
+                    >
+                      <option value="low">Low Priority</option>
+                      <option value="medium">Medium Priority</option>
+                      <option value="high">High Priority</option>
+                    </select>
                     
-                    {/* Priority selector */}
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-xs text-white/60">Priority:</span>
-                      <div className="flex gap-1">
-                        <button
-                          onClick={() => setEditingTodo({...editingTodo, priority: 'low'})}
-                          className={`px-2 py-0.5 text-xs rounded-full ${
-                            editingTodo.priority === 'low' 
-                              ? 'bg-blue-500/20 text-blue-400 border border-blue-400/30' 
-                              : 'bg-[#18092a]/80 text-white/50 border border-gray-800/30 hover:bg-blue-500/10'
-                          }`}
-                        >
-                          Low
-                        </button>
-                        <button
-                          onClick={() => setEditingTodo({...editingTodo, priority: 'medium'})}
-                          className={`px-2 py-0.5 text-xs rounded-full ${
-                            editingTodo.priority === 'medium' 
-                              ? 'bg-green-500/20 text-green-400 border border-green-400/30' 
-                              : 'bg-[#18092a]/80 text-white/50 border border-gray-800/30 hover:bg-green-500/10'
-                          }`}
-                        >
-                          Medium
-                        </button>
-                        <button
-                          onClick={() => setEditingTodo({...editingTodo, priority: 'high'})}
-                          className={`px-2 py-0.5 text-xs rounded-full ${
-                            editingTodo.priority === 'high' 
-                              ? 'bg-orange-500/20 text-orange-400 border border-orange-400/30' 
-                              : 'bg-[#18092a]/80 text-white/50 border border-gray-800/30 hover:bg-orange-500/10'
-                          }`}
-                        >
-                          High
-                        </button>
-                        <button
-                          onClick={() => setEditingTodo({...editingTodo, priority: 'urgent'})}
-                          className={`px-2 py-0.5 text-xs rounded-full ${
-                            editingTodo.priority === 'urgent' 
-                              ? 'bg-red-500/20 text-red-400 border border-red-400/30' 
-                              : 'bg-[#18092a]/80 text-white/50 border border-gray-800/30 hover:bg-red-500/10'
-                          }`}
-                        >
-                          Urgent
-                        </button>
-                      </div>
-                    </div>
+                    <button
+                      onClick={saveEditedTodo}
+                      className="flex-1 bg-[#00ff94]/10 text-[#00ff94] px-4 py-2 rounded-lg hover:bg-[#00ff94]/20 transition-colors border border-[#00ff94]/30 flex items-center justify-center gap-1"
+                    >
+                      <SaveIcon fontSize="small" />
+                      <span>Save</span>
+                    </button>
                     
-                    <div className="flex justify-end gap-2">
-                      <button 
-                        onClick={cancelEditing}
-                        className="text-white/70 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors"
-                      >
-                        <CloseIcon fontSize="small" />
-                      </button>
-                      <button 
-                        onClick={saveEditedTodo}
-                        className="text-[#00ff94] p-1 rounded-lg hover:bg-[#00ff94]/10 transition-colors"
-                        disabled={editingTodo.title.trim() === ''}
-                      >
-                        <SaveIcon fontSize="small" />
-                      </button>
-                    </div>
+                    <button
+                      onClick={cancelEditing}
+                      className="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 text-white/70 transition-colors border border-gray-800/50 flex items-center justify-center"
+                    >
+                      <CloseIcon fontSize="small" />
+                    </button>
                   </div>
-                ) : (
-                  // View mode
-                  <>
-                    <div className="flex items-center gap-3">
-                      <button 
-                        onClick={() => toggleTodo(todo._id)}
-                        className={`p-1 rounded-full ${
-                          todo.isCompleted 
-                            ? 'text-[#00ff94]' 
-                            : 'text-white/50 hover:text-white/80'
-                        }`}
-                      >
-                        <CheckCircleOutlineIcon fontSize="small" />
-                      </button>
-                      <div className="flex flex-col">
-                        <span className={todo.isCompleted ? 'line-through' : ''}>{todo.title}</span>
-                        
-                        {/* Metadata row: priority + due date if exists */}
-                        {(todo.priority || todo.dueDate) && (
-                          <div className="flex items-center gap-2 text-xs text-white/50 mt-1">
-                            {todo.priority && (
-                              <span className={`
-                                px-1.5 py-0.5 rounded-full text-xs
-                                ${todo.priority === 'high' ? 'bg-orange-500/20 text-orange-400' : ''}
-                                ${todo.priority === 'urgent' ? 'bg-red-500/20 text-red-400' : ''}
-                                ${todo.priority === 'low' ? 'bg-blue-500/20 text-blue-400' : ''}
-                                ${todo.priority === 'medium' ? 'bg-green-500/20 text-green-400' : ''}
-                              `}>
-                                {todo.priority}
-                              </span>
-                            )}
-                            
-                            {todo.dueDate && (
-                              <span className="flex items-center gap-1">
-                                <CalendarTodayIcon style={{ fontSize: 12 }} />
-                                {formatDate(todo.dueDate)}
-                              </span>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </div>
+                </div>
+              ) : (
+                // View mode
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => handleToggleTodo(todo._id)}
+                    className={`p-1 rounded-full ${
+                      todo.isCompleted 
+                        ? 'text-[#00ff94] hover:text-[#00cc77] bg-[#00ff94]/10' 
+                        : 'text-white/40 hover:text-white/60 hover:bg-white/5'
+                    }`}
+                    aria-label={todo.isCompleted ? "Mark as incomplete" : "Mark as complete"}
+                  >
+                    <CheckCircleOutlineIcon />
+                  </button>
+                  
+                  <div className="flex-1">
+                    <p className={`${
+                      todo.isCompleted ? 'line-through text-white/50' : 'text-white'
+                    }`}>
+                      {todo.title}
+                    </p>
                     
-                    <div className="flex items-center">
-                      <button 
-                        onClick={() => startEditingTodo(todo)}
-                        className="text-white/50 hover:text-white/80 p-1 rounded-full hover:bg-white/10 transition-colors"
-                      >
-                        <EditIcon fontSize="small" />
-                      </button>
-                      
-                      <button 
-                        onClick={() => deleteTodo(todo._id)}
-                        className="text-white/50 hover:text-white/80 p-1 rounded-full hover:bg-white/10 transition-colors"
-                      >
-                        <DeleteOutlineIcon fontSize="small" />
-                      </button>
-                    </div>
-                  </>
-                )}
-              </div>
-            ))
-          )}
+                    {todo.dueDate && (
+                      <div className="text-white/60 text-xs flex items-center gap-1 mt-1">
+                        <CalendarTodayIcon style={{ fontSize: 12 }} />
+                        <span>{formatDate(todo.dueDate)}</span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="flex items-center">
+                    {/* Priority indicator */}
+                    {todo.priority && (
+                      <span className={`inline-block w-2 h-2 rounded-full mr-3 ${
+                        todo.priority === 'high' ? 'bg-red-500' :
+                        todo.priority === 'medium' ? 'bg-amber-500' :
+                        'bg-blue-500'
+                      }`}></span>
+                    )}
+                    
+                    <button
+                      onClick={() => startEditingTodo(todo)}
+                      className="p-1 text-white/40 hover:text-white/60 hover:bg-white/5 rounded"
+                    >
+                      <EditIcon fontSize="small" />
+                    </button>
+                    
+                    <button
+                      onClick={() => handleDeleteTodo(todo._id)}
+                      className="p-1 text-white/40 hover:text-red-400 hover:bg-white/5 rounded"
+                    >
+                      <DeleteOutlineIcon fontSize="small" />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
         </div>
       )}
     </div>

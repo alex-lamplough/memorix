@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import logger from '../utils/logger';
 import { useAuth0 } from '@auth0/auth0-react';
-import { setAuthTokenGetter as setOldAuthTokenGetter } from '../services/api';
 import { setAuthTokenGetter, refreshAuthToken } from '../api/apiClient';
 
 /**
@@ -57,9 +56,8 @@ const AuthTokenProvider = ({ children }) => {
   
   // Set up the token getter function when component mounts or tokenGetter changes
   useEffect(() => {
-    // Set up the token getter function for both APIs
+    // Set up the token getter function for the API
     setAuthTokenGetter(tokenGetter);
-    setOldAuthTokenGetter(tokenGetter); // For backward compatibility
     
     // Log that the token provider is initialized
     logger.debug('🔐 Auth token provider initialized');

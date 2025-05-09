@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import logger from '../utils/logger';
 import { 
   Dialog, 
@@ -33,8 +33,10 @@ import SearchIcon from '@mui/icons-material/Search';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import TuneIcon from '@mui/icons-material/Tune';
 
-import { flashcardService } from '../services/api';
-import { quizService } from '../services/quiz-service';
+// Import React Query hooks
+import { useActivities, useGeneratedActivities } from '../api/queries/activities';
+import { useFlashcardSets } from '../api/queries/flashcards';
+import { useQuizzes } from '../api/queries/quizzes';
 
 function ActivityItem({ activity }) {
   // Format the timestamp
@@ -121,8 +123,6 @@ function ActivityItem({ activity }) {
 }
 
 function ActivityModal({ open, onClose }) {
-  const [activities, setActivities] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState(0);
   const [showFilters, setShowFilters] = useState(false);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
@@ -141,124 +141,51 @@ function ActivityModal({ open, onClose }) {
   // Available activity limit options
   const LIMIT_OPTIONS = [100, 250, 500, 1000, 'All'];
   
-  // Fetch activity data
-  useEffect(() => {
-    if (open) {
-      fetchActivityData();
-    }
-  }, [open, activityLimit]);
+  // First try to fetch from the API directly
+  const { 
+    data: apiActivities,
+    isLoading: isLoadingApiActivities,
+    isError: isApiActivitiesError
+  } = useActivities({
+    limit: activityLimit === 'All' ? undefined : activityLimit,
+    sort: sortOrder,
+    startDate: startDate ? startDate.toISOString() : undefined,
+    endDate: endDate ? endDate.toISOString() : undefined,
+    type: activeTab === 1 ? 'flashcard' : activeTab === 2 ? 'quiz' : undefined,
+    action: typeFilter !== 'all' ? typeFilter : undefined
+  });
   
-  const fetchActivityData = async () => {
-    setIsLoading(true);
-    try {
-      // Get all activity data
-      // In a real implementation, you'd have a dedicated API endpoint for this
-      // For now, we'll combine data from flashcards and quizzes
-      const flashcardSets = await flashcardService.getAllFlashcardSets();
-      const quizzes = await quizService.getAllQuizzes();
-      
-      // Transform flashcard sets into activity items
-      const flashcardActivities = flashcardSets.flatMap(set => {
-        const activities = [];
-        
-        // Create activity
-        activities.push({
-          id: `create-${set._id}`,
-          title: set.title,
-          itemType: 'flashcard',
-          actionType: 'create',
-          timestamp: set.createdAt,
-          cardsCount: set.cardCount || 0
-        });
-        
-        // Study activity (if studied)
-        if (set.lastStudied) {
-          activities.push({
-            id: `study-${set._id}-${new Date(set.lastStudied).getTime()}`,
-            title: set.title,
-            itemType: 'flashcard',
-            actionType: 'study',
-            timestamp: set.lastStudied,
-            cardsStudied: Math.round(set.cardCount * (set.progress || 0) / 100)
-          });
-        }
-        
-        // Update activity (if updated after creation)
-        if (set.updatedAt && new Date(set.updatedAt).getTime() > new Date(set.createdAt).getTime()) {
-          activities.push({
-            id: `update-${set._id}-${new Date(set.updatedAt).getTime()}`,
-            title: set.title,
-            itemType: 'flashcard',
-            actionType: 'update',
-            timestamp: set.updatedAt
-          });
-        }
-        
-        return activities;
-      });
-      
-      // Transform quizzes into activity items
-      const quizActivities = quizzes.flatMap(quiz => {
-        const activities = [];
-        
-        // Create activity
-        activities.push({
-          id: `create-${quiz._id}`,
-          title: quiz.title,
-          itemType: 'quiz',
-          actionType: 'create',
-          timestamp: quiz.createdAt,
-          questionsCount: quiz.questions?.length || 0
-        });
-        
-        // Complete activity (if completed)
-        if (quiz.lastCompleted) {
-          activities.push({
-            id: `complete-${quiz._id}-${new Date(quiz.lastCompleted).getTime()}`,
-            title: quiz.title,
-            itemType: 'quiz',
-            actionType: 'complete',
-            timestamp: quiz.lastCompleted,
-            score: quiz.lastScore
-          });
-        }
-        
-        // Update activity (if updated after creation)
-        if (quiz.updatedAt && new Date(quiz.updatedAt).getTime() > new Date(quiz.createdAt).getTime()) {
-          activities.push({
-            id: `update-${quiz._id}-${new Date(quiz.updatedAt).getTime()}`,
-            title: quiz.title,
-            itemType: 'quiz',
-            actionType: 'update',
-            timestamp: quiz.updatedAt
-          });
-        }
-        
-        return activities;
-      });
-      
-      // Combine all activities
-      const allActivities = [...flashcardActivities, ...quizActivities];
-      
-      // Sort by timestamp (newest first by default)
-      allActivities.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-      
-      // Store total count before limiting
-      setTotalActivities(allActivities.length);
-      
-      // Apply limit to total activities to prevent performance issues
-      const limitedActivities = activityLimit === 'All' 
-        ? allActivities 
-        : allActivities.slice(0, activityLimit);
-      
-      setActivities(limitedActivities);
-      setPage(1); // Reset to page 1 when new data loads
-    } catch (error) {
-      logger.error('Error fetching activity data:', error);
-    } finally {
-      setIsLoading(false);
+  // Fallback data sources if the activities API isn't available
+  const { data: flashcardSets, isLoading: isLoadingFlashcards } = useFlashcardSets();
+  const { data: quizzes, isLoading: isLoadingQuizzes } = useQuizzes();
+  
+  // Generate activities from data as fallback
+  const { 
+    data: generatedActivities,
+    isLoading: isLoadingGenerated
+  } = useGeneratedActivities(
+    // Only use these if API activities failed or returned empty
+    isApiActivitiesError || (apiActivities && apiActivities.length === 0) ? flashcardSets : null,
+    isApiActivitiesError || (apiActivities && apiActivities.length === 0) ? quizzes : null,
+    {
+      limit: activityLimit,
+      filter: activeTab === 1 ? 'flashcard' : activeTab === 2 ? 'quiz' : typeFilter !== 'all' ? typeFilter : undefined
     }
-  };
+  );
+  
+  // Determine which activities to use
+  const activities = apiActivities && apiActivities.length > 0 ? apiActivities : generatedActivities || [];
+  
+  // Determine loading state
+  const isLoading = isLoadingApiActivities || 
+    (isApiActivitiesError && (isLoadingFlashcards || isLoadingQuizzes || isLoadingGenerated));
+  
+  // Update total activities count whenever activities change
+  useEffect(() => {
+    if (activities) {
+      setTotalActivities(activities.length);
+    }
+  }, [activities]);
   
   const handleTabChange = (event, newValue) => {
     setActiveTab(newValue);
@@ -294,7 +221,6 @@ function ActivityModal({ open, onClose }) {
   
   const handleLimitChange = (event) => {
     setActivityLimit(event.target.value);
-    setIsLoading(true); // Show loading while fetching new data
   };
   
   const handleDateChange = (type, date) => {
@@ -320,23 +246,11 @@ function ActivityModal({ open, onClose }) {
     setPage(1);
   };
   
-  // Filter and sort activities based on user selections
+  // Filter activities based on user selections that aren't handled by the API
   const getFilteredActivities = () => {
     let filtered = [...activities];
     
-    // Filter by tab
-    if (activeTab === 1) {
-      filtered = filtered.filter(a => a.itemType === 'flashcard');
-    } else if (activeTab === 2) {
-      filtered = filtered.filter(a => a.itemType === 'quiz');
-    }
-    
-    // Filter by action type
-    if (typeFilter !== 'all') {
-      filtered = filtered.filter(a => a.actionType === typeFilter);
-    }
-    
-    // Filter by search query
+    // Filter by search query (client-side)
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(a => 
@@ -344,28 +258,6 @@ function ActivityModal({ open, onClose }) {
         a.actionType.toLowerCase().includes(query) ||
         a.itemType.toLowerCase().includes(query)
       );
-    }
-    
-    // Filter by date range
-    if (startDate) {
-      // Set start date to beginning of day
-      const start = new Date(startDate);
-      start.setHours(0, 0, 0, 0);
-      filtered = filtered.filter(a => new Date(a.timestamp) >= start);
-    }
-    
-    if (endDate) {
-      // Set end date to end of day
-      const end = new Date(endDate);
-      end.setHours(23, 59, 59, 999);
-      filtered = filtered.filter(a => new Date(a.timestamp) <= end);
-    }
-    
-    // Apply sorting
-    if (sortOrder === 'oldest') {
-      filtered.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-    } else {
-      filtered.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
     }
     
     return filtered;

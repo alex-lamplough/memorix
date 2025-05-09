@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
 import logger from '../utils/logger';
 import { useParams, useNavigate } from 'react-router-dom'
-import { quizService } from '../services/quiz-service'
 import { handleRequestError } from '../services/utils'
+
+// React Query
+import { useQuiz, useUpdateQuiz } from '../api/queries/quizzes'
 
 // MUI components
 import { 
@@ -27,14 +29,24 @@ function EditQuiz() {
   const { id } = useParams()
   const navigate = useNavigate()
   const [quiz, setQuiz] = useState(null)
-  const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [isSaving, setIsSaving] = useState(false)
   const [showSnackbar, setShowSnackbar] = useState(false)
   const [snackbarMessage, setSnackbarMessage] = useState('')
   const [snackbarSeverity, setSnackbarSeverity] = useState('success')
   const isMountedRef = useRef(true)
-  const retryCount = useRef(0)
+  
+  // Use React Query hooks
+  const { 
+    data: quizData, 
+    isLoading, 
+    isError, 
+    error: quizError 
+  } = useQuiz(id);
+  
+  const { 
+    mutate: updateQuiz, 
+    isLoading: isSaving
+  } = useUpdateQuiz();
   
   // Set up isMountedRef for cleanup
   useEffect(() => {
@@ -44,55 +56,20 @@ function EditQuiz() {
     };
   }, []);
 
-  // Fetch the quiz
+  // Update local state when quiz data changes
   useEffect(() => {
-    const fetchQuiz = async () => {
-      if (!isMountedRef.current) return;
-      
-      try {
-        setIsLoading(true)
-        setError(null)
-        
-        logger.debug(`Fetching quiz with ID: ${id}`)
-        const data = await quizService.getQuiz(id)
-        
-        if (isMountedRef.current) {
-          setQuiz(data)
-          // Reset retry count on successful fetch
-          retryCount.current = 0;
-        }
-      } catch (err) {
-        logger.error('Error fetching quiz:', { value: err })
-        
-        // Check if it's a cancellation error - pass true to indicate this is a critical request
-        if (!handleRequestError(err, 'Quiz fetch', true)) {
-          if (isMountedRef.current) {
-            // If error is due to cancellation and we haven't retried too many times, retry fetch
-            if ((err.name === 'CanceledError' || err.message === 'canceled') && retryCount.current < 3) {
-              console.log(`Retrying quiz fetch (attempt ${retryCount.current + 1})...`);
-              retryCount.current += 1;
-              
-              // Wait a moment then retry
-              setTimeout(() => {
-                if (isMountedRef.current) {
-                  fetchQuiz();
-                }
-              }, 500);
-              return;
-            }
-            
-            setError(err.message || 'Failed to load quiz')
-          }
-        }
-      } finally {
-        if (isMountedRef.current) {
-          setIsLoading(false)
-        }
-      }
+    if (quizData && isMountedRef.current) {
+      setQuiz(quizData);
+      setError(null);
     }
-    
-    fetchQuiz()
-  }, [id])
+  }, [quizData]);
+  
+  // Handle errors from React Query
+  useEffect(() => {
+    if (isError && isMountedRef.current) {
+      setError(quizError?.message || 'Failed to load quiz');
+    }
+  }, [isError, quizError]);
   
   const showSnackbarMessage = (message, severity) => {
     setSnackbarMessage(message)
@@ -241,8 +218,6 @@ function EditQuiz() {
     }
     
     try {
-      setIsSaving(true)
-      
       // Calculate estimated time based on question count (approx 30 sec per question)
       const estimatedTime = `${Math.max(5, Math.ceil(quiz.questions.length * 0.5))} min`
       
@@ -253,14 +228,22 @@ function EditQuiz() {
         questionCount: quiz.questions.length
       }
       
-      // Send to server
-      await quizService.updateQuiz(id, updatedQuiz)
-      showSnackbarMessage('Quiz saved successfully!', 'success')
+      // Send to server using React Query mutation
+      updateQuiz(
+        { id, quiz: updatedQuiz },
+        {
+          onSuccess: () => {
+            showSnackbarMessage('Quiz saved successfully!', 'success');
+          },
+          onError: (err) => {
+            logger.error('Error saving quiz:', { value: err });
+            showSnackbarMessage('Failed to save changes. Please try again.', 'error');
+          }
+        }
+      );
     } catch (err) {
-      logger.error('Error saving quiz:', { value: err })
-      showSnackbarMessage('Failed to save changes. Please try again.', 'error')
-    } finally {
-      setIsSaving(false)
+      logger.error('Error saving quiz:', { value: err });
+      showSnackbarMessage('Failed to save changes. Please try again.', 'error');
     }
   }
   

@@ -22,7 +22,6 @@ import StarBorderIcon from '@mui/icons-material/StarBorder'
 import DeleteIcon from '@mui/icons-material/Delete'
 
 // Services
-import { quizService } from '../services/quiz-service'
 import { handleRequestError } from '../services/utils'
 
 // Queries
@@ -292,7 +291,7 @@ function Quizzes() {
       {/* Quiz creation modal */}
       {isQuizModalOpen && (
         <QuizCreationModal
-          isOpen={isQuizModalOpen}
+          open={isQuizModalOpen}
           onClose={handleCloseQuizModal}
           onQuizCreated={handleQuizCreated}
         />

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import logger from '../utils/logger';
 import { useNavigate } from 'react-router-dom'
+import { useToggleFavorite } from '../api/queries/flashcards'
 
 // Icons
 import AccessTimeIcon from '@mui/icons-material/AccessTime'
@@ -13,14 +14,14 @@ import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline'
 // Components
 import ShareModal from './ShareModal'
 
-// Services
-import { flashcardService } from '../services/api'
-
 function FlashcardSet({ title, cards, lastStudied, progress, id = 1, isFavorite = false, onToggleFavorite, correctPercentage = 0, totalStudied = 0 }) {
   const [isShareModalOpen, setIsShareModalOpen] = useState(false)
   const [showOptionsMenu, setShowOptionsMenu] = useState(false)
   const [favorite, setFavorite] = useState(isFavorite)
   const navigate = useNavigate()
+  
+  // Use React Query mutation for toggling favorite status
+  const { mutate: toggleFavorite } = useToggleFavorite();
   
   // Handle favorite toggle
   const handleToggleFavorite = async () => {
@@ -28,13 +29,23 @@ function FlashcardSet({ title, cards, lastStudied, progress, id = 1, isFavorite 
       const newFavoriteStatus = !favorite
       setFavorite(newFavoriteStatus)
       
-      // Call the API to update the favorite status
-      await flashcardService.toggleFavorite(id, newFavoriteStatus)
-      
-      // If there's a parent callback, invoke it
-      if (onToggleFavorite) {
-        onToggleFavorite(id, newFavoriteStatus)
-      }
+      // Call the mutation to update the favorite status
+      toggleFavorite(
+        { id, isFavorite: newFavoriteStatus },
+        {
+          onError: (error) => {
+            logger.error('Error toggling favorite:', error)
+            // Revert the UI state on error
+            setFavorite(favorite)
+          },
+          onSuccess: () => {
+            // If there's a parent callback, invoke it
+            if (onToggleFavorite) {
+              onToggleFavorite(id, newFavoriteStatus)
+            }
+          }
+        }
+      );
     } catch (error) {
       logger.error('Error toggling favorite:', error)
       // Revert the UI state on error

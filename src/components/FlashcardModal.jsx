@@ -29,7 +29,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import ShareIcon from '@mui/icons-material/Share';
 import DeleteIcon from '@mui/icons-material/Delete';
 
-import { flashcardService } from '../services/api';
+import { useFlashcardSets, useDeleteFlashcardSet } from '../api/queries/flashcards';
 import ShareModal from './ShareModal';
 import { useNavigate } from 'react-router-dom';
 
@@ -37,6 +37,9 @@ function FlashcardCard({ flashcard, onDelete, onRefresh }) {
   const navigate = useNavigate();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  
+  // Use React Query mutation for deleting flashcard set
+  const { mutate: deleteFlashcardSet } = useDeleteFlashcardSet();
   
   const handleStudyClick = () => {
     navigate(`/study/${flashcard.id}`);
@@ -56,14 +59,22 @@ function FlashcardCard({ flashcard, onDelete, onRefresh }) {
   
   const confirmDelete = async () => {
     try {
-      await flashcardService.deleteFlashcardSet(flashcard.id);
-      setShowDeleteConfirm(false);
-      if (onDelete) onDelete(flashcard.id);
-      if (onRefresh) onRefresh();
+      // Use the React Query mutation to delete the flashcard set
+      deleteFlashcardSet(flashcard.id, {
+        onSuccess: () => {
+          setShowDeleteConfirm(false);
+          if (onDelete) onDelete(flashcard.id);
+          if (onRefresh) onRefresh();
+        },
+        onError: (error) => {
+          logger.error('Error deleting flashcard set:', error);
+          alert('Failed to delete flashcard set. Please try again.');
+          setShowDeleteConfirm(false);
+        }
+      });
     } catch (error) {
       logger.error('Error deleting flashcard set:', error);
       alert('Failed to delete flashcard set. Please try again.');
-    } finally {
       setShowDeleteConfirm(false);
     }
   };
@@ -172,22 +183,20 @@ function FlashcardModal({ open, onClose, onUpdate }) {
   const [page, setPage] = useState(1);
   const isMobile = useMediaQuery('(max-width:640px)');
   
+  // Use React Query hook to fetch flashcard sets
+  const { 
+    data: flashcardSets,
+    isLoading: isLoadingFlashcards, 
+    refetch 
+  } = useFlashcardSets();
+  
   // Items per page for pagination
   const ITEMS_PER_PAGE = 9;
   
-  // Fetch flashcard data
+  // Transform data when it's loaded
   useEffect(() => {
-    if (open) {
-      fetchFlashcards();
-    }
-  }, [open]);
-  
-  const fetchFlashcards = async () => {
-    setIsLoading(true);
-    try {
-      const response = await flashcardService.getAllFlashcardSets();
-      
-      const transformedSets = response.map(set => ({
+    if (flashcardSets) {
+      const transformedSets = flashcardSets.map(set => ({
         id: set._id,
         title: set.title,
         cards: set.cardCount || 0,
@@ -198,12 +207,21 @@ function FlashcardModal({ open, onClose, onUpdate }) {
       }));
       
       setFlashcards(transformedSets);
-    } catch (error) {
-      logger.error('Error fetching flashcard sets:', error);
-    } finally {
       setIsLoading(false);
     }
-  };
+  }, [flashcardSets]);
+  
+  // Update loading state
+  useEffect(() => {
+    setIsLoading(isLoadingFlashcards);
+  }, [isLoadingFlashcards]);
+  
+  // Refetch data when modal is opened
+  useEffect(() => {
+    if (open) {
+      refetch();
+    }
+  }, [open, refetch]);
   
   // Format the last studied date
   const formatLastStudied = (dateString) => {
@@ -252,8 +270,8 @@ function FlashcardModal({ open, onClose, onUpdate }) {
   };
   
   const handleDeleteFlashcard = (id) => {
-    // Update the state to remove the deleted flashcard
-    setFlashcards(prevFlashcards => prevFlashcards.filter(card => card.id !== id));
+    const updatedFlashcards = flashcards.filter(f => f.id !== id);
+    setFlashcards(updatedFlashcards);
     if (onUpdate) onUpdate();
   };
   
@@ -514,7 +532,7 @@ function FlashcardModal({ open, onClose, onUpdate }) {
                   key={flashcard.id} 
                   flashcard={flashcard} 
                   onDelete={handleDeleteFlashcard}
-                  onRefresh={fetchFlashcards}
+                  onRefresh={refetch}
                 />
               ))}
             </Grid>

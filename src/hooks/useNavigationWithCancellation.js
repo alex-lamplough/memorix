@@ -1,7 +1,9 @@
 import { useNavigate } from 'react-router-dom';
 import { useCallback } from 'react';
-import { cancelAllRequests as cancelFlashcardRequests } from '../services/api';
-import { cancelAllRequests as cancelQuizRequests } from '../services/quiz-service';
+import { cancelAllRequests as cancelFlashcardRequests } from '../api/queries/flashcards';
+import { cancelAllRequests as cancelQuizRequests } from '../api/queries/quizzes';
+import { cancelAllRequests as cancelTodoRequests } from '../api/queries/todos';
+import { cancelAllRequests as cancelActivityRequests } from '../api/queries/activities';
 
 /**
  * Custom hook that returns a navigation function that cancels all pending
@@ -15,6 +17,8 @@ export function useNavigationWithCancellation() {
       // Cancel all pending API requests
       cancelFlashcardRequests();
       cancelQuizRequests();
+      cancelTodoRequests();
+      cancelActivityRequests();
       
       // Then navigate to new route
       navigate(to, options);

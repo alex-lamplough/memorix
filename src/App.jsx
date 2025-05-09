@@ -55,9 +55,10 @@ import instagramLogo from './assets/instagramLogo.png'
 import xLogo from './assets/xLogo.png'
 
 // Services
-import { flashcardService } from './services/api'
-import { quizService } from './services/quiz-service'
-import { todoService } from './services/todo-service'
+import { cancelAllRequests as cancelAllFlashcardRequests } from './api/queries/flashcards'
+import { cancelAllRequests as cancelAllTodoRequests } from './api/queries/todos'
+import { cancelAllRequests as cancelAllQuizRequests } from './api/queries/quizzes'
+import { cancelAllRequests as cancelAllActivityRequests } from './api/queries/activities'
 import { createNavigationHandler } from './services/utils'
 
 // ComingSoon component for features that are under development
@@ -783,23 +784,11 @@ function App() {
   useEffect(() => {
     // Create a function that cancels all active requests
     const cancelAllActiveRequests = () => {
-      // Import these functions from the respective services
-      const { cancelAllRequests: cancelAllFlashcardRequests } = flashcardService;
-      const { cancelAllRequests: cancelAllQuizRequests } = quizService;
-      const { cancelAllRequests: cancelAllTodoRequests } = todoService;
-      
-      // Only cancel requests if these functions exist
-      if (typeof cancelAllFlashcardRequests === 'function') {
-        cancelAllFlashcardRequests();
-      }
-      
-      if (typeof cancelAllQuizRequests === 'function') {
-        cancelAllQuizRequests();
-      }
-      
-      if (typeof cancelAllTodoRequests === 'function') {
-        cancelAllTodoRequests();
-      }
+      // Cancel all requests directly
+      cancelAllFlashcardRequests();
+      cancelAllTodoRequests();
+      cancelAllQuizRequests();
+      cancelAllActivityRequests();
       
       logger.debug('Cancelled all pending requests due to navigation');
     };
@@ -817,17 +806,11 @@ function App() {
     
     // Replace the navigate function with one that cancels requests first
     window.navigateWithCancellation = createNavigationHandler(originalPush, () => {
-      if (flashcardService && typeof flashcardService.cancelAllRequests === 'function') {
-        flashcardService.cancelAllRequests();
-      }
-      
-      if (quizService && typeof quizService.cancelAllRequests === 'function') {
-        quizService.cancelAllRequests();
-      }
-      
-      if (todoService && typeof todoService.cancelAllRequests === 'function') {
-        todoService.cancelAllRequests();
-      }
+      // Cancel all requests directly
+      cancelAllFlashcardRequests();
+      cancelAllTodoRequests();
+      cancelAllQuizRequests();
+      cancelAllActivityRequests();
     });
     
     return () => {

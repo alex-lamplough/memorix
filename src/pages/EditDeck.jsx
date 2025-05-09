@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import logger from '../utils/logger';
 import { useParams, useNavigate } from 'react-router-dom'
-import { flashcardService } from '../services/api'
-import { handleRequestError } from '../services/utils'
+import { useFlashcardSet, useUpdateFlashcardSet } from '../api/queries/flashcards'
 
 // Icons
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
@@ -18,14 +17,24 @@ function EditDeck() {
   const { id } = useParams()
   const navigate = useNavigate()
   const [flashcardSet, setFlashcardSet] = useState(null)
-  const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [isSaving, setIsSaving] = useState(false)
   const [showSnackbar, setShowSnackbar] = useState(false)
   const [snackbarMessage, setSnackbarMessage] = useState('')
   const [snackbarSeverity, setSnackbarSeverity] = useState('success')
   const isMountedRef = useRef(true)
-  const retryCount = useRef(0)
+  
+  // Fetch flashcard set using React Query
+  const { 
+    data: fetchedFlashcardSet, 
+    isLoading,
+    error: fetchError 
+  } = useFlashcardSet(id);
+  
+  // Use React Query mutation for updating flashcard set
+  const { 
+    mutate: updateFlashcardSet,
+    isPending: isSaving
+  } = useUpdateFlashcardSet();
   
   // Set up isMountedRef for cleanup
   useEffect(() => {
@@ -35,55 +44,19 @@ function EditDeck() {
     };
   }, []);
   
-  // Fetch the flashcard set
+  // Initialize the state when data is loaded
   useEffect(() => {
-    const fetchFlashcardSet = async () => {
-      if (!isMountedRef.current) return;
-      
-      try {
-        setIsLoading(true)
-        setError(null)
-        
-        logger.debug(`Fetching flashcard set with ID: ${id}`)
-        const data = await flashcardService.getFlashcardSet(id)
-        
-        if (isMountedRef.current) {
-          setFlashcardSet(data)
-          // Reset retry count on successful fetch
-          retryCount.current = 0;
-        }
-      } catch (err) {
-        logger.error('Error fetching flashcard set:', { value: err })
-        
-        // Check if it's a cancellation error - pass true to indicate this is a critical request
-        if (!handleRequestError(err, 'Flashcard set fetch', true)) {
-          if (isMountedRef.current) {
-            // If error is due to cancellation and we haven't retried too many times, retry fetch
-            if ((err.name === 'CanceledError' || err.message === 'canceled') && retryCount.current < 3) {
-              console.log(`Retrying flashcard fetch (attempt ${retryCount.current + 1})...`);
-              retryCount.current += 1;
-              
-              // Wait a moment then retry
-              setTimeout(() => {
-                if (isMountedRef.current) {
-                  fetchFlashcardSet();
-                }
-              }, 500);
-              return;
-            }
-            
-            setError(err.message || 'Failed to load flashcard set')
-          }
-        }
-      } finally {
-        if (isMountedRef.current) {
-          setIsLoading(false)
-        }
-      }
+    if (fetchedFlashcardSet && isMountedRef.current) {
+      setFlashcardSet(fetchedFlashcardSet);
     }
-    
-    fetchFlashcardSet()
-  }, [id])
+  }, [fetchedFlashcardSet]);
+  
+  // Handle fetch errors
+  useEffect(() => {
+    if (fetchError && isMountedRef.current) {
+      setError(fetchError.message || 'Failed to load flashcard set');
+    }
+  }, [fetchError]);
   
   const showSnackbarMessage = (message, severity) => {
     setSnackbarMessage(message)
@@ -142,14 +115,19 @@ function EditDeck() {
   
   const handleSave = async () => {
     try {
-      setIsSaving(true)
-      await flashcardService.updateFlashcardSet(id, flashcardSet)
-      showSnackbarMessage('Flashcard set saved successfully!', 'success')
+      // Use React Query mutation to update flashcard set
+      updateFlashcardSet({ id, flashcardSet }, {
+        onSuccess: () => {
+          showSnackbarMessage('Flashcard set saved successfully!', 'success');
+        },
+        onError: (err) => {
+          logger.error('Error saving flashcard set:', { value: err });
+          showSnackbarMessage('Failed to save changes. Please try again.', 'error');
+        }
+      });
     } catch (err) {
-      logger.error('Error saving flashcard set:', { value: err })
-      showSnackbarMessage('Failed to save changes. Please try again.', 'error')
-    } finally {
-      setIsSaving(false)
+      logger.error('Error saving flashcard set:', { value: err });
+      showSnackbarMessage('Failed to save changes. Please try again.', 'error');
     }
   }
   
@@ -248,108 +226,133 @@ function EditDeck() {
             <EditIcon className="text-[#00ff94] mr-2" />
             <h1 className="text-2xl font-bold">Edit Flashcard Set</h1>
           </div>
-          
-          {/* Title and description */}
-          <div className="bg-[#18092a]/60 rounded-xl p-6 mb-6 border border-gray-800/30">
-            <div className="mb-4">
-              <label htmlFor="title" className="block text-white/70 mb-1 text-sm">Title</label>
-              <input
-                type="text"
-                id="title"
-                value={flashcardSet.title || ''}
-                onChange={handleTitleChange}
-                className="w-full bg-[#15052a]/80 text-white rounded-lg px-4 py-2 border border-gray-800/50 focus:outline-none focus:border-[#00ff94]/50 focus:ring-1 focus:ring-[#00ff94]/30"
-              />
-            </div>
-            
-            <div>
-              <label htmlFor="description" className="block text-white/70 mb-1 text-sm">Description (optional)</label>
-              <textarea
-                id="description"
-                value={flashcardSet.description || ''}
-                onChange={handleDescriptionChange}
-                className="w-full bg-[#15052a]/80 text-white rounded-lg px-4 py-2 border border-gray-800/50 focus:outline-none focus:border-[#00ff94]/50 focus:ring-1 focus:ring-[#00ff94]/30 h-24 resize-none"
-              ></textarea>
-            </div>
+          <p className="text-white/70 text-sm">
+            Make changes to your flashcard set and click Save Changes when you're done.
+          </p>
+        </div>
+        
+        <div className="bg-[#18092a]/60 rounded-xl p-6 border border-gray-800/30 shadow-lg mb-8">
+          <div className="mb-6">
+            <label htmlFor="title" className="block text-white font-medium mb-2">Title</label>
+            <input
+              id="title"
+              type="text"
+              value={flashcardSet.title}
+              onChange={handleTitleChange}
+              className="w-full bg-[#2E0033]/30 border border-gray-800/50 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-[#00ff94]/50 focus:border-transparent"
+              placeholder="Enter flashcard set title"
+            />
           </div>
           
-          {/* Cards */}
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h2 className="text-lg font-semibold">Flashcards ({flashcardSet.cards?.length || 0})</h2>
-              <button
-                onClick={handleAddCard}
-                className="bg-[#00ff94]/10 text-[#00ff94] px-3 py-1.5 rounded-lg hover:bg-[#00ff94]/20 transition-colors border border-[#00ff94]/30 inline-flex items-center"
-              >
-                <AddCircleOutlineIcon fontSize="small" className="mr-1" /> Add Card
-              </button>
-            </div>
-            
-            {flashcardSet.cards?.map((card, index) => (
-              <div key={index} className="bg-[#18092a]/60 rounded-xl p-5 border border-gray-800/30 relative">
+          <div className="mb-6">
+            <label htmlFor="description" className="block text-white font-medium mb-2">Description</label>
+            <textarea
+              id="description"
+              value={flashcardSet.description || ''}
+              onChange={handleDescriptionChange}
+              className="w-full bg-[#2E0033]/30 border border-gray-800/50 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-[#00ff94]/50 focus:border-transparent min-h-[100px]"
+              placeholder="Enter flashcard set description"
+            ></textarea>
+          </div>
+        </div>
+        
+        <div className="bg-[#18092a]/60 rounded-xl p-6 border border-gray-800/30 shadow-lg mb-8">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-bold">Flashcards</h2>
+            <button
+              onClick={handleAddCard}
+              className="bg-[#00ff94]/10 text-[#00ff94] px-3 py-1.5 rounded-lg hover:bg-[#00ff94]/20 transition-colors border border-[#00ff94]/30 inline-flex items-center"
+            >
+              <AddCircleOutlineIcon fontSize="small" className="mr-1" /> Add Card
+            </button>
+          </div>
+          
+          {flashcardSet.cards.map((card, index) => (
+            <div key={index} className="bg-[#2E0033]/30 rounded-lg p-4 mb-4 border border-gray-800/50">
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="font-medium">Card {index + 1}</h3>
                 <button
                   onClick={() => handleDeleteCard(index)}
-                  className="absolute top-3 right-3 text-white/40 hover:text-white/70 transition-colors"
+                  className="text-red-400 hover:text-red-300 p-1"
+                  disabled={flashcardSet.cards.length <= 1}
+                  title="Delete card"
                 >
-                  <DeleteOutlineIcon />
-                </button>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-white/70 mb-1 text-sm">Front (Question)</label>
-                    <textarea
-                      value={card.front || ''}
-                      onChange={(e) => handleCardChange(index, 'front', e.target.value)}
-                      className="w-full bg-[#15052a]/80 text-white rounded-lg px-4 py-2 border border-gray-800/50 focus:outline-none focus:border-[#00ff94]/50 focus:ring-1 focus:ring-[#00ff94]/30 h-24 resize-none"
-                    ></textarea>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-white/70 mb-1 text-sm">Back (Answer)</label>
-                    <textarea
-                      value={card.back || ''}
-                      onChange={(e) => handleCardChange(index, 'back', e.target.value)}
-                      className="w-full bg-[#15052a]/80 text-white rounded-lg px-4 py-2 border border-gray-800/50 focus:outline-none focus:border-[#00ff94]/50 focus:ring-1 focus:ring-[#00ff94]/30 h-24 resize-none"
-                    ></textarea>
-                  </div>
-                </div>
-                
-                <div className="mt-2 text-white/50 text-xs">
-                  Card {index + 1} of {flashcardSet.cards.length}
-                </div>
-              </div>
-            ))}
-            
-            {(!flashcardSet.cards || flashcardSet.cards.length === 0) && (
-              <div className="bg-[#18092a]/60 rounded-xl p-8 text-center border border-gray-800/30">
-                <p className="text-white/70 mb-4">No cards in this set yet. Add your first card to get started.</p>
-                <button
-                  onClick={handleAddCard}
-                  className="bg-[#00ff94]/10 text-[#00ff94] px-4 py-2 rounded-lg hover:bg-[#00ff94]/20 transition-colors border border-[#00ff94]/30 inline-flex items-center"
-                >
-                  <AddCircleOutlineIcon fontSize="small" className="mr-1" /> Add First Card
+                  <DeleteOutlineIcon fontSize="small" />
                 </button>
               </div>
+              
+              <div className="mb-3">
+                <label htmlFor={`card-front-${index}`} className="block text-white/70 text-sm mb-1">Front</label>
+                <textarea
+                  id={`card-front-${index}`}
+                  value={card.front}
+                  onChange={(e) => handleCardChange(index, 'front', e.target.value)}
+                  className="w-full bg-[#18092a]/60 border border-gray-800/50 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-[#00ff94]/50 focus:border-transparent min-h-[80px]"
+                  placeholder="Enter card front content"
+                ></textarea>
+              </div>
+              
+              <div>
+                <label htmlFor={`card-back-${index}`} className="block text-white/70 text-sm mb-1">Back</label>
+                <textarea
+                  id={`card-back-${index}`}
+                  value={card.back}
+                  onChange={(e) => handleCardChange(index, 'back', e.target.value)}
+                  className="w-full bg-[#18092a]/60 border border-gray-800/50 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-[#00ff94]/50 focus:border-transparent min-h-[80px]"
+                  placeholder="Enter card back content"
+                ></textarea>
+              </div>
+            </div>
+          ))}
+          
+          <button
+            onClick={handleAddCard}
+            className="w-full bg-[#2E0033]/30 border border-gray-800/50 rounded-lg p-3 text-white/70 hover:bg-[#2E0033]/50 transition-colors flex items-center justify-center"
+          >
+            <AddCircleOutlineIcon fontSize="small" className="mr-1" /> Add Another Card
+          </button>
+        </div>
+        
+        <div className="flex justify-end space-x-4">
+          <button
+            onClick={handleGoBack}
+            className="bg-[#18092a]/60 text-white px-4 py-2 rounded-lg hover:bg-[#18092a] transition-colors border border-gray-800/30"
+          >
+            Cancel
+          </button>
+          <button 
+            onClick={handleSave}
+            disabled={isSaving}
+            className={`px-6 py-2 rounded-lg inline-flex items-center ${
+              isSaving 
+                ? 'bg-gray-700/50 text-gray-400 cursor-not-allowed' 
+                : 'bg-[#00ff94]/10 text-[#00ff94] hover:bg-[#00ff94]/20 transition-colors border border-[#00ff94]/30'
+            }`}
+          >
+            {isSaving ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white/20 border-t-[#00ff94] rounded-full animate-spin mr-2"></div>
+                Saving...
+              </>
+            ) : (
+              <>
+                <SaveIcon fontSize="small" className="mr-1" /> Save Changes
+              </>
             )}
-          </div>
+          </button>
         </div>
       </div>
       
-      {/* Snackbar for notifications */}
-      <Snackbar 
-        open={showSnackbar} 
-        autoHideDuration={4000} 
+      <Snackbar
+        open={showSnackbar}
+        autoHideDuration={6000}
         onClose={() => setShowSnackbar(false)}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
         <Alert 
           onClose={() => setShowSnackbar(false)} 
           severity={snackbarSeverity}
-          sx={{ 
-            backgroundColor: snackbarSeverity === 'success' ? '#00ff94' : undefined,
-            color: snackbarSeverity === 'success' ? '#18092a' : undefined,
-            fontWeight: snackbarSeverity === 'success' ? 'bold' : undefined
-          }}
+          sx={{ width: '100%' }}
         >
           {snackbarMessage}
         </Alert>

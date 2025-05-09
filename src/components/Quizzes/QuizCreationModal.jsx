@@ -38,8 +38,8 @@ import QuizIcon from '@mui/icons-material/Quiz'
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline'
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome'
 
-// Services
-import { quizService } from '../../services/quiz-service'
+// React Query hooks
+import { useCreateQuiz, useGenerateQuestions } from '../../api/queries/quizzes'
 
 /**
  * Modal for creating quizzes with multiple choice and true/false options
@@ -62,12 +62,21 @@ const QuizCreationModal = ({ open, onClose, onQuizCreated }) => {
   }])
   const [aiPrompt, setAiPrompt] = useState('')
   const [questionCount, setQuestionCount] = useState(5)
-  const [isLoading, setIsLoading] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
   const [aiGeneratedQuestions, setAiGeneratedQuestions] = useState([])
   const [showSnackbar, setShowSnackbar] = useState(false)
   const [snackbarMessage, setSnackbarMessage] = useState('')
   const [snackbarSeverity, setSnackbarSeverity] = useState('success')
+  
+  // Use React Query mutations
+  const { mutate: createQuiz, isLoading: isCreating } = useCreateQuiz();
+  const { 
+    mutate: generateQuestionsWithAI, 
+    isLoading: isGeneratingQuestions
+  } = useGenerateQuestions();
+  
+  // Calculate combined loading state
+  const isLoading = isCreating || isGenerating || isGeneratingQuestions;
   
   // Reset form when modal is opened
   useEffect(() => {
@@ -160,8 +169,8 @@ const QuizCreationModal = ({ open, onClose, onQuizCreated }) => {
     }])
   }
   
-  // Handle AI question generation
-  const generateQuestionsWithAI = async () => {
+  // Update generateQuestionsWithAI to use React Query
+  const handleGenerateQuestions = async () => {
     if (!aiPrompt) {
       showSnackbarMessage('Please enter a topic or content for the quiz questions', 'error')
       return
@@ -171,30 +180,39 @@ const QuizCreationModal = ({ open, onClose, onQuizCreated }) => {
       // Set generating state to true to show loading indicator
       setIsGenerating(true)
       
-      // Call the API to generate quiz questions
-      const data = await quizService.generateQuestions({
-        content: aiPrompt,
-        count: questionCount,
-        difficulty
-      })
-      
-      // Set the generated questions
-      if (data.questions && Array.isArray(data.questions)) {
-        setAiGeneratedQuestions(data.questions)
-        // If no title is set, use the generated title or a default based on the prompt
-        if (!title) {
-          setTitle(data.title || `Quiz: ${aiPrompt.slice(0, 30)}${aiPrompt.length > 30 ? '...' : ''}`)
+      // Call the mutation to generate quiz questions
+      generateQuestionsWithAI(
+        {
+          content: aiPrompt,
+          count: questionCount,
+          difficulty
+        }, 
+        {
+          onSuccess: (data) => {
+            // Set the generated questions
+            if (data.questions && Array.isArray(data.questions)) {
+              setAiGeneratedQuestions(data.questions)
+              // If no title is set, use the generated title or a default based on the prompt
+              if (!title) {
+                setTitle(data.title || `Quiz: ${aiPrompt.slice(0, 30)}${aiPrompt.length > 30 ? '...' : ''}`)
+              }
+              showSnackbarMessage('Questions generated successfully!', 'success')
+            } else {
+              throw new Error('Invalid response format from server')
+            }
+            setIsGenerating(false);
+          },
+          onError: (error) => {
+            logger.error('Error generating quiz questions:', error)
+            showSnackbarMessage('Failed to generate questions. Please try again.', 'error')
+            setIsGenerating(false);
+          }
         }
-        showSnackbarMessage('Questions generated successfully!', 'success')
-      } else {
-        throw new Error('Invalid response format from server')
-      }
+      );
     } catch (error) {
       logger.error('Error generating quiz questions:', error)
       showSnackbarMessage('Failed to generate questions. Please try again.', 'error')
-    } finally {
-      // Set generating state back to false when done
-      setIsGenerating(false)
+      setIsGenerating(false);
     }
   }
   
@@ -213,6 +231,7 @@ const QuizCreationModal = ({ open, onClose, onQuizCreated }) => {
     setShowSnackbar(true)
   }
   
+  // Update saveQuiz to use React Query
   const saveQuiz = async () => {
     if (!title) {
       showSnackbarMessage('Please enter a title for your quiz', 'error')
@@ -232,8 +251,6 @@ const QuizCreationModal = ({ open, onClose, onQuizCreated }) => {
       return
     }
     
-    setIsLoading(true)
-    
     try {
       // Calculate estimated time based on question count (approx 30 sec per question)
       const estimatedTime = `${Math.max(5, Math.ceil(questions.length * 0.5))} min`
@@ -244,7 +261,8 @@ const QuizCreationModal = ({ open, onClose, onQuizCreated }) => {
       // Format difficulty for display (capitalize first letter)
       const formattedDifficulty = difficulty.charAt(0).toUpperCase() + difficulty.slice(1)
       
-      const response = await quizService.createQuiz({
+      // Create the quiz object
+      const quizData = {
         title,
         description,
         category,
@@ -254,22 +272,29 @@ const QuizCreationModal = ({ open, onClose, onQuizCreated }) => {
         time: estimatedTime,
         tags,
         questions
-      })
+      };
       
-      showSnackbarMessage('Quiz saved successfully!', 'success')
-      resetForm()
-      
-      // Call onQuizCreated callback if provided
-      if (typeof onQuizCreated === 'function') {
-        onQuizCreated(response?.data)
-      }
-      
-      onClose()
+      // Use the mutation
+      createQuiz(quizData, {
+        onSuccess: (response) => {
+          showSnackbarMessage('Quiz saved successfully!', 'success');
+          resetForm();
+          
+          // Call onQuizCreated callback if provided
+          if (typeof onQuizCreated === 'function') {
+            onQuizCreated(response);
+          }
+          
+          onClose();
+        },
+        onError: (error) => {
+          logger.error('Error saving quiz:', error);
+          showSnackbarMessage('Failed to save quiz. Please try again.', 'error');
+        }
+      });
     } catch (error) {
-      logger.error('Error saving quiz:', error)
-      showSnackbarMessage('Failed to save quiz. Please try again.', 'error')
-    } finally {
-      setIsLoading(false)
+      logger.error('Error saving quiz:', error);
+      showSnackbarMessage('Failed to save quiz. Please try again.', 'error');
     }
   }
   
@@ -277,7 +302,7 @@ const QuizCreationModal = ({ open, onClose, onQuizCreated }) => {
     <>
       <Dialog 
         open={open} 
-        onClose={(isLoading || isGenerating) ? null : onClose}
+        onClose={isLoading ? null : onClose}
         fullWidth
         maxWidth="md"
         PaperProps={{
@@ -913,7 +938,7 @@ const QuizCreationModal = ({ open, onClose, onQuizCreated }) => {
             <Box sx={{ textAlign: 'center', mt: 2, mb: 3 }}>
               <Button
                 variant="contained"
-                onClick={generateQuestionsWithAI}
+                onClick={handleGenerateQuestions}
                 startIcon={isGenerating ? <CircularProgress size={20} color="inherit" /> : <AutoAwesomeIcon />}
                 disabled={!aiPrompt || isGenerating}
                 sx={{

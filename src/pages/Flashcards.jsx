@@ -24,7 +24,6 @@ import StarIcon from '@mui/icons-material/Star'
 import StarBorderIcon from '@mui/icons-material/StarBorder'
 
 // Services & Queries
-import { flashcardService } from '../services/api'
 import { handleRequestError } from '../services/utils'
 import { useFlashcardSets, useDeleteFlashcardSet, useToggleFavorite } from '../api/queries/flashcards'
 

@@ -31,6 +31,7 @@ import FlashcardSetCard from '../components/FlashcardSetCard'
 import { handleRequestError } from '../services/utils'
 import { useFlashcardSets, useDeleteFlashcardSet, useToggleFavorite } from '../api/queries/flashcards'
 import { useQuizzes, useDeleteQuiz } from '../api/queries/quizzes'
+import { useGeneratedActivities } from '../api/queries/activities'
 
 // Custom hooks
 import useNavigationWithCancellation from '../hooks/useNavigationWithCancellation'
@@ -49,144 +50,15 @@ function SidebarItem({ icon, label, active, to }) {
 }
 
 function RecentActivity({ flashcardSets, quizSets }) {
-  const [recentActivities, setRecentActivities] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [isActivityModalOpen, setIsActivityModalOpen] = useState(false);
-  const isMountedRef = useRef(true);
   
-  useEffect(() => {
-    isMountedRef.current = true;
-    
-    // Process data whenever props change
-    if (flashcardSets && quizSets) {
-      processActivityData(flashcardSets, quizSets);
-    } else {
-      // If we don't have data yet, keep showing loading
-      setIsLoading(true);
-    }
-    
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, [flashcardSets, quizSets]);
-  
-  // Format the last studied date in a user-friendly way
-  const formatLastStudied = (dateString) => {
-    if (!dateString) return 'Never';
-    
-    try {
-      const date = new Date(dateString);
-      
-      // Check if date is valid
-      if (isNaN(date.getTime())) {
-        return 'Never';
-      }
-      
-      const now = new Date();
-      const diffTime = Math.abs(now - date);
-      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-      
-      if (diffDays === 0) {
-        // Check if it's today
-        const hours = date.getHours();
-        const minutes = date.getMinutes();
-        return `Today at ${hours}:${minutes < 10 ? '0' + minutes : minutes}`;
-      } else if (diffDays === 1) {
-        return 'Yesterday';
-      } else if (diffDays < 7) {
-        return `${diffDays} days ago`;
-      } else if (diffDays < 30) {
-        const weeks = Math.floor(diffDays / 7);
-        return `${weeks} ${weeks === 1 ? 'week' : 'weeks'} ago`;
-      } else {
-        return date.toLocaleDateString();
-      }
-    } catch (error) {
-      console.error('Error formatting date:', error);
-      return 'Never';
-    }
-  };
-  
-  // Process activity data
-  const processActivityData = (flashcardSets, quizzes) => {
-    if (!isMountedRef.current) return;
-    
-    setIsLoading(true);
-    try {
-      // Transform flashcard sets into activity items
-      const flashcardActivities = flashcardSets.flatMap(set => {
-        const activities = [];
-        
-        // Create activity
-        activities.push({
-          id: `create-${set._id}`,
-          title: set.title,
-          itemType: 'flashcard',
-          actionType: 'create',
-          timestamp: set.createdAt,
-          cardsCount: set.cardCount || 0
-        });
-        
-        // Study activity (if studied)
-        if (set.lastStudied) {
-          activities.push({
-            id: `study-${set._id}-${new Date(set.lastStudied).getTime()}`,
-            title: set.title,
-            itemType: 'flashcard',
-            actionType: 'study',
-            timestamp: set.lastStudied,
-            cardsStudied: Math.round(set.cardCount * (set.progress || 0) / 100)
-          });
-        }
-        
-        return activities;
-      });
-      
-      // Transform quizzes into activity items
-      const quizActivities = quizzes?.flatMap(quiz => {
-        const activities = [];
-        
-        // Create activity
-        activities.push({
-          id: `create-${quiz._id}`,
-          title: quiz.title,
-          itemType: 'quiz',
-          actionType: 'create',
-          timestamp: quiz.createdAt
-        });
-        
-        // Complete activity (if completed)
-        if (quiz.lastCompleted) {
-          activities.push({
-            id: `complete-${quiz._id}-${new Date(quiz.lastCompleted).getTime()}`,
-            title: quiz.title,
-            itemType: 'quiz',
-            actionType: 'complete',
-            timestamp: quiz.lastCompleted
-          });
-        }
-        
-        return activities;
-      }) || [];
-      
-      // Combine all activities
-      const allActivities = [...flashcardActivities, ...quizActivities];
-      
-      // Sort by timestamp (newest first)
-      allActivities.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-      
-      // Take only the 5 most recent
-      if (isMountedRef.current) {
-        setRecentActivities(allActivities.slice(0, 5));
-        setIsLoading(false);
-      }
-    } catch (error) {
-      logger.error('Error processing activity data:', error);
-      if (isMountedRef.current) {
-        setIsLoading(false);
-      }
-    }
-  };
+  // Use React Query hook to generate activities
+  const { 
+    data: recentActivities,
+    isLoading
+  } = useGeneratedActivities(flashcardSets, quizSets, { 
+    limit: 5 // Only get 5 most recent activities
+  });
   
   // Format relative time
   const formatTimeAgo = (timestamp) => {
@@ -255,48 +127,50 @@ function RecentActivity({ flashcardSets, quizSets }) {
   };
   
   return (
-    <div className="bg-[#18092a]/60 rounded-xl p-6 border border-gray-800/30 shadow-lg text-white">
+    <div className="bg-[#18092a]/60 rounded-xl shadow-lg p-6 border border-gray-800/30">
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-xl font-bold">Recent Activity</h3>
+        <h2 className="text-xl font-bold text-white">Recent Activity</h2>
+        <button 
+          onClick={openActivityModal}
+          className="text-white/70 hover:text-white text-sm"
+        >
+          View All
+        </button>
       </div>
       
       {isLoading ? (
-        <div className="flex justify-center py-6">
-          <div className="w-8 h-8 border-2 border-[#00ff94]/20 border-t-[#00ff94] rounded-full animate-spin"></div>
+        <div className="py-10 flex justify-center">
+          <div className="w-8 h-8 border-2 border-[#00ff94]/10 border-t-[#00ff94] rounded-full animate-spin"></div>
         </div>
-      ) : recentActivities.length === 0 ? (
-        <div className="text-center py-4">
-          <p className="text-white/70">No recent activity</p>
-        </div>
-      ) : (
+      ) : recentActivities && recentActivities.length > 0 ? (
         <div className="space-y-4">
           {recentActivities.map(activity => {
             const { icon, color, bgColor, count, label } = getActivityDetails(activity);
-            
             return (
-              <div key={activity.id} className="flex items-center gap-3 pb-4 border-b border-gray-800/30">
-                <div className={`p-2 ${bgColor} rounded-lg`}>
-                  <span className={`${color} text-lg font-bold`}>{count}</span>
+              <div key={activity.id} className="flex items-center gap-3">
+                <div className={`${bgColor} rounded-lg p-2`}>
+                  {icon}
                 </div>
-                <div>
-                  <h4 className="font-medium">{activity.title}</h4>
-                  <p className="text-white/70 text-sm flex items-center gap-1">
-                    {icon} {label}
-                  </p>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold truncate">{activity.title}</h3>
+                  <p className="text-white/70 text-sm">{label}</p>
                 </div>
+                {count && (
+                  <div className={`${color} text-sm font-medium`}>
+                    {count}
+                  </div>
+                )}
               </div>
             );
           })}
         </div>
+      ) : (
+        <div className="py-8 text-center">
+          <p className="text-white/70">No recent activity</p>
+        </div>
       )}
       
-      <button 
-        className="text-[#00ff94] text-sm mt-4 hover:underline flex items-center"
-        onClick={openActivityModal}
-      >
-        View all activity
-      </button>
-      
+      {/* Activity modal */}
       <ActivityModal 
         open={isActivityModalOpen} 
         onClose={() => setIsActivityModalOpen(false)} 

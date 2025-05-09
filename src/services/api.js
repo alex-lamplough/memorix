@@ -1,3 +1,12 @@
+/**
+ * @deprecated This file is being deprecated in favor of the new adapter-based architecture.
+ * Please use the appropriate adapter and React Query hooks from src/api/adapters and src/api/queries.
+ * 
+ * Example: 
+ * - Instead of importing { flashcardService } from '../services/api'
+ * - Use: import { useFlashcardSets, useFlashcardSet } from '../api/queries/flashcards'
+ */
+
 import axios from 'axios';
 import logger from '../utils/logger';
 

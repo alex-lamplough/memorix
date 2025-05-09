@@ -40,9 +40,7 @@ import FlashOnIcon from '@mui/icons-material/FlashOn'
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline'
 
 // Import React Query hooks
-import { useCreateFlashcardSet } from '../api/queries/flashcards'
-// Keep old service for AI generation until we migrate that as well
-import { flashcardService } from '../services/api'
+import { useCreateFlashcardSet, useGenerateFlashcards } from '../api/queries/flashcards'
 
 /**
  * Modal for creating flashcard sets with manual and AI-assisted options
@@ -63,11 +61,12 @@ const FlashcardCreationModal = ({ open, onClose }) => {
   const [showSnackbar, setShowSnackbar] = useState(false)
   const [snackbarMessage, setSnackbarMessage] = useState('')
   const [snackbarSeverity, setSnackbarSeverity] = useState('success')
-  const [isGenerating, setIsGenerating] = useState(false)
   
-  // Use React Query mutation for creating flashcard sets
+  // Use React Query mutations
   const createMutation = useCreateFlashcardSet();
   const isLoading = createMutation.isPending || createMutation.isLoading;
+  const generateMutation = useGenerateFlashcards();
+  const isGenerating = generateMutation.isPending || generateMutation.isLoading;
   
   // Reset form when modal is opened
   useEffect(() => {
@@ -117,33 +116,36 @@ const FlashcardCreationModal = ({ open, onClose }) => {
     }
     
     try {
-      // Set generating state to true to show loading indicator
-      setIsGenerating(true)
-      
-      // Call backend API to generate flashcards using our service
-      const data = await flashcardService.generateFlashcards({
-        content: aiPrompt,
-        count: cardCount,
-        difficulty
-      })
-      
-      // Set the generated cards
-      if (data.cards && Array.isArray(data.cards)) {
-        setAiGeneratedCards(data.cards)
-        // If no title is set, use the generated title or a default based on the prompt
-        if (!title) {
-          setTitle(data.title || `Flashcards: ${aiPrompt.slice(0, 30)}${aiPrompt.length > 30 ? '...' : ''}`)
+      // Call the mutation to generate flashcards
+      generateMutation.mutate(
+        {
+          content: aiPrompt,
+          count: cardCount,
+          difficulty
+        },
+        {
+          onSuccess: (data) => {
+            // Set the generated cards
+            if (data.cards && Array.isArray(data.cards)) {
+              setAiGeneratedCards(data.cards)
+              // If no title is set, use the generated title or a default based on the prompt
+              if (!title) {
+                setTitle(data.title || `Flashcards: ${aiPrompt.slice(0, 30)}${aiPrompt.length > 30 ? '...' : ''}`)
+              }
+              showSnackbarMessage('Flashcards generated successfully!', 'success')
+            } else {
+              throw new Error('Invalid response format from server')
+            }
+          },
+          onError: (error) => {
+            logger.error('Error generating flashcards:', error)
+            showSnackbarMessage('Failed to generate flashcards. Please try again.', 'error')
+          }
         }
-        showSnackbarMessage('Flashcards generated successfully!', 'success')
-      } else {
-        throw new Error('Invalid response format from server')
-      }
+      );
     } catch (error) {
       logger.error('Error generating flashcards:', error)
       showSnackbarMessage('Failed to generate flashcards. Please try again.', 'error')
-    } finally {
-      // Set generating state back to false when done
-      setIsGenerating(false)
     }
   }
   
