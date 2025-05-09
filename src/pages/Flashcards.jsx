@@ -24,7 +24,7 @@ import StarIcon from '@mui/icons-material/Star'
 import StarBorderIcon from '@mui/icons-material/StarBorder'
 
 // Services & Queries
-import { handleRequestError } from '../services/utils'
+import { handleRequestError } from '../api/utils'
 import { useFlashcardSets, useDeleteFlashcardSet, useToggleFavorite } from '../api/queries/flashcards'
 
 // Local FlashcardCard component that shows all the stats

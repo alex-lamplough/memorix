@@ -211,4 +211,11 @@ export const requireCompletedOnboarding = async (req, res, next) => {
     logger.error('❌ Error in onboarding middleware:', error);
     next(error);
   }
-}; 
+};
+
+/**
+ * Middleware that requires authentication
+ * This is a convenience wrapper around authenticate with required=true
+ * @returns {Function} Express middleware function
+ */
+export const requireAuth = authenticate({ required: true }); 

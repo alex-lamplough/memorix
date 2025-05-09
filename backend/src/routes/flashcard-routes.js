@@ -7,6 +7,7 @@ import FlashcardSet from '../models/flashcard-set-model.js';
 import User from '../models/user-model.js';
 import openaiService from '../services/openai-service.js';
 import { authenticate } from '../middleware/auth-middleware.js';
+import { logActivity, logFlashcardCreation, logFlashcardStudy } from '../utils/activity-logger.js';
 
 const router = express.Router();
 
@@ -383,6 +384,9 @@ router.post('/', async (req, res, next) => {
     
     logger.debug(`Flashcard set created with ID: ${flashcardSet._id}`);
     
+    // Log activity
+    await logFlashcardCreation(user, flashcardSet);
+    
     res.status(201).json(flashcardSet);
   } catch (error) {
     logger.error('Error creating flashcard set:', error);
@@ -436,6 +440,18 @@ router.put('/:id', async (req, res, next) => {
       },
       { new: true }
     );
+    
+    // Log activity
+    await logActivity({
+      userId: req.user.mongoUser ? req.user.mongoUser._id : req.user.id,
+      title: updatedFlashcardSet.title,
+      itemType: 'flashcard',
+      actionType: 'update',
+      itemId: updatedFlashcardSet._id,
+      metadata: {
+        cardCount: updatedFlashcardSet.cards ? updatedFlashcardSet.cards.length : 0
+      }
+    });
     
     res.json(updatedFlashcardSet);
   } catch (error) {
@@ -559,11 +575,34 @@ router.post('/:id/study', async (req, res, next) => {
     
     await flashcardSet.save();
     
-    res.json(flashcardSet.studyStats);
+    // Log study activity
+    await logFlashcardStudy(
+      req.user.mongoUser || { id: req.user.id }, 
+      flashcardSet, 
+      {
+        cardsStudied: cardReviews ? cardReviews.length : 0,
+        correctPercentage: calculateCorrectPercentage(cardReviews),
+        timeSpent: timeSpent
+      }
+    );
+    
+    res.json({
+      message: 'Study session recorded',
+      flashcardSet
+    });
   } catch (error) {
+    logger.error('Error recording study session:', error);
     next(error);
   }
 });
+
+// Helper function to calculate correct percentage from card reviews
+function calculateCorrectPercentage(cardReviews) {
+  if (!cardReviews || cardReviews.length === 0) return 0;
+  
+  const goodPerformances = cardReviews.filter(review => review.performance >= 4).length;
+  return Math.round((goodPerformances / cardReviews.length) * 100);
+}
 
 // Toggle favorite status for a flashcard set
 router.patch('/:id/favorite', authenticate(), lookupMongoUser, async (req, res, next) => {

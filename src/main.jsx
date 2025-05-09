@@ -6,6 +6,7 @@ import './index.css'
 import App from './App.jsx'
 import AuthProvider from './auth/AuthProvider'
 import AuthTokenProvider from './auth/AuthTokenProvider'
+import AuthContextProvider from './auth/AuthContext'
 import { validateEnvironmentOnStartup } from './utils/validate-env'
 import { getEnvironmentName, isProduction } from './utils/env-utils'
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider'
@@ -13,6 +14,7 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns'
 import { ThemeProvider, createTheme } from '@mui/material/styles'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import queryClient from './api/queryClient'
+import { initAuthUtils } from './utils/auth-utils'
 
 // Create a dark theme for MUI components
 const darkTheme = createTheme({
@@ -59,17 +61,25 @@ validateEnvironmentOnStartup();
 const env = getEnvironmentName();
 console.log(`📱 Memorix starting in ${env} environment (${isProduction() ? 'production' : 'development'})`);
 
+// Initialize auth utilities in development environment
+if (!isProduction()) {
+  initAuthUtils();
+  console.log('🔧 Development auth utilities initialized. Use window.clearAuth() if you encounter auth problems.');
+}
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <BrowserRouter>
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <AuthTokenProvider>
-            <ThemeProvider theme={darkTheme}>
-              <LocalizationProvider dateAdapter={AdapterDateFns}>
-                <App />
-              </LocalizationProvider>
-            </ThemeProvider>
+            <AuthContextProvider>
+              <ThemeProvider theme={darkTheme}>
+                <LocalizationProvider dateAdapter={AdapterDateFns}>
+                  <App />
+                </LocalizationProvider>
+              </ThemeProvider>
+            </AuthContextProvider>
           </AuthTokenProvider>
         </AuthProvider>
       </QueryClientProvider>

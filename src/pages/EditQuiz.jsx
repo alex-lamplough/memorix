@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import logger from '../utils/logger';
 import { useParams, useNavigate } from 'react-router-dom'
-import { handleRequestError } from '../services/utils'
+import { handleRequestError } from '../api/utils'
 
 // React Query
 import { useQuiz, useUpdateQuiz } from '../api/queries/quizzes'

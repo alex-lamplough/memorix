@@ -38,9 +38,18 @@ export function useAuth() {
   };
 
   const logoutUser = () => {
+    // Determine the correct redirect URL based on environment
+    const isDevelopment = window.location.hostname === 'localhost' || 
+                         window.location.hostname === '127.0.0.1';
+    const redirectUrl = isDevelopment ? 
+                        'http://localhost:5173' : 
+                        window.location.origin;
+    
+    logger.debug(`Logging out. Redirect URL: ${redirectUrl}`);
+    
     logout({ 
       logoutParams: {
-        returnTo: window.location.origin
+        returnTo: redirectUrl
       }
     });
   };

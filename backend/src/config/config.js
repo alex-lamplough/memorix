@@ -17,7 +17,7 @@ logger.debug(`- STRIPE_CREATOR_PLAN available: ${!!process.env.STRIPE_CREATOR_PL
 const serverConfig = {
   port: process.env.PORT || 5001,
   environment: process.env.NODE_ENV || 'development',
-  corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:5173'
+  corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:5173,http://localhost:5001'
 };
 
 // Database configuration

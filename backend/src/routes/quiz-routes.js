@@ -106,6 +106,10 @@ router.put('/:id', quizController.updateQuiz);
 // Description: Delete a quiz
 router.delete('/:id', quizController.deleteQuiz);
 
+// Route: POST /api/quizzes/:id/complete
+// Description: Record quiz completion
+router.post('/:id/complete', quizController.completeQuiz);
+
 // Toggle favorite status for a quiz
 router.patch('/:id/favorite', authenticate(), lookupMongoUser, async (req, res, next) => {
   try {

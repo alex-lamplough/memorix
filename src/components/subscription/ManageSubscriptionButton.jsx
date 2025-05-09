@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import logger from '../../utils/logger';
-import subscriptionService from '../../services/subscription-service';
 import { useNavigate } from 'react-router-dom';
+import { useCreatePortalSession } from '../../api/queries/subscriptions';
 
 /**
  * Button component for opening Stripe customer portal to manage subscription
@@ -18,6 +18,9 @@ const ManageSubscriptionButton = ({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
+  
+  // Use React Query mutation hook
+  const { mutateAsync: createPortalSession } = useCreatePortalSession();
 
   const handleClick = async () => {
     try {
@@ -25,7 +28,7 @@ const ManageSubscriptionButton = ({
       setError(null);
 
       // Get portal session from backend
-      const { url } = await subscriptionService.createPortalSession();
+      const { url } = await createPortalSession();
       
       // Redirect to Stripe customer portal
       window.location.href = url;

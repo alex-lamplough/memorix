@@ -134,6 +134,7 @@ function ActivityModal({ open, onClose }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [activityLimit, setActivityLimit] = useState(100);
   const [totalActivities, setTotalActivities] = useState(0);
+  const [useGeneratedOnly, setUseGeneratedOnly] = useState(false);
   const isMobile = useMediaQuery('(max-width:640px)');
   
   // Items per page for pagination
@@ -153,7 +154,16 @@ function ActivityModal({ open, onClose }) {
     endDate: endDate ? endDate.toISOString() : undefined,
     type: activeTab === 1 ? 'flashcard' : activeTab === 2 ? 'quiz' : undefined,
     action: typeFilter !== 'all' ? typeFilter : undefined
+  }, {
+    enabled: !useGeneratedOnly // Only use API activities if we're not forced to use generated
   });
+  
+  // Once we get a 404, we should switch to generated activities only
+  useEffect(() => {
+    if (isApiActivitiesError) {
+      setUseGeneratedOnly(true);
+    }
+  }, [isApiActivitiesError]);
   
   // Fallback data sources if the activities API isn't available
   const { data: flashcardSets, isLoading: isLoadingFlashcards } = useFlashcardSets();
@@ -165,8 +175,8 @@ function ActivityModal({ open, onClose }) {
     isLoading: isLoadingGenerated
   } = useGeneratedActivities(
     // Only use these if API activities failed or returned empty
-    isApiActivitiesError || (apiActivities && apiActivities.length === 0) ? flashcardSets : null,
-    isApiActivitiesError || (apiActivities && apiActivities.length === 0) ? quizzes : null,
+    useGeneratedOnly || isApiActivitiesError || (apiActivities && apiActivities.length === 0) ? flashcardSets : null,
+    useGeneratedOnly || isApiActivitiesError || (apiActivities && apiActivities.length === 0) ? quizzes : null,
     {
       limit: activityLimit,
       filter: activeTab === 1 ? 'flashcard' : activeTab === 2 ? 'quiz' : typeFilter !== 'all' ? typeFilter : undefined
@@ -174,7 +184,7 @@ function ActivityModal({ open, onClose }) {
   );
   
   // Determine which activities to use
-  const activities = apiActivities && apiActivities.length > 0 ? apiActivities : generatedActivities || [];
+  const activities = (!useGeneratedOnly && apiActivities && apiActivities.length > 0) ? apiActivities : generatedActivities || [];
   
   // Determine loading state
   const isLoading = isLoadingApiActivities || 

@@ -12,6 +12,10 @@ const audience = import.meta.env.VITE_AUTH0_AUDIENCE || '';
 // Get current environment
 const currentEnv = getEnvironmentName();
 const isProd = isProduction();
+const isDev = isDevelopment();
+
+// Determine the correct redirect URI based on environment
+const redirectUri = isDev ? 'http://localhost:5173' : window.location.origin;
 
 // Log for debugging in development mode only
 if (isDevelopment()) {
@@ -19,6 +23,7 @@ if (isDevelopment()) {
   logger.debug(`  Domain: ${domain || 'NOT SET - AUTH WILL FAIL'}`);
   console.log(`  Client ID: ${clientId ? maskSensitiveValue(clientId) : 'NOT SET - AUTH WILL FAIL'}`);
   console.log(`  Audience: ${audience ? maskSensitiveValue(audience) : 'Not configured (this is optional)'}`);
+  console.log(`  Redirect URI: ${redirectUri}`);
 }
 
 // Check if required values are missing
@@ -29,7 +34,7 @@ if (!domain || !clientId) {
 
 // Only include audience if it's actually needed and configured
 const authParams = {
-  redirect_uri: window.location.origin,
+  redirect_uri: redirectUri,
 };
 
 // Only add audience if it's specifically set

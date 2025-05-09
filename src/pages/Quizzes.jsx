@@ -22,7 +22,7 @@ import StarBorderIcon from '@mui/icons-material/StarBorder'
 import DeleteIcon from '@mui/icons-material/Delete'
 
 // Services
-import { handleRequestError } from '../services/utils'
+import { handleRequestError } from '../api/utils'
 
 // Queries
 import { useQuizzes, useDeleteQuiz, useToggleFavorite } from '../api/queries/quizzes'

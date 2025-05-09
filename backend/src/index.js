@@ -18,6 +18,7 @@ import quizRoutes from './routes/quiz-routes.js';
 import publicRoutes from './routes/public-routes.js';
 import partnershipRoutes from './routes/partnership-routes.js';
 import subscriptionRoutes from './routes/subscription-routes.js';
+import activityRoutes from './routes/activity-routes.js';
 import { errorHandler } from './middleware/error-middleware.js';
 import { connectToMongoDB } from './db/mongodb.js';
 
@@ -49,7 +50,17 @@ app.use((req, res, next) => {
 
 // Standard middleware 
 app.use(cors({
-  origin: config.server.corsOrigin,
+  origin: function(origin, callback) {
+    // Parse the corsOrigin value into an array
+    const allowedOrigins = config.server.corsOrigin.split(',');
+    
+    // If no origin provided or origin is in allowed list, allow it
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true
 }));
 app.use(helmet());
@@ -99,6 +110,7 @@ const setupServer = () => {
   app.use('/api/todos', todoRoutes);
   app.use('/api/quizzes', quizRoutes);
   app.use('/api/subscriptions', subscriptionRoutes);
+  app.use('/api/activities', activityRoutes);
 
   // Health check endpoint
   app.get('/api/health', (req, res) => {

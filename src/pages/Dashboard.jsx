@@ -28,10 +28,10 @@ import Layout from '../components/Layout'
 import FlashcardSetCard from '../components/FlashcardSetCard'
 
 // Services & Queries
-import { handleRequestError } from '../services/utils'
+import { handleRequestError } from '../api/utils'
 import { useFlashcardSets, useDeleteFlashcardSet, useToggleFavorite } from '../api/queries/flashcards'
 import { useQuizzes, useDeleteQuiz } from '../api/queries/quizzes'
-import { useGeneratedActivities } from '../api/queries/activities'
+import { useGeneratedActivities, useActivities } from '../api/queries/activities'
 
 // Custom hooks
 import useNavigationWithCancellation from '../hooks/useNavigationWithCancellation'
@@ -51,14 +51,41 @@ function SidebarItem({ icon, label, active, to }) {
 
 function RecentActivity({ flashcardSets, quizSets }) {
   const [isActivityModalOpen, setIsActivityModalOpen] = useState(false);
+  const [useGeneratedOnly, setUseGeneratedOnly] = useState(false);
   
-  // Use React Query hook to generate activities
+  // First try API endpoint if available
   const { 
-    data: recentActivities,
-    isLoading
+    data: apiActivities,
+    isLoading: isLoadingApi,
+    isError: isApiError
+  } = useActivities({ 
+    limit: 5 // Only get 5 most recent activities
+  }, {
+    // Only use if we haven't already determined the endpoint doesn't exist
+    enabled: !useGeneratedOnly,
+    // Don't show error toasts for missing endpoints
+    onError: (error) => {
+      if (error.response?.status === 404) {
+        setUseGeneratedOnly(true);
+      }
+    }
+  });
+  
+  // Use React Query hook to generate activities as fallback
+  const { 
+    data: generatedActivities,
+    isLoading: isLoadingGenerated
   } = useGeneratedActivities(flashcardSets, quizSets, { 
     limit: 5 // Only get 5 most recent activities
   });
+  
+  // Determine which activities to use and loading state
+  const recentActivities = (!useGeneratedOnly && apiActivities && apiActivities.length > 0) 
+    ? apiActivities 
+    : generatedActivities || [];
+  
+  const isLoading = (!useGeneratedOnly && isLoadingApi) || 
+    (useGeneratedOnly && isLoadingGenerated);
   
   // Format relative time
   const formatTimeAgo = (timestamp) => {

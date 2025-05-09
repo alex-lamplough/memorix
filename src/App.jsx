@@ -1,6 +1,7 @@
 import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom'
 import logger from './utils/logger';
 import { useState, useEffect, lazy, Suspense, useRef } from 'react'
+import { useAuth0 } from '@auth0/auth0-react'
 
 // Feature icons
 import BoltIcon from '@mui/icons-material/Bolt'
@@ -59,7 +60,8 @@ import { cancelAllRequests as cancelAllFlashcardRequests } from './api/queries/f
 import { cancelAllRequests as cancelAllTodoRequests } from './api/queries/todos'
 import { cancelAllRequests as cancelAllQuizRequests } from './api/queries/quizzes'
 import { cancelAllRequests as cancelAllActivityRequests } from './api/queries/activities'
-import { createNavigationHandler } from './services/utils'
+import { cancelAllRequests as cancelAllSubscriptionRequests } from './api/queries/subscriptions'
+import { createNavigationHandler } from './api/utils'
 
 // ComingSoon component for features that are under development
 function ComingSoon() {
@@ -749,6 +751,7 @@ function App() {
   const location = useLocation();
   const navigate = useNavigate();
   const [activeSection, setActiveSection] = useState(null);
+  const { logout } = useAuth0();
   
   // Function to handle scroll and update active section
   useEffect(() => {
@@ -780,6 +783,99 @@ function App() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
   
+  // Listen for auth errors and handle session expiration
+  useEffect(() => {
+    // Flag to track if we're already handling an auth error
+    let isHandlingAuthError = false;
+    
+    const handleAuthError = (event) => {
+      // Prevent multiple simultaneous auth error handlers
+      if (isHandlingAuthError) return;
+      isHandlingAuthError = true;
+      
+      const { type, message } = event.detail;
+      
+      // Log the auth error
+      logger.warn('Authentication error detected:', { type, message });
+      
+      // Show a notification to the user
+      const notification = document.createElement('div');
+      notification.style.position = 'fixed';
+      notification.style.top = '20px';
+      notification.style.left = '50%';
+      notification.style.transform = 'translateX(-50%)';
+      notification.style.backgroundColor = '#ff7262';
+      notification.style.color = 'white';
+      notification.style.padding = '12px 20px';
+      notification.style.borderRadius = '8px';
+      notification.style.zIndex = '9999';
+      notification.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+      notification.textContent = message || 'Your session has expired. Please log in again.';
+      
+      document.body.appendChild(notification);
+      
+      // Cancel all pending requests to prevent further auth errors
+      const cancelAllActiveRequests = () => {
+        cancelAllFlashcardRequests();
+        cancelAllTodoRequests();
+        cancelAllQuizRequests();
+        cancelAllActivityRequests();
+        cancelAllSubscriptionRequests();
+        logger.debug('Cancelled all pending requests during auth error');
+      };
+      
+      cancelAllActiveRequests();
+      
+      // Force the correct redirect for local development
+      const isDevelopment = window.location.hostname === 'localhost' || 
+                         window.location.hostname === '127.0.0.1';
+      
+      // Redirect to home page after a short delay
+      setTimeout(() => {
+        if (isDevelopment) {
+          // For local development, handle logout manually to avoid Auth0 redirect issues
+          logger.debug('Development environment detected - using manual logout');
+          // Clear Auth0 session cookie
+          document.cookie.split(';').forEach(cookie => {
+            const [name] = cookie.trim().split('=');
+            if (name.includes('auth0') || name.includes('_identity')) {
+              document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+            }
+          });
+          
+          // Clear storage
+          localStorage.removeItem('auth0.is.authenticated');
+          localStorage.removeItem('auth0.login.state');
+          sessionStorage.clear();
+          
+          // Redirect to localhost - use replace to avoid browser history issues
+          window.location.replace('http://localhost:5173');
+        } else {
+          // In production, use Auth0 logout
+          logout({ returnTo: window.location.origin });
+        }
+        
+        // Remove the notification after redirect initiated
+        try {
+          document.body.removeChild(notification);
+        } catch (e) {
+          // Notification may already be removed, ignore error
+        }
+        
+        // Reset handling flag
+        isHandlingAuthError = false;
+      }, 1000);
+    };
+    
+    // Add event listener for auth errors
+    window.addEventListener('auth-error', handleAuthError);
+    
+    // Clean up
+    return () => {
+      window.removeEventListener('auth-error', handleAuthError);
+    };
+  }, [navigate, logout]);
+  
   // Cancel all pending API requests when navigating between routes
   useEffect(() => {
     // Create a function that cancels all active requests
@@ -789,6 +885,7 @@ function App() {
       cancelAllTodoRequests();
       cancelAllQuizRequests();
       cancelAllActivityRequests();
+      cancelAllSubscriptionRequests();
       
       logger.debug('Cancelled all pending requests due to navigation');
     };
@@ -811,6 +908,7 @@ function App() {
       cancelAllTodoRequests();
       cancelAllQuizRequests();
       cancelAllActivityRequests();
+      cancelAllSubscriptionRequests();
     });
     
     return () => {

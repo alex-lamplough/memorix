@@ -1,7 +1,12 @@
 import { useState, useEffect } from 'react';
 import logger from '../../utils/logger';
 import { loadStripe } from '@stripe/stripe-js';
-import subscriptionService from '../../services/subscription-service';
+import { 
+  useCreateCheckoutSession, 
+  useCreatePortalSession,
+  useCancelSubscription,
+  useReactivateSubscription
+} from '../../api/queries/subscriptions';
 
 // Initialize Stripe with the publishable key
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
@@ -21,6 +26,12 @@ const StripeWidget = ({ user, subscription, onSubscriptionUpdate, className = ''
   const [selectedPlan, setSelectedPlan] = useState('pro');
   const [subscriptionDetails, setSubscriptionDetails] = useState(null);
   
+  // Use React Query mutation hooks
+  const { mutateAsync: createCheckoutSession } = useCreateCheckoutSession();
+  const { mutateAsync: createPortalSession } = useCreatePortalSession();
+  const { mutateAsync: cancelSubscription } = useCancelSubscription();
+  const { mutateAsync: reactivateSubscription } = useReactivateSubscription();
+  
   useEffect(() => {
     // If we have a subscription, set it to the details state
     if (subscription) {
@@ -36,7 +47,7 @@ const StripeWidget = ({ user, subscription, onSubscriptionUpdate, className = ''
       setSelectedPlan(plan);
 
       // Get checkout session from backend
-      const { url } = await subscriptionService.createCheckoutSession(plan);
+      const { url } = await createCheckoutSession({ plan });
       
       // Redirect to Stripe checkout
       window.location.href = url;
@@ -55,7 +66,7 @@ const StripeWidget = ({ user, subscription, onSubscriptionUpdate, className = ''
       setError(null);
 
       // Get portal session from backend
-      const { url } = await subscriptionService.createPortalSession();
+      const { url } = await createPortalSession();
       
       // Redirect to Stripe portal
       window.location.href = url;
@@ -78,7 +89,7 @@ const StripeWidget = ({ user, subscription, onSubscriptionUpdate, className = ''
       setError(null);
 
       // Call cancel endpoint
-      const result = await subscriptionService.cancelSubscription();
+      const result = await cancelSubscription();
       
       // Update local state
       setSubscriptionDetails({
@@ -110,7 +121,7 @@ const StripeWidget = ({ user, subscription, onSubscriptionUpdate, className = ''
       setError(null);
 
       // Call reactivate endpoint
-      const result = await subscriptionService.reactivateSubscription();
+      const result = await reactivateSubscription();
       
       // Update local state
       setSubscriptionDetails({

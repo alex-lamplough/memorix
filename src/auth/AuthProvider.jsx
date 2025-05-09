@@ -97,11 +97,16 @@ const UserSync = ({ children }) => {
 const AuthProvider = ({ children }) => {
   const { domain, clientId, authorizationParams, useRefreshTokens, cacheLocation } = auth0Config;
   
+  // Get current environment info
+  const isDev = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+  const baseUrl = isDev ? 'http://localhost:5173' : window.location.origin;
+  
   // Log Auth0 configuration for debugging
   logger.debug('🔐 Auth0Provider Configuration:');
   logger.debug('  Domain:', { value: domain });
   logger.debug('  Client ID:', { value: clientId.substring(0, 5) + '...' });
-  logger.debug('  Redirect URI:', { value: window.location.origin });
+  logger.debug('  Redirect URI:', { value: authorizationParams.redirect_uri });
+  logger.debug('  Base URL:', { value: baseUrl });
   logger.debug('  Auth Params:', { value: JSON.stringify(authorizationParams) });
   
   const onRedirectCallback = (appState) => {
@@ -123,20 +128,23 @@ const AuthProvider = ({ children }) => {
         '/onboarding'
       );
       
-      // Navigate to the onboarding page
-      window.location.pathname = '/onboarding';
+      // Navigate to the onboarding page - use the correct base URL
+      window.location.href = `${baseUrl}/onboarding`;
       return;
     }
     
     // For existing users, redirect to the dashboard page
+    const returnTo = appState?.returnTo || '/dashboard';
+    
+    // Update history state
     window.history.replaceState(
       {},
       document.title,
-      appState?.returnTo || '/dashboard'
+      returnTo
     );
     
-    // Navigate to the dashboard page
-    window.location.pathname = '/dashboard';
+    // Navigate to the dashboard page - use the correct base URL
+    window.location.href = `${baseUrl}${returnTo}`;
   };
 
   return (

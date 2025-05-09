@@ -24,7 +24,11 @@ import PercentIcon from '@mui/icons-material/Percent'
 // Hooks and Services
 import { useUserProfile, useUpdateUserProfile, useUpdateUserPreferences } from '../api/queries/users'
 import useSubscription from '../hooks/useSubscription'
-import subscriptionService from '../services/subscription-service'
+import { 
+  useCreatePortalSession, 
+  useCreateCheckoutSession, 
+  useValidateCoupon 
+} from '../api/queries/subscriptions'
 
 function SettingsNavItem({ icon, label, active, onClick }) {
   return (
@@ -255,42 +259,38 @@ function SubscriptionGuidelines() {
 // New component for coupon code functionality
 function CouponInput({ onApply, className = '' }) {
   const [couponCode, setCouponCode] = useState('');
-  const [isApplying, setIsApplying] = useState(false);
-  const [error, setError] = useState(null);
-  const [couponDetails, setCouponDetails] = useState(null);
+  const [isValidating, setIsValidating] = useState(false);
+  const [validationError, setValidationError] = useState('');
   
+  // Use React Query validation hook
+  const { mutateAsync: validateCoupon } = useValidateCoupon();
+
   const handleApply = async () => {
-    if (!couponCode.trim()) return;
-    
-    setIsApplying(true);
-    setError(null);
-    setCouponDetails(null);
-    
+    if (!couponCode.trim()) {
+      setValidationError('Please enter a coupon code');
+      return;
+    }
+
+    setIsValidating(true);
+    setValidationError('');
+
     try {
-      // Validate the coupon with our API
-      const couponInfo = await subscriptionService.validateCoupon(couponCode);
-      
-      if (couponInfo.valid) {
-        // Save the coupon details
-        setCouponDetails(couponInfo);
-        
-        // Notify parent component of the valid coupon code
-        onApply(couponCode);
+      const result = await validateCoupon(couponCode.trim());
+      if (result.valid) {
+        onApply(couponCode.trim(), result);
       } else {
-        setError(couponInfo.message || 'Invalid coupon code');
+        setValidationError(result.message || 'Invalid coupon code');
       }
-    } catch (err) {
-      logger.error('Error applying coupon:', { value: err });
-      setError(err.response?.data?.message || 'Invalid coupon code. Please try again.');
+    } catch (error) {
+      logger.error('Error validating coupon:', error);
+      setValidationError('Failed to validate coupon. Please try again.');
     } finally {
-      setIsApplying(false);
+      setIsValidating(false);
     }
   };
   
   const handleClearCoupon = () => {
     setCouponCode('');
-    setCouponDetails(null);
-    setError(null);
     onApply(''); // Notify parent that coupon was cleared
   };
   
@@ -298,7 +298,7 @@ function CouponInput({ onApply, className = '' }) {
     <div className={`mt-4 ${className}`}>
       <h4 className="text-sm font-medium mb-2 text-white/80">Have a coupon code?</h4>
       
-      {!couponDetails ? (
+      {!couponCode && (
         // Coupon input form
         <div className="flex items-center gap-2">
           <div className="flex-1 relative">
@@ -315,24 +315,26 @@ function CouponInput({ onApply, className = '' }) {
           </div>
           <button
             onClick={handleApply}
-            disabled={isApplying || !couponCode.trim()}
-            className={`px-4 py-2 bg-[#00ff94]/10 text-[#00ff94] rounded-lg hover:bg-[#00ff94]/20 transition-colors border border-[#00ff94]/30 ${isApplying || !couponCode.trim() ? 'opacity-70 cursor-not-allowed' : ''}`}
+            disabled={isValidating || !couponCode.trim()}
+            className={`px-4 py-2 bg-[#00ff94]/10 text-[#00ff94] rounded-lg hover:bg-[#00ff94]/20 transition-colors border border-[#00ff94]/30 ${isValidating || !couponCode.trim() ? 'opacity-70 cursor-not-allowed' : ''}`}
           >
-            {isApplying ? 'Validating...' : 'Apply'}
+            {isValidating ? 'Validating...' : 'Apply'}
           </button>
         </div>
-      ) : (
+      )}
+      
+      {couponCode && (
         // Coupon applied state
         <div className="bg-[#00ff94]/10 border border-[#00ff94]/30 p-3 rounded-lg">
           <div className="flex justify-between items-center">
             <div>
-              <span className="font-medium text-[#00ff94]">{couponDetails.name}</span>
+              <span className="font-medium text-[#00ff94]">{couponCode}</span>
               <div className="flex items-center mt-1">
-                <span className="text-white/70 line-through mr-2">£{couponDetails.regularPrice}</span>
-                <span className="text-[#00ff94] font-bold">£{couponDetails.discountedPrice}</span>
+                <span className="text-white/70 line-through mr-2">£{validationError}</span>
+                <span className="text-[#00ff94] font-bold">£{validationError}</span>
                 <span className="text-white/70 text-xs ml-1">/month</span>
               </div>
-              <p className="text-white/60 text-xs mt-1">{couponDetails.discountDisplay} applied</p>
+              <p className="text-white/60 text-xs mt-1">{validationError}</p>
             </div>
             <button
               onClick={handleClearCoupon}
@@ -344,121 +346,128 @@ function CouponInput({ onApply, className = '' }) {
         </div>
       )}
       
-      {error && <p className="mt-2 text-sm text-red-500">{error}</p>}
+      {validationError && <p className="mt-2 text-sm text-red-500">{validationError}</p>}
     </div>
   );
 }
 
 function SubscriptionSettings() {
-  const { data: user, isLoading: isLoadingUser } = useUserProfile();
-  const { subscription, isLoading: isLoadingSubscription, isProSubscriber } = useSubscription();
-  const [detailedSubscription, setDetailedSubscription] = useState(null);
-  const [isLoadingDetails, setIsLoadingDetails] = useState(false);
+  const navigate = useNavigate();
+  const [isPortalLoading, setIsPortalLoading] = useState(false);
+  const [isCheckoutLoading, setIsCheckoutLoading] = useState(false);
   const [portalError, setPortalError] = useState(null);
-  const [couponCode, setCouponCode] = useState('');
-  const [couponMessage, setCouponMessage] = useState('');
+  const [activeCoupon, setActiveCoupon] = useState(null);
+  const [subscriptionDetails, setSubscriptionDetails] = useState(null);
+  const { subscription, isLoading, isProSubscriber } = useSubscription();
   
-  // Add logging to debug the subscription data
+  // Use React Query hooks
+  const { mutateAsync: createPortalSession } = useCreatePortalSession();
+  const { mutateAsync: createCheckoutSession } = useCreateCheckoutSession();
+
   useEffect(() => {
-    logger.debug('User subscription data:', { value: user?.subscription });
-    logger.debug('Subscription hook data:', { value: subscription });
-  }, [user, subscription]);
-  
-  // Fetch detailed subscription information
-  useEffect(() => {
-    const fetchSubscriptionDetails = async () => {
-      if (user?.subscription?.plan === 'pro') {
-        try {
-          setIsLoadingDetails(true);
-          const details = await subscriptionService.getSubscriptionDetails();
-          logger.debug('Detailed subscription info:', { value: details });
-          setDetailedSubscription(details);
-        } catch (error) {
-          logger.error('Error fetching subscription details:', error);
-        } finally {
-          setIsLoadingDetails(false);
-        }
-      }
-    };
-    
     fetchSubscriptionDetails();
-  }, [user]);
-  
-  // Handle Stripe portal errors
-  const handlePortalError = (errorMessage, errorCode) => {
-    setPortalError(errorMessage);
-    logger.error('Portal configuration issue:', { value: errorMessage, errorCode });
+  }, [subscription]);
+
+  const fetchSubscriptionDetails = async () => {
+    if (!subscription) return;
+    
+    try {
+      // No need to fetch subscription details separately as it's already 
+      // available through useSubscription() which uses React Query
+      setSubscriptionDetails(subscription);
+    } catch (error) {
+      logger.error('Error fetching subscription details:', error);
+    }
   };
-  
-  if (isLoadingUser || isLoadingSubscription || isLoadingDetails) {
+
+  const handlePortalError = (errorMessage, errorCode) => {
+    let errorText = errorMessage || 'Failed to load the subscription portal.';
+    
+    // Add guidance based on error code
+    if (errorCode === 'customer_not_found') {
+      errorText += ' It looks like you haven\'t set up a subscription yet.';
+    } else if (errorCode === 'subscription_not_found') {
+      errorText += ' It appears you don\'t have an active subscription.';
+    }
+    
+    setPortalError(errorText);
+  };
+
+  const handleManageSubscription = async () => {
+    setIsPortalLoading(true);
+    setPortalError(null);
+    
+    try {
+      const { url } = await createPortalSession();
+      
+      // Navigate to Stripe Portal
+      if (url) {
+        window.location.href = url;
+      } else {
+        throw new Error('No portal URL returned');
+      }
+    } catch (error) {
+      logger.error('Failed to create portal session:', error);
+      handlePortalError(error.message, error.code);
+    } finally {
+      setIsPortalLoading(false);
+    }
+  };
+
+  const handleSubscribe = async (plan) => {
+    setIsCheckoutLoading(true);
+    
+    try {
+      const { url } = await createCheckoutSession({ 
+        plan, 
+        couponCode: activeCoupon ? activeCoupon.code : undefined 
+      });
+      
+      // Navigate to Stripe Checkout
+      if (url) {
+        window.location.href = url;
+      } else {
+        throw new Error('No checkout URL returned');
+      }
+    } catch (error) {
+      logger.error('Failed to create checkout session:', error);
+      alert('There was an error creating your checkout session. Please try again.');
+    } finally {
+      setIsCheckoutLoading(false);
+    }
+  };
+
+  const getCheckoutButtonText = (plan) => {
+    if (isCheckoutLoading) {
+      return 'Processing...';
+    }
+    
+    if (subscription && subscription.plan === plan) {
+      return 'Current Plan';
+    }
+    
+    if (plan === 'pro') {
+      return activeCoupon ? `Subscribe with ${activeCoupon.displayText}` : 'Subscribe to Pro';
+    }
+    
+    return `Subscribe to ${plan.charAt(0).toUpperCase() + plan.slice(1)}`;
+  };
+
+  const handleCouponApply = (code, couponData) => {
+    setActiveCoupon({
+      code,
+      displayText: couponData.displayText || `Coupon: ${code}`,
+      discount: couponData.discount
+    });
+  };
+
+  if (isLoading) {
     return (
       <div className="bg-[#18092a]/60 rounded-xl p-6 border border-gray-800/30 shadow-lg text-white">
         <p className="text-white/70">Loading subscription information...</p>
       </div>
     );
   }
-
-  // Debug log all potential sources of billing date
-  logger.debug('Billing date sources:', {
-    detailedNextBillingDate: detailedSubscription?.nextBillingDate,
-    subscriptionRenewalDate: subscription?.renewalDate,
-    userNextBillingDate: user.subscription?.nextBillingDate,
-    subscriptionCurrentPeriodEnd: subscription?.currentPeriodEnd,
-    userCurrentPeriodEnd: user.subscription?.currentPeriodEnd
-  });
-
-  // Extract and prioritize next billing date from available sources
-  let nextBillingDate = null;
-  
-  // Check all possible sources for next billing date in order of preference
-  if (user.subscription?.nextBillingDate) {
-    nextBillingDate = user.subscription.nextBillingDate;
-    logger.debug('Using nextBillingDate from user object');
-  } else if (detailedSubscription?.nextBillingDate) {
-    nextBillingDate = detailedSubscription.nextBillingDate;
-    logger.debug('Using nextBillingDate from detailed subscription');
-  } else if (subscription?.renewalDate) {
-    nextBillingDate = subscription.renewalDate;
-    logger.debug('Using renewalDate from subscription hook');
-  }
-  
-  // Check if subscription is scheduled for cancellation
-  const isCanceling = 
-    detailedSubscription?.cancelAtPeriodEnd || 
-    subscription?.cancelAtPeriodEnd || 
-    user.subscription?.cancelAtPeriodEnd;
-
-  // Final debug log of the next billing date value
-  logger.debug('Final nextBillingDate value:', { value: nextBillingDate });
-
-  // Update button text to show coupon applied when valid
-  const getCheckoutButtonText = (plan) => {
-    let baseText = '';
-    
-    if (plan === 'free') {
-      baseText = "Sign Up For Pro - £7.99/month";
-    } else if (plan === 'creator' || plan === 'enterprise') {
-      baseText = "Switch to Pro - £7.99/month";
-    } else {
-      baseText = "Sign Up For Pro - £7.99/month";
-    }
-    
-    if (couponCode) {
-      return `${baseText} (Coupon Applied)`;
-    }
-    
-    return baseText;
-  };
-  
-  // Handle coupon application
-  const handleCouponApply = (code) => {
-    setCouponCode(code);
-    if (code) {
-      setCouponMessage('Coupon will be applied at checkout');
-    } else {
-      setCouponMessage('');
-    }
-  };
 
   return (
     <div className="bg-[#18092a]/60 rounded-xl p-6 border border-gray-800/30 shadow-lg text-white">
@@ -480,33 +489,33 @@ function SubscriptionSettings() {
               <div className="flex justify-between items-center">
                 <span className="text-white/70">Plan</span>
                 <span className="bg-[#00ff94]/10 px-3 py-1 rounded-full text-sm text-[#00ff94]">
-                  {(user.subscription?.plan || subscription?.plan || 'Free').charAt(0).toUpperCase() + 
-                   (user.subscription?.plan || subscription?.plan || 'Free').slice(1)}
+                  {(subscription?.plan || 'Free').charAt(0).toUpperCase() + 
+                   (subscription?.plan || 'Free').slice(1)}
                 </span>
               </div>
               
               <div className="flex justify-between items-center mt-3">
                 <span className="text-white/70">Status</span>
                 <span className={`px-3 py-1 rounded-full text-sm ${
-                  user.subscription?.status === 'active' || subscription?.status === 'active'
+                  subscription?.status === 'active'
                     ? 'bg-green-500/10 text-green-400'
                     : 'bg-yellow-500/10 text-yellow-400'
                 }`}>
-                  {(user.subscription?.status || subscription?.status || 'Inactive').charAt(0).toUpperCase() + 
-                   (user.subscription?.status || subscription?.status || 'Inactive').slice(1)}
+                  {(subscription?.status || 'Inactive').charAt(0).toUpperCase() + 
+                   (subscription?.status || 'Inactive').slice(1)}
                 </span>
               </div>
               
-              {user.subscription?.plan !== 'free' && (
+              {subscription?.plan !== 'free' && (
                 <div className="space-y-3 mt-4 pt-4 border-t border-white/10">
                   <div className="flex justify-between items-center">
                     <span className="text-white/70">Next Billing Date</span>
                     <span>
-                      {nextBillingDate || 'Not available'}
+                      {subscription?.nextBillingDate || 'Not available'}
                     </span>
                   </div>
                   
-                  {isCanceling && (
+                  {subscription?.cancelAtPeriodEnd && (
                     <div className="mt-4 bg-gray-800/30 p-3 rounded text-amber-400 text-sm">
                       Your subscription will be canceled at the end of the current billing period.
                     </div>
@@ -612,14 +621,15 @@ function SubscriptionSettings() {
                 <td className="py-2"></td>
                 <td className="py-2 text-center"></td>
                 <td className="py-2 text-center bg-[#00ff94]/5">
-                  {user.subscription?.plan === 'pro' ? (
+                  {subscription?.plan === 'pro' ? (
                     <span className="inline-block px-3 py-1 text-xs bg-[#00ff94]/20 text-[#00ff94] rounded-full">Current Plan</span>
                   ) : (
                     <CheckoutButton
                       plan="pro"
-                      text={couponCode ? "Sign Up For Pro (Coupon Applied)" : "Get Pro"}
+                      text={getCheckoutButtonText('pro')}
                       className="bg-[#00ff94] text-[#18092a] px-4 py-1 text-sm rounded-lg hover:bg-[#00ff94]/90 transition-colors"
-                      couponCode={couponCode}
+                      couponCode={activeCoupon ? activeCoupon.code : null}
+                      onClick={() => handleSubscribe('pro')}
                     />
                   )}
                 </td>
@@ -638,9 +648,10 @@ function SubscriptionSettings() {
           {!isProSubscriber() && (
             <CheckoutButton
               plan="pro"
-              text={couponCode ? "Sign Up For Pro (Coupon Applied)" : "Sign Up For Pro"}
+              text={getCheckoutButtonText('pro')}
               className="bg-[#00ff94]/10 text-[#00ff94] px-6 py-2.5 rounded-lg hover:bg-[#00ff94]/20 transition-colors border border-[#00ff94]/30"
-              couponCode={couponCode}
+              couponCode={activeCoupon ? activeCoupon.code : null}
+              onClick={() => handleSubscribe('pro')}
             />
           )}
           {isProSubscriber() && (
@@ -651,10 +662,6 @@ function SubscriptionSettings() {
             />
           )}
         </div>
-        
-        {couponMessage && (
-          <div className="mt-2 text-center text-xs text-[#00ff94]/80">{couponMessage}</div>
-        )}
       </div>
       
       <div>
@@ -666,7 +673,7 @@ function SubscriptionSettings() {
               <h4 className="font-bold">Free Plan</h4>
               <p className="text-white/70 text-sm">Basic features with limited usage</p>
             </div>
-            {user.subscription?.plan === 'free' || !user.subscription?.plan ? (
+            {subscription?.plan === 'free' || !subscription?.plan ? (
               <span className="bg-white/10 px-3 py-1 rounded-full text-xs text-white/80">Current</span>
             ) : null}
           </div>
@@ -696,7 +703,7 @@ function SubscriptionSettings() {
               <h4 className="font-bold">Pro Plan</h4>
               <p className="text-white/70 text-sm">Enhanced features for serious learners</p>
             </div>
-            {user.subscription?.plan === 'pro' ? (
+            {subscription?.plan === 'pro' ? (
               <span className="bg-[#00ff94]/10 px-3 py-1 rounded-full text-xs text-[#00ff94]">Current</span>
             ) : (
               <span className="bg-[#00ff94]/10 px-3 py-1 rounded-full text-xs text-[#00ff94]">Recommended</span>
@@ -735,7 +742,7 @@ function SubscriptionSettings() {
           />
           
           <div className="mt-4">
-            {user.subscription?.plan === 'pro' ? (
+            {subscription?.plan === 'pro' ? (
               <ManageSubscriptionButton
                 text="Manage Subscription"
                 className="bg-[#00ff94]/10 text-[#00ff94] font-medium px-4 py-2 rounded-lg w-full hover:bg-[#00ff94]/20 transition-colors border border-[#00ff94]/30"
@@ -744,9 +751,10 @@ function SubscriptionSettings() {
             ) : (
               <CheckoutButton
                 plan="pro"
-                text={couponCode ? "Sign Up For Pro - £9.99/month (Coupon Applied)" : "Sign Up For Pro - £7.99/month"}
+                text={getCheckoutButtonText('pro')}
                 className="bg-[#00ff94] text-[#18092a] font-medium px-4 py-2 rounded-lg w-full hover:bg-[#00ff94]/90 transition-colors"
-                couponCode={couponCode}
+                couponCode={activeCoupon ? activeCoupon.code : null}
+                onClick={() => handleSubscribe('pro')}
               />
             )}
           </div>

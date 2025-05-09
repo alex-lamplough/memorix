@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import Quiz from '../models/quiz-model.js';
 import logger from '../utils/logger.js';
+import { logActivity, logQuizCompletion } from '../utils/activity-logger.js';
 
 /**
  * Get all quizzes for the authenticated user
@@ -137,6 +138,18 @@ export const createQuiz = async (req, res) => {
     // Save to database
     await newQuiz.save();
     
+    // Log activity
+    await logActivity({
+      userId: req.user.id,
+      title: newQuiz.title,
+      itemType: 'quiz',
+      actionType: 'create',
+      itemId: newQuiz._id,
+      metadata: {
+        questionsCount: questions.length
+      }
+    });
+    
     logger.info('Successfully created quiz', { quizId: newQuiz._id });
     
     return res.status(201).json({
@@ -204,6 +217,18 @@ export const updateQuiz = async (req, res) => {
     
     // Save the updated quiz
     await quiz.save();
+    
+    // Log activity
+    await logActivity({
+      userId: req.user.id,
+      title: quiz.title,
+      itemType: 'quiz',
+      actionType: 'update',
+      itemId: quiz._id,
+      metadata: {
+        questionsCount: quiz.questionCount || (quiz.questions ? quiz.questions.length : 0)
+      }
+    });
     
     logger.info('Successfully updated quiz', { quizId: id });
     
@@ -337,11 +362,91 @@ export const getPublicQuizzes = async (req, res) => {
   }
 };
 
+/**
+ * Record quiz completion
+ * 
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+export const completeQuiz = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { score, questionsAnswered, timeSpent } = req.body;
+    
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Invalid quiz ID format' 
+      });
+    }
+    
+    // Find the quiz
+    const quiz = await Quiz.findById(id);
+    
+    if (!quiz) {
+      return res.status(404).json({ 
+        success: false, 
+        error: 'Quiz not found' 
+      });
+    }
+    
+    // Update completion stats
+    quiz.lastCompleted = new Date();
+    quiz.lastScore = score;
+    quiz.completionCount = (quiz.completionCount || 0) + 1;
+    
+    // Add score to score history
+    if (!quiz.scoreHistory) {
+      quiz.scoreHistory = [];
+    }
+    
+    quiz.scoreHistory.push({
+      date: new Date(),
+      score,
+      timeSpent: timeSpent || 0
+    });
+    
+    // Save the updated quiz
+    await quiz.save();
+    
+    // Log the activity
+    await logQuizCompletion(
+      req.user.mongoUser || { id: req.user.id },
+      quiz,
+      {
+        score,
+        questionsAnswered: questionsAnswered || quiz.questionCount,
+        timeSpent: timeSpent || 0
+      }
+    );
+    
+    logger.info('Successfully completed quiz', { quizId: id, score });
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Quiz completion recorded successfully',
+      data: {
+        lastCompleted: quiz.lastCompleted,
+        lastScore: quiz.lastScore,
+        completionCount: quiz.completionCount
+      }
+    });
+  } catch (error) {
+    logger.error('Error recording quiz completion:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to record quiz completion',
+      message: error.message
+    });
+  }
+};
+
 export default {
   getAllQuizzes,
   getQuizById,
   createQuiz,
   updateQuiz,
   deleteQuiz,
-  getPublicQuizzes
+  getPublicQuizzes,
+  completeQuiz
 }; 

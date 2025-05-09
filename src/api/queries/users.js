@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useAuth0 } from '@auth0/auth0-react';
 import logger from '../../utils/logger';
 import apiClient from '../apiClient';
 
@@ -10,19 +11,61 @@ export const QUERY_KEYS = {
   USER_ONBOARDING: 'user-onboarding',
 };
 
+// Abort controller map to track and cancel requests
+const controllers = new Map();
+
+// Function to cancel all pending requests 
+export const cancelAllRequests = () => {
+  controllers.forEach((controller, key) => {
+    logger.debug(`Cancelling user request: ${key}`);
+    controller.abort();
+  });
+  controllers.clear();
+};
+
+// Helper to create a cancellable request
+const createCancellableRequest = (endpoint) => {
+  // Cancel any existing request for this endpoint
+  if (controllers.has(endpoint)) {
+    controllers.get(endpoint).abort();
+    controllers.delete(endpoint);
+  }
+  
+  // Create a new controller
+  const controller = new AbortController();
+  controllers.set(endpoint, controller);
+  
+  return {
+    signal: controller.signal,
+    cleanup: () => {
+      controllers.delete(endpoint);
+    }
+  };
+};
+
 // Get current user profile
 export const useUserProfile = () => {
+  const { isAuthenticated, isLoading: authLoading } = useAuth0();
+  
   return useQuery({
     queryKey: [QUERY_KEYS.USER_PROFILE],
     queryFn: async () => {
+      const { signal, cleanup } = createCancellableRequest('/users/me');
+      
       try {
-        const response = await apiClient.get('/users/me');
+        const response = await apiClient.get('/users/me', { signal });
+        cleanup();
         return response.data;
       } catch (error) {
+        cleanup();
         logger.error('Error fetching user profile:', error);
         throw error;
       }
     },
+    // Only run the query if the user is authenticated
+    enabled: isAuthenticated && !authLoading,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    retry: 1, // Only retry once
   });
 };
 
@@ -32,10 +75,14 @@ export const useUpdateUserProfile = () => {
   
   return useMutation({
     mutationFn: async (userData) => {
+      const { signal, cleanup } = createCancellableRequest('/users/me/update');
+      
       try {
-        const response = await apiClient.patch('/users/me', userData);
+        const response = await apiClient.patch('/users/me', userData, { signal });
+        cleanup();
         return response.data;
       } catch (error) {
+        cleanup();
         logger.error('Error updating user profile:', error);
         throw error;
       }

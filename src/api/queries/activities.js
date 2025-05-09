@@ -10,6 +10,9 @@ export const QUERY_KEYS = {
 // Export cancelAllRequests for use in navigation handlers
 export { cancelAllRequests };
 
+// Keep track of API endpoint availability between renders
+let activitiesEndpointExists = true;
+
 /**
  * Hook to fetch user activities
  * 
@@ -20,13 +23,41 @@ export { cancelAllRequests };
  * @param {string} params.endDate - End date for filtering
  * @param {number} params.limit - Maximum number of activities to return
  * @param {string} params.sort - Sort order (newest, oldest)
+ * @param {Object} options - Additional React Query options
  * @returns {Object} - React Query result object
  */
-export const useActivities = (params = {}) => {
+export const useActivities = (params = {}, options = {}) => {
+  // If we already know the endpoint doesn't exist, return a disabled query
+  if (!activitiesEndpointExists && !options.enabled) {
+    return {
+      data: [],
+      isLoading: false,
+      isError: false,
+      error: null,
+      status: 'success'
+    };
+  }
+
   return useQuery({
     queryKey: [QUERY_KEYS.ACTIVITIES, params],
-    queryFn: () => activityAdapter.getUserActivities(params),
+    queryFn: async () => {
+      try {
+        const data = await activityAdapter.getUserActivities(params);
+        // If we get here, the endpoint exists
+        activitiesEndpointExists = true;
+        return data;
+      } catch (error) {
+        // If we get a 404, the endpoint doesn't exist
+        if (error.response && error.response.status === 404) {
+          activitiesEndpointExists = false;
+        }
+        throw error;
+      }
+    },
     staleTime: 1000 * 60 * 5, // 5 minute stale time
+    ...options,
+    // Only attempt to fetch if we think the endpoint exists or if it's explicitly enabled
+    enabled: activitiesEndpointExists && (options.enabled !== false)
   });
 };
 

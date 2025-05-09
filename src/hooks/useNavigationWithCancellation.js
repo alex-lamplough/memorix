@@ -4,6 +4,7 @@ import { cancelAllRequests as cancelFlashcardRequests } from '../api/queries/fla
 import { cancelAllRequests as cancelQuizRequests } from '../api/queries/quizzes';
 import { cancelAllRequests as cancelTodoRequests } from '../api/queries/todos';
 import { cancelAllRequests as cancelActivityRequests } from '../api/queries/activities';
+import { cancelAllRequests as cancelSubscriptionRequests } from '../api/queries/subscriptions';
 
 /**
  * Custom hook that returns a navigation function that cancels all pending
@@ -19,6 +20,7 @@ export function useNavigationWithCancellation() {
       cancelQuizRequests();
       cancelTodoRequests();
       cancelActivityRequests();
+      cancelSubscriptionRequests();
       
       // Then navigate to new route
       navigate(to, options);

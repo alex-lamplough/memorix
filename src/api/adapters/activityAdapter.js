@@ -4,6 +4,9 @@ import logger from '../../utils/logger';
 // Create a map to track in-flight requests (for cancellation)
 const requestMap = new Map();
 
+// Flag to prevent repeated logging of missing endpoint
+let hasLoggedMissingEndpoint = false;
+
 // Helper to create a cancellable request
 const createCancellableRequest = (endpoint) => {
   // Cancel any existing request for this endpoint
@@ -52,6 +55,11 @@ export const activityAdapter = {
    * @returns {Promise<Array>} - Array of user activities
    */
   getUserActivities: async (params = {}) => {
+    // If we already know the endpoint doesn't exist, skip the API call
+    if (hasLoggedMissingEndpoint) {
+      return [];
+    }
+    
     const { signal, cleanup } = createCancellableRequest('activities');
     try {
       const response = await apiClient.get('/activities', { 
@@ -65,7 +73,11 @@ export const activityAdapter = {
       
       // If the backend doesn't support activities endpoint yet, return empty array
       if (error.response && error.response.status === 404) {
-        logger.warn('Activities endpoint not found. Returning empty array.');
+        if (!hasLoggedMissingEndpoint) {
+          logger.warn('Activities endpoint not found. The application will use generated activities instead.');
+          // Only log this once per session
+          hasLoggedMissingEndpoint = true;
+        }
         return [];
       }
       

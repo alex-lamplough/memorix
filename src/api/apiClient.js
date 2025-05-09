@@ -113,18 +113,44 @@ apiClient.interceptors.response.use(
       
       // Handle 401 Unauthorized errors (expired token)
       if (error.response.status === 401) {
-        logger.warn('Unauthorized request - token may be expired');
+        logger.warn('Unauthorized request - token expired or invalid');
         
-        // Clear the current token
-        currentToken = null;
-        
-        // Try to get a fresh token
-        await refreshAuthToken();
-        
-        // If we got a new token, retry the request
-        if (currentToken && error.config) {
-          error.config.headers.Authorization = `Bearer ${currentToken}`;
-          return axios(error.config);
+        // Add a property to the request config to track retry attempts
+        if (!error.config._retry) {
+          error.config._retry = true;
+          
+          // Clear the current token
+          currentToken = null;
+          
+          try {
+            // Try to get a fresh token once
+            await refreshAuthToken();
+            
+            // If we got a new token, retry the request
+            if (currentToken) {
+              logger.debug('Retrying request with new token');
+              error.config.headers.Authorization = `Bearer ${currentToken}`;
+              return axios(error.config);
+            }
+          } catch (refreshError) {
+            logger.error('Failed to refresh token:', refreshError);
+          }
+          
+          // If we reach here, either token refresh failed or no new token was obtained
+          logger.error('Authentication failed - redirecting to login');
+            
+          // Use a timeout to make sure we don't create an infinite loop of events
+          setTimeout(() => {
+            window.dispatchEvent(new CustomEvent('auth-error', { 
+              detail: { 
+                type: 'token_expired',
+                message: 'Your session has expired. Please log in again.'
+              }
+            }));
+          }, 100);
+        } else {
+          // This request has already been retried once, don't retry again
+          logger.warn('Request already retried once with refreshed token, still failing with 401');
         }
       }
     } else {
