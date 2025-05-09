@@ -6,8 +6,7 @@ import FlipIcon from '@mui/icons-material/Flip';
 import NavigateNextIcon from '@mui/icons-material/NavigateNext';
 import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import BookmarkIcon from '@mui/icons-material/Bookmark';
-import BookmarkBorderIcon from '@mui/icons-material/BookmarkBorder';
+import BookmarkIcon from '@mui/icons-material/BookmarkBorder';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import DoneAllIcon from '@mui/icons-material/DoneAll';
 import PlaylistAddCheckIcon from '@mui/icons-material/PlaylistAddCheck';
@@ -21,6 +20,7 @@ function FlashcardStudy({
   onReset,
   reviewLaterCards = {},
   learnedCards = {},
+  onIndexChange,
 }) {
   const [currentCardIndex, setCurrentCardIndex] = useState(initialCardIndex);
   const [isFlipped, setIsFlipped] = useState(false);
@@ -31,30 +31,20 @@ function FlashcardStudy({
   const [showReviewOnly, setShowReviewOnly] = useState(false);
   const [filteredCards, setFilteredCards] = useState(cards);
   
-  // Calculate progress when cards are completed
+  // Update progress whenever card statuses change
   useEffect(() => {
     if (filteredCards.length > 0) {
-      // Only count cards that have been explicitly marked
       let completedCount = 0;
       
-      // Count differently depending on mode
       if (showReviewOnly) {
-        // In review mode, we're only looking at cards marked for review
-        // So we count cards that were marked for review but are now learned
+        // In review mode, we only count cards marked as learned
         completedCount = filteredCards.reduce((count, card) => {
-          // If it was marked for review but is now learned, count it as completed
-          if (localLearnedCards[card.id]) {
-            return count + 1;
-          }
-          return count;
+          return localLearnedCards[card.id] ? count + 1 : count;
         }, 0);
       } else {
-        // In normal mode, count all cards that have been acted upon
+        // In normal mode, count cards that have been either learned or marked for review
         completedCount = filteredCards.reduce((count, card) => {
-          if (localLearnedCards[card.id] || localReviewLaterCards[card.id]) {
-            return count + 1;
-          }
-          return count;
+          return (localLearnedCards[card.id] || localReviewLaterCards[card.id]) ? count + 1 : count;
         }, 0);
       }
       
@@ -76,6 +66,7 @@ function FlashcardStudy({
   
   // Check if all cards have been reviewed
   useEffect(() => {
+    // All cards are reviewed if they're either learned or marked for review
     const allCardsReviewed = cards.every(
       card => localLearnedCards[card.id] || localReviewLaterCards[card.id]
     );
@@ -89,6 +80,13 @@ function FlashcardStudy({
     }
   }, [currentCardIndex, filteredCards, localLearnedCards, localReviewLaterCards, onDeckComplete, cards]);
 
+  // Notify parent when current index changes
+  useEffect(() => {
+    if (onIndexChange) {
+      onIndexChange(currentCardIndex);
+    }
+  }, [currentCardIndex, onIndexChange]);
+
   // Handle card flipping
   const handleFlip = () => {
     setIsFlipped(!isFlipped);
@@ -101,19 +99,8 @@ function FlashcardStudy({
       setIsFlipped(false);
     } else {
       // We've reached the end - check if all cards have been reviewed
-      // Include the current card in our check since we just interacted with it
-      const updatedLearnedCards = { ...localLearnedCards };
-      const updatedReviewCards = { ...localReviewLaterCards };
-      const currentCardId = filteredCards[currentCardIndex]?.id;
-      
-      // Ensure current card is counted if we're checking at the end
-      if (currentCardId && !updatedLearnedCards[currentCardId] && !updatedReviewCards[currentCardId]) {
-        // Force the current card to be counted as reviewed
-        updatedReviewCards[currentCardId] = true;
-      }
-      
       const allCardsReviewed = cards.every(
-        card => updatedLearnedCards[card.id] || updatedReviewCards[card.id]
+        card => localLearnedCards[card.id] || localReviewLaterCards[card.id]
       );
       
       if (allCardsReviewed) {
@@ -158,101 +145,35 @@ function FlashcardStudy({
       }
     }
     
-    // Call the callback if provided
+    // Call the callback
     if (onCardComplete) {
       onCardComplete(cardId, 'learned');
-    }
-    
-    // Update progress immediately
-    updateProgressAfterAction(newLearnedCards, newReviewLaterCards);
-    
-    // Check if this was the last card
-    if (currentCardIndex === filteredCards.length - 1) {
-      // Check if we've completed all cards
-      const allCardsReviewed = cards.every(
-        card => newLearnedCards[card.id] || newReviewLaterCards[card.id] || card.id === cardId
-      );
-      
-      if (allCardsReviewed) {
-        setIsDeckCompleted(true);
-        if (onDeckComplete) {
-          onDeckComplete();
-        }
-        return;
-      }
     }
     
     // Move to next card
     handleNext();
   };
 
-  // Toggle review later status and go to next card
+  // Mark card for review later and go to next card
   const toggleReviewLater = () => {
     if (!filteredCards[currentCardIndex]?.id) return;
     
     const cardId = filteredCards[currentCardIndex].id;
     
-    // Update local state - always mark for review here
+    // Mark for review
     const newReviewLaterCards = {
       ...localReviewLaterCards,
       [cardId]: true
     };
     setLocalReviewLaterCards(newReviewLaterCards);
     
-    // Call the callback if provided
+    // Call the callback
     if (onReviewLaterToggle) {
       onReviewLaterToggle(cardId, true);
     }
     
-    // Update progress immediately
-    updateProgressAfterAction(localLearnedCards, newReviewLaterCards);
-    
-    // Check if this was the last card
-    if (currentCardIndex === filteredCards.length - 1) {
-      // Check if we've completed all cards
-      const allCardsReviewed = cards.every(
-        card => localLearnedCards[card.id] || newReviewLaterCards[card.id] || card.id === cardId
-      );
-      
-      if (allCardsReviewed) {
-        setIsDeckCompleted(true);
-        if (onDeckComplete) {
-          onDeckComplete();
-        }
-        return;
-      }
-    }
-    
     // Move to next card
     handleNext();
-  };
-  
-  // Helper function to update progress after marking a card
-  const updateProgressAfterAction = (learnedCardsState, reviewLaterCardsState) => {
-    if (filteredCards.length > 0) {
-      let completedCount = 0;
-      
-      if (showReviewOnly) {
-        // In review mode
-        completedCount = filteredCards.reduce((count, card) => {
-          if (learnedCardsState[card.id]) {
-            return count + 1;
-          }
-          return count;
-        }, 0);
-      } else {
-        // In normal mode
-        completedCount = filteredCards.reduce((count, card) => {
-          if (learnedCardsState[card.id] || reviewLaterCardsState[card.id]) {
-            return count + 1;
-          }
-          return count;
-        }, 0);
-      }
-      
-      const calculatedProgress = Math.round((completedCount / filteredCards.length) * 100);
-      setProgress(calculatedProgress);
-    }
   };
   
   // Reset deck to start from beginning
@@ -262,12 +183,10 @@ function FlashcardStudy({
     setIsDeckCompleted(false);
     setShowReviewOnly(false);
     setProgress(0);
-    // Reset all learned and review later status
     setLocalLearnedCards({});
     setLocalReviewLaterCards({});
     setFilteredCards(cards);
     
-    // Notify parent component
     if (onReset) {
       onReset();
     }
@@ -296,12 +215,10 @@ function FlashcardStudy({
     );
   }
   
-  // Completion screen
+  // Completion screen with review option
   if (isDeckCompleted) {
-    const totalCards = cards.length;
-    const learnedCount = Object.keys(localLearnedCards).length;
     const reviewCount = Object.keys(localReviewLaterCards).length;
-    const completionPercentage = Math.round((learnedCount / totalCards) * 100);
+    const learnedCount = Object.keys(localLearnedCards).length;
     
     return (
       <div className="w-full flex flex-col items-center">
@@ -316,22 +233,12 @@ function FlashcardStudy({
             {reviewCount === 0 ? 'Deck Completed!' : 'Review Needed'}
           </h2>
           
-          <div className="mb-6">
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-white/70 text-sm">Progress</span>
-              <span className="text-white/70 text-sm">{completionPercentage}%</span>
-            </div>
-            <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-              <div className="h-full bg-[#00ff94]" style={{ width: `${completionPercentage}%` }} />
-            </div>
-          </div>
-          
           <div className="grid grid-cols-2 gap-4 mb-6">
             <div className="bg-[#18092a]/60 p-4 rounded-lg border border-gray-800/30">
               <div className="text-white/70 text-sm">Learned</div>
               <div className="text-white text-2xl font-bold flex items-center">
                 <CheckCircleIcon className="text-[#00ff94] mr-2" />
-                {learnedCount} <span className="text-base font-normal text-white/50 ml-1">of {totalCards}</span>
+                {learnedCount}
               </div>
             </div>
             
@@ -351,7 +258,7 @@ function FlashcardStudy({
                 onClick={handleReviewMarked}
               >
                 <PlaylistAddCheckIcon className="mr-2" />
-                Review Marked Cards
+                Review Cards
               </button>
             )}
             
@@ -442,7 +349,7 @@ function FlashcardStudy({
             className={`bg-[#18092a]/60 text-white px-4 py-3 rounded-lg border border-gray-800/30 hover:bg-[#18092a] transition-colors flex items-center justify-center ${isCardMarkedForReview ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' : ''}`}
             onClick={toggleReviewLater}
           >
-            <BookmarkBorderIcon className="mr-2" />
+            <BookmarkIcon className="mr-2" />
             Review Later
           </button>
         </div>
@@ -483,7 +390,8 @@ FlashcardStudy.propTypes = {
   onDeckComplete: PropTypes.func,
   onReset: PropTypes.func,
   reviewLaterCards: PropTypes.object,
-  learnedCards: PropTypes.object
+  learnedCards: PropTypes.object,
+  onIndexChange: PropTypes.func
 };
 
 export default FlashcardStudy; 

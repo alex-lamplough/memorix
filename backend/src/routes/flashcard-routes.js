@@ -278,27 +278,70 @@ router.get('/:id', async (req, res, next) => {
       isPublic: flashcardSet.isPublic
     });
     
-    // Check if user has permission to view this set
-    // Allow access if set is public or user is the owner
+    // Check if the flashcard set is public or belongs to user
     const isOwner = flashcardSet.userId.toString() === req.user.id || 
                    (req.user.mongoUser && flashcardSet.userId.equals(req.user.mongoUser._id));
     
     if (!flashcardSet.isPublic && !isOwner) {
-      return res.status(403).json({ error: 'You do not have permission to view this flashcard set' });
+      return res.status(403).json({ error: 'You do not have permission to view this private flashcard set' });
     }
     
-    // Add isFavorite flag before sending response
-    const responseObj = flashcardSet.toObject();
-    responseObj.isFavorite = flashcardSet.favorites && Array.isArray(flashcardSet.favorites) && 
-                             flashcardSet.favorites.some(favId => 
-                               req.user.mongoUser ? 
-                               favId.equals(req.user.mongoUser._id) : 
-                               favId.equals(req.user.id)
-                             );
-
-    res.json(responseObj);
+    // Check if the user has favorited this set
+    let isFavorite = false;
+    if (req.user.mongoUser && flashcardSet.favorites.some(id => id.equals(req.user.mongoUser._id))) {
+      isFavorite = true;
+    } else if (req.user.id && flashcardSet.favorites.some(id => id.toString() === req.user.id)) {
+      isFavorite = true;
+    }
+    
+    // Format the response with appropriate fields
+    const responseData = {
+      id: flashcardSet._id,
+      title: flashcardSet.title,
+      description: flashcardSet.description,
+      category: flashcardSet.category,
+      tags: flashcardSet.tags,
+      isPublic: flashcardSet.isPublic,
+      // Transform cards format
+      cards: flashcardSet.cards.map(card => ({
+        id: card._id,
+        question: card.front,
+        answer: card.back,
+        hint: card.hint,
+        difficulty: card.difficulty,
+        lastReviewed: card.lastReviewed,
+        nextReviewDate: card.nextReviewDate
+      })),
+      userId: flashcardSet.userId,
+      createdAt: flashcardSet.createdAt,
+      updatedAt: flashcardSet.updatedAt,
+      // Include study stats and formatting
+      progress: flashcardSet.studyStats.masteryLevel || 0,
+      studyStats: {
+        totalStudySessions: flashcardSet.studyStats.totalStudySessions,
+        totalTimeSpent: flashcardSet.studyStats.totalTimeSpent,
+        lastStudied: flashcardSet.studyStats.lastStudied,
+        masteryLevel: flashcardSet.studyStats.masteryLevel,
+      },
+      isFavorite
+    };
+    
+    // Include study progress data if the user is the owner
+    if (isOwner && flashcardSet.studyProgress) {
+      // Convert Maps to objects for the response
+      responseData.studyProgress = {
+        currentCardIndex: flashcardSet.studyProgress.currentCardIndex,
+        studyMode: flashcardSet.studyProgress.studyMode,
+        lastUpdated: flashcardSet.studyProgress.lastUpdated,
+        // Convert Maps to objects
+        learnedCards: Object.fromEntries(flashcardSet.studyProgress.learnedCards || new Map()),
+        reviewLaterCards: Object.fromEntries(flashcardSet.studyProgress.reviewLaterCards || new Map()),
+      };
+    }
+    
+    res.json(responseData);
   } catch (error) {
-    logger.error('Error getting flashcard set:', error);
+    logger.error('Error fetching flashcard set:', error);
     next(error);
   }
 });
@@ -588,6 +631,135 @@ router.patch('/:id/favorite', authenticate(), lookupMongoUser, async (req, res, 
   } catch (error) {
     logger.error('Error toggling favorite status:', error);
     next(error);
+  }
+});
+
+// Update detailed study progress for a flashcard set
+router.post('/:id/progress', async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { progress } = req.body;
+    
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: 'Invalid ID format' });
+    }
+    
+    logger.debug('Updating study progress:', { 
+      setId: id, 
+      progressData: Object.keys(progress || {}).length > 0 ? 'Data present' : 'Empty data',
+      userId: req.user.id 
+    });
+    
+    // Use findOneAndUpdate with optimistic concurrency control
+    const flashcardSet = await FlashcardSet.findById(id);
+    
+    if (!flashcardSet) {
+      return res.status(404).json({ error: 'Flashcard set not found' });
+    }
+    
+    // Check if user has permission
+    const isOwner = flashcardSet.userId.toString() === req.user.id || 
+                   (req.user.mongoUser && flashcardSet.userId.equals(req.user.mongoUser._id));
+    
+    if (!isOwner) {
+      return res.status(403).json({ error: 'You do not have permission to update progress for this flashcard set' });
+    }
+    
+    // Initialize studyProgress if it doesn't exist
+    if (!flashcardSet.studyProgress) {
+      flashcardSet.studyProgress = {
+        currentCardIndex: 0,
+        learnedCards: new Map(),
+        reviewLaterCards: new Map(),
+        studyMode: 'normal',
+        sessionHistory: [],
+        lastUpdated: new Date()
+      };
+    }
+    
+    // Update progress fields only if they're provided
+    if (progress.currentCardIndex !== undefined) {
+      flashcardSet.studyProgress.currentCardIndex = progress.currentCardIndex;
+    }
+    
+    if (progress.studyMode) {
+      flashcardSet.studyProgress.studyMode = progress.studyMode;
+    }
+    
+    // Handle learnedCards: convert from object to Map for storage
+    if (progress.learnedCards && Object.keys(progress.learnedCards).length > 0) {
+      // Convert object to Map
+      const learnedCardsMap = new Map();
+      Object.entries(progress.learnedCards).forEach(([key, value]) => {
+        learnedCardsMap.set(key, Boolean(value));
+      });
+      flashcardSet.studyProgress.learnedCards = learnedCardsMap;
+      
+      // For analytics: update the count of learned cards
+      if (flashcardSet.cards && flashcardSet.cards.length > 0) {
+        flashcardSet.studyStats.masteryLevel = Math.round((Object.keys(progress.learnedCards).length / flashcardSet.cards.length) * 100);
+      }
+    }
+    
+    // Handle reviewLaterCards: convert from object to Map for storage
+    if (progress.reviewLaterCards && Object.keys(progress.reviewLaterCards).length > 0) {
+      // Convert object to Map
+      const reviewLaterCardsMap = new Map();
+      Object.entries(progress.reviewLaterCards).forEach(([key, value]) => {
+        reviewLaterCardsMap.set(key, Boolean(value));
+      });
+      flashcardSet.studyProgress.reviewLaterCards = reviewLaterCardsMap;
+    }
+    
+    // Add session history entry only if timeSpent is provided
+    if (progress.timeSpent && progress.timeSpent > 0) {
+      // If no session history exists, create array
+      if (!flashcardSet.studyProgress.sessionHistory) {
+        flashcardSet.studyProgress.sessionHistory = [];
+      }
+      
+      // Add new session entry
+      flashcardSet.studyProgress.sessionHistory.push({
+        date: new Date(),
+        timeSpent: progress.timeSpent,
+        cardsLearned: progress.learnedCards ? Object.keys(progress.learnedCards).length : 0,
+        cardsReviewed: progress.reviewLaterCards ? Object.keys(progress.reviewLaterCards).length : 0,
+        completedStatus: progress.studyMode === 'completed' ? 'completed' : 'partial'
+      });
+      
+      // Update overall study stats
+      flashcardSet.studyStats.totalTimeSpent += progress.timeSpent;
+      flashcardSet.studyStats.totalStudySessions += 1;
+      flashcardSet.studyStats.lastStudied = new Date();
+    }
+    
+    // Always update the lastUpdated timestamp
+    flashcardSet.studyProgress.lastUpdated = new Date();
+    
+    // Save with a version check
+    await flashcardSet.save();
+    
+    // Convert Maps back to objects for response, but only include minimal data
+    const responseData = {
+      currentCardIndex: flashcardSet.studyProgress.currentCardIndex,
+      studyMode: flashcardSet.studyProgress.studyMode,
+      lastUpdated: flashcardSet.studyProgress.lastUpdated,
+      updated: true
+    };
+    
+    res.json({
+      message: 'Study progress updated successfully',
+      progress: responseData
+    });
+  } catch (error) {
+    logger.error('Error updating study progress:', error);
+    
+    if (error.name === 'VersionError') {
+      // Handle concurrent modification
+      res.status(409).json({ error: 'Progress update conflict. Please refresh and try again.' });
+    } else {
+      next(error);
+    }
   }
 });
 

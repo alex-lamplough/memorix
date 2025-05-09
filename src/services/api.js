@@ -459,6 +459,24 @@ export const flashcardService = {
     }
   },
   
+  // Update study progress (current index, learned cards, review cards)
+  updateStudyProgress: async (id, progressData) => {
+    try {
+      // Format the progress data for the API
+      const progress = {
+        currentCardIndex: progressData.currentCardIndex,
+        learnedCards: progressData.learnedCards || {},
+        reviewLaterCards: progressData.reviewLaterCards || {}
+      };
+      
+      const response = await api.post(`/flashcards/${id}/progress`, { progress });
+      return response.data;
+    } catch (error) {
+      logger.error(`Error updating study progress for flashcard set ${id}:`, error);
+      throw error;
+    }
+  },
+  
   // Search flashcard sets by query
   searchFlashcards: async (query) => {
     try {

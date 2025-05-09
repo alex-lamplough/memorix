@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import logger from '../utils/logger';
 import { useParams, useNavigate } from 'react-router-dom';
 import FlashcardStudy from '../components/FlashcardStudy';
 import { flashcardService } from '../services/api';
@@ -15,6 +14,7 @@ function FlashcardStudyExample() {
   const [flashcardSet, setFlashcardSet] = useState(null);
   const [reviewLaterCards, setReviewLaterCards] = useState({});
   const [learnedCards, setLearnedCards] = useState({});
+  const [currentCardIndex, setCurrentCardIndex] = useState(0);
 
   // Fetch flashcard set
   useEffect(() => {
@@ -57,27 +57,26 @@ function FlashcardStudyExample() {
           cards: formattedCards
         });
         
-        // Initialize review later cards from saved data if available
-        if (data.studyStats?.reviewLaterCards) {
-          const reviewLaterObj = {};
-          data.studyStats.reviewLaterCards.forEach(cardId => {
-            reviewLaterObj[cardId] = true;
-          });
-          setReviewLaterCards(reviewLaterObj);
-        }
-        
-        // Initialize learned cards from saved data if available
-        if (data.studyStats?.learnedCards) {
-          const learnedObj = {};
-          data.studyStats.learnedCards.forEach(cardId => {
-            learnedObj[cardId] = true;
-          });
-          setLearnedCards(learnedObj);
+        // Initialize study progress from saved data if available
+        if (data.studyProgress) {
+          // Set current card index
+          if (data.studyProgress.currentCardIndex !== undefined) {
+            setCurrentCardIndex(data.studyProgress.currentCardIndex);
+          }
+          
+          // Initialize learned cards
+          if (data.studyProgress.learnedCards) {
+            setLearnedCards(data.studyProgress.learnedCards);
+          }
+          
+          // Initialize review later cards
+          if (data.studyProgress.reviewLaterCards) {
+            setReviewLaterCards(data.studyProgress.reviewLaterCards);
+          }
         }
         
       } catch (err) {
-        logger.error('Error fetching flashcard set:', { value: err });
-        setError(err.message || 'Failed to load flashcard set');
+        setError('Failed to load flashcard set');
       } finally {
         setIsLoading(false);
       }
@@ -86,46 +85,75 @@ function FlashcardStudyExample() {
     fetchFlashcardSet();
   }, [id]);
   
+  // Save study progress to the server
+  const saveStudyProgress = async (index, learned, review) => {
+    if (!id) return; // Don't save progress for demo cards
+    
+    try {
+      await flashcardService.updateStudyProgress(id, {
+        currentCardIndex: index,
+        learnedCards: learned,
+        reviewLaterCards: review
+      });
+    } catch (error) {
+      // Silent fail - we don't want to interrupt the user experience
+      console.error('Failed to save study progress');
+    }
+  };
+  
   // Handle card completion
   const handleCardComplete = (cardId, status) => {
-    logger.debug(`Card ${cardId} marked as ${status}`);
-    
     // Update learned cards
     if (status === 'learned') {
-      setLearnedCards(prev => ({
-        ...prev,
+      const newLearnedCards = {
+        ...learnedCards,
         [cardId]: true
-      }));
+      };
+      setLearnedCards(newLearnedCards);
+      
+      // Save progress
+      saveStudyProgress(currentCardIndex + 1, newLearnedCards, reviewLaterCards);
     }
   };
   
   // Handle review later toggle
   const handleReviewLaterToggle = (cardId, isMarkedForReview) => {
-    logger.debug(`Card ${cardId} ${isMarkedForReview ? 'marked' : 'unmarked'} for review later`);
-    
     // Update review later cards
-    setReviewLaterCards(prev => {
-      const updated = { ...prev };
-      if (isMarkedForReview) {
-        updated[cardId] = true;
-      } else {
-        delete updated[cardId];
-      }
-      return updated;
-    });
+    const newReviewLaterCards = { ...reviewLaterCards };
+    
+    if (isMarkedForReview) {
+      newReviewLaterCards[cardId] = true;
+    } else {
+      delete newReviewLaterCards[cardId];
+    }
+    
+    setReviewLaterCards(newReviewLaterCards);
+    
+    // Save progress
+    saveStudyProgress(currentCardIndex + 1, learnedCards, newReviewLaterCards);
   };
   
   // Handle deck completion
   const handleDeckComplete = () => {
-    logger.debug('Deck completed!');
+    // Save final state
+    saveStudyProgress(currentCardIndex, learnedCards, reviewLaterCards);
   };
   
   // Handle deck reset or review mode change
   const handleDeckReset = () => {
-    logger.debug('Deck restarted or mode changed');
-    // Reset our parent state to match the component's state
-    setReviewLaterCards({});
+    // Reset state
     setLearnedCards({});
+    setReviewLaterCards({});
+    setCurrentCardIndex(0);
+    
+    // Save reset state
+    saveStudyProgress(0, {}, {});
+  };
+  
+  // Track current index changes
+  const handleIndexChange = (index) => {
+    setCurrentCardIndex(index);
+    saveStudyProgress(index, learnedCards, reviewLaterCards);
   };
   
   // Handle go back
@@ -165,13 +193,14 @@ function FlashcardStudyExample() {
             
             <FlashcardStudy
               cards={flashcardSet.cards}
-              initialCardIndex={0}
+              initialCardIndex={currentCardIndex}
               onCardComplete={handleCardComplete}
               onReviewLaterToggle={handleReviewLaterToggle}
               onDeckComplete={handleDeckComplete}
               reviewLaterCards={reviewLaterCards}
               learnedCards={learnedCards}
               onReset={handleDeckReset}
+              onIndexChange={handleIndexChange}
             />
           </>
         )}

@@ -15,153 +15,25 @@ import QuizIcon from '@mui/icons-material/Quiz'
 import ShareIcon from '@mui/icons-material/Share'
 import DeleteIcon from '@mui/icons-material/Delete'
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline'
+import StarBorderIcon from '@mui/icons-material/StarBorder'
 
 // Components
 import Sidebar from '../components/Sidebar'
 import DashboardHeader from '../components/DashboardHeader'
-import FlashcardSet from '../components/FlashcardSet'
 import Todo from '../components/Todo'
 import FlashcardCreationModal from '../components/FlashcardCreationModal'
 import ShareModal from '../components/ShareModal'
 import ActivityModal from '../components/ActivityModal'
 import Layout from '../components/Layout'
+import FlashcardSetCard from '../components/FlashcardSetCard'
 
 // Services & Queries
 import { handleRequestError } from '../services/utils'
-import { useFlashcardSets, useDeleteFlashcardSet } from '../api/queries/flashcards'
+import { useFlashcardSets, useDeleteFlashcardSet, useToggleFavorite } from '../api/queries/flashcards'
 import { useQuizzes, useDeleteQuiz } from '../api/queries/quizzes'
 
 // Custom hooks
 import useNavigationWithCancellation from '../hooks/useNavigationWithCancellation'
-
-// This component was causing a conflict with the imported FlashcardSet
-function FlashcardCard({ title, cards, lastStudied, progress, id, onDelete }) {
-  const navigate = useNavigationWithCancellation();
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
-  
-  const handleStudyClick = () => {
-    navigate(`/study/${id}`);
-  }
-  
-  const handleEditClick = () => {
-    navigate(`/edit/${id}`);
-  }
-  
-  const handleShareClick = () => {
-    setIsShareModalOpen(true);
-  }
-  
-  const handleDeleteClick = () => {
-    setShowDeleteConfirm(true);
-  }
-  
-  const confirmDelete = async () => {
-    try {
-      await onDelete(id);
-    } catch (error) {
-      logger.error('Error deleting flashcard set:', error);
-      alert('Failed to delete flashcard set. Please try again.');
-    } finally {
-      setShowDeleteConfirm(false);
-    }
-  }
-  
-  const cancelDelete = () => {
-    setShowDeleteConfirm(false);
-  }
-  
-  return (
-    <div className="bg-[#18092a]/60 rounded-xl p-6 border border-gray-800/30 shadow-lg text-white">
-      <div className="flex justify-between items-start mb-4">
-        <h3 className="text-xl font-bold truncate pr-2">{title}</h3>
-        <div className="flex space-x-1">
-          <button 
-            className="text-white/60 hover:text-white p-1 rounded-full hover:bg-white/10"
-            onClick={handleShareClick}
-            title="Share"
-          >
-            <ShareIcon fontSize="small" />
-          </button>
-          <button 
-            className="text-white/60 hover:text-red-400 p-1 rounded-full hover:bg-white/10"
-            onClick={handleDeleteClick}
-            title="Delete"
-          >
-            <DeleteIcon fontSize="small" />
-          </button>
-        </div>
-      </div>
-      
-      {/* Delete confirmation */}
-      {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-[#18092a] p-6 rounded-xl max-w-md w-full mx-4">
-            <h3 className="text-xl font-bold mb-3">Delete Flashcard Set</h3>
-            <p className="text-white/70 mb-6">Are you sure you want to delete "{title}"? This action cannot be undone.</p>
-            <div className="flex justify-end gap-3">
-              <button 
-                onClick={cancelDelete} 
-                className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg"
-              >
-                Cancel
-              </button>
-              <button 
-                onClick={confirmDelete} 
-                className="px-4 py-2 bg-red-500/20 text-red-400 hover:bg-red-500/30 rounded-lg"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-      
-      {/* Share modal */}
-      <ShareModal
-        open={isShareModalOpen}
-        onClose={() => setIsShareModalOpen(false)}
-        itemToShare={{
-          id,
-          type: "flashcards",
-          title
-        }}
-      />
-      
-      <div className="mb-4">
-        <span className="text-white/70 text-sm">
-          {cards} {cards === 1 ? 'card' : 'cards'}
-        </span>
-        <div className="mt-2 h-1.5 bg-white/10 rounded-full overflow-hidden">
-          <div 
-            className="h-full bg-[#00ff94]" 
-            style={{ width: `${progress}%` }}
-          ></div>
-        </div>
-      </div>
-      
-      <div className="text-white/70 text-sm mb-5 flex items-center gap-1">
-        <AccessTimeIcon fontSize="small" />
-        <span>Last studied: {lastStudied}</span>
-      </div>
-      
-      <div className="flex gap-2">
-        <button 
-          className="bg-[#00ff94]/10 text-[#00ff94] px-4 py-2 rounded-lg hover:bg-[#00ff94]/20 transition-colors border border-[#00ff94]/30 flex-1"
-          onClick={handleStudyClick}
-        >
-          Study
-        </button>
-        <button 
-          className="bg-[#18092a]/60 text-white px-4 py-2 rounded-lg border border-gray-800/30 hover:bg-[#18092a] transition-colors"
-          onClick={handleEditClick}
-        >
-          Edit
-        </button>
-      </div>
-    </div>
-  )
-}
 
 function SidebarItem({ icon, label, active, to }) {
   return (
@@ -202,23 +74,36 @@ function RecentActivity({ flashcardSets, quizSets }) {
   const formatLastStudied = (dateString) => {
     if (!dateString) return 'Never';
     
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffTime = Math.abs(now - date);
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-    
-    if (diffDays === 0) {
-      // Check if it's today
-      return 'Today';
-    } else if (diffDays === 1) {
-      return 'Yesterday';
-    } else if (diffDays < 7) {
-      return `${diffDays} days ago`;
-    } else if (diffDays < 30) {
-      const weeks = Math.floor(diffDays / 7);
-      return `${weeks} ${weeks === 1 ? 'week' : 'weeks'} ago`;
-    } else {
-      return date.toLocaleDateString();
+    try {
+      const date = new Date(dateString);
+      
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        return 'Never';
+      }
+      
+      const now = new Date();
+      const diffTime = Math.abs(now - date);
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      
+      if (diffDays === 0) {
+        // Check if it's today
+        const hours = date.getHours();
+        const minutes = date.getMinutes();
+        return `Today at ${hours}:${minutes < 10 ? '0' + minutes : minutes}`;
+      } else if (diffDays === 1) {
+        return 'Yesterday';
+      } else if (diffDays < 7) {
+        return `${diffDays} days ago`;
+      } else if (diffDays < 30) {
+        const weeks = Math.floor(diffDays / 7);
+        return `${weeks} ${weeks === 1 ? 'week' : 'weeks'} ago`;
+      } else {
+        return date.toLocaleDateString();
+      }
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'Never';
     }
   };
   
@@ -432,7 +317,8 @@ function Dashboard() {
   const { 
     data: flashcardSets = [], 
     isLoading: isFlashcardsLoading,
-    error: flashcardsError
+    error: flashcardsError,
+    refetch: flashcardRefetch
   } = useFlashcardSets();
   
   // Use React Query to fetch quizzes
@@ -444,29 +330,42 @@ function Dashboard() {
   
   // Use the delete mutations
   const { mutate: deleteFlashcardSet } = useDeleteFlashcardSet();
-  const { mutate: deleteQuiz } = useDeleteQuiz();
+  const { mutate: toggleFavorite } = useToggleFavorite();
   
   // Format the last studied date in a user-friendly way
   const formatLastStudied = (dateString) => {
     if (!dateString) return 'Never';
     
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffTime = Math.abs(now - date);
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-    
-    if (diffDays === 0) {
-      // Check if it's today
-      return 'Today';
-    } else if (diffDays === 1) {
-      return 'Yesterday';
-    } else if (diffDays < 7) {
-      return `${diffDays} days ago`;
-    } else if (diffDays < 30) {
-      const weeks = Math.floor(diffDays / 7);
-      return `${weeks} ${weeks === 1 ? 'week' : 'weeks'} ago`;
-    } else {
-      return date.toLocaleDateString();
+    try {
+      const date = new Date(dateString);
+      
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        return 'Never';
+      }
+      
+      const now = new Date();
+      const diffTime = Math.abs(now - date);
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      
+      if (diffDays === 0) {
+        // Check if it's today
+        const hours = date.getHours();
+        const minutes = date.getMinutes();
+        return `Today at ${hours}:${minutes < 10 ? '0' + minutes : minutes}`;
+      } else if (diffDays === 1) {
+        return 'Yesterday';
+      } else if (diffDays < 7) {
+        return `${diffDays} days ago`;
+      } else if (diffDays < 30) {
+        const weeks = Math.floor(diffDays / 7);
+        return `${weeks} ${weeks === 1 ? 'week' : 'weeks'} ago`;
+      } else {
+        return date.toLocaleDateString();
+      }
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'Never';
     }
   };
   
@@ -475,13 +374,33 @@ function Dashboard() {
   useMemo(() => {
     if (!flashcardSets || !flashcardSets.length) return;
     
-    const transformedSets = flashcardSets.map(set => ({
-      id: set._id,
-      title: set.title,
-      cards: set.cardCount || 0,
-      lastStudied: formatLastStudied(set.lastStudied),
-      progress: set.progress || 0
-    }));
+    // Debug the original data structure
+    console.log('Original flashcard sets from API:', JSON.stringify(flashcardSets, null, 2));
+    
+    const transformedSets = flashcardSets.map(set => {
+      // Debug study stats data for each set
+      console.log(`Processing set for dashboard: ${set.title}`, { 
+        studyStats: set.studyStats,
+        lastStudied: set.lastStudied,
+        progress: set.progress,
+        correctPercentage: set.correctPercentage,
+        cardCount: set.cardCount,
+        studySessions: set.studySessions,
+        isFavorite: set.isFavorite
+      });
+      
+      return {
+        id: set._id,
+        title: set.title,
+        cards: set.cardCount || 0,
+        lastStudied: formatLastStudied(set.lastStudied || set.studyStats?.lastStudied),
+        progress: set.progress || 0,
+        correctPercentage: set.correctPercentage || 
+                        (set.studyStats?.masteryLevel ? Math.round(set.studyStats.masteryLevel) : 0),
+        totalStudied: set.studySessions || set.studyStats?.totalStudySessions || 0,
+        isFavorite: set.isFavorite || false
+      };
+    });
     
     setTransformedFlashcardSets(transformedSets);
   }, [flashcardSets]);
@@ -496,6 +415,10 @@ function Dashboard() {
   
   const handleDeleteFlashcard = (id) => {
     deleteFlashcardSet(id);
+  };
+  
+  const handleToggleFavorite = (id, isFavorite) => {
+    toggleFavorite({ id, isFavorite });
   };
   
   // Get only the first 6 flashcards to display on dashboard
@@ -553,17 +476,35 @@ function Dashboard() {
             )}
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-            {limitedFlashcardSets.map(set => (
-              <FlashcardCard 
-                key={set.id}
-                id={set.id}
-                title={set.title}
-                cards={set.cards}
-                lastStudied={set.lastStudied}
-                progress={set.progress}
-                onDelete={handleDeleteFlashcard}
-              />
-            ))}
+            {limitedFlashcardSets.map(set => {
+              // Debug what's being passed to FlashcardSetCard
+              console.log(`Rendering FlashcardSetCard for ${set.title}:`, {
+                id: set.id,
+                title: set.title,
+                cards: set.cards,
+                lastStudied: set.lastStudied,
+                progress: set.progress,
+                correctPercentage: set.correctPercentage,
+                totalStudied: set.totalStudied,
+                isFavorite: set.isFavorite
+              });
+              
+              return (
+                <FlashcardSetCard 
+                  key={set.id}
+                  id={set.id}
+                  title={set.title}
+                  cards={set.cards}
+                  lastStudied={set.lastStudied}
+                  progress={set.progress}
+                  onDelete={handleDeleteFlashcard}
+                  correctPercentage={set.correctPercentage}
+                  totalStudied={set.totalStudied}
+                  isFavorite={set.isFavorite}
+                  onToggleFavorite={handleToggleFavorite}
+                />
+              );
+            })}
           </div>
           
           {/* Recent Activity */}

@@ -1,415 +1,333 @@
 import { useState, useEffect, useRef } from 'react'
-import logger from '../utils/logger';
 import { useParams, useNavigate } from 'react-router-dom'
 import { flashcardService } from '../services/api'
-import { handleRequestError } from '../services/utils'
-import FlashcardDeck from '../components/FlashcardDeck'
+import FocusStudyDeck from '../components/FocusStudyDeck'
+import { useQuery } from '@tanstack/react-query'
 
 // Icons
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
-import AccessTimeIcon from '@mui/icons-material/AccessTime'
-import CheckCircleIcon from '@mui/icons-material/CheckCircle'
-import BarChartIcon from '@mui/icons-material/BarChart'
-import StarIcon from '@mui/icons-material/Star'
-import TimerIcon from '@mui/icons-material/Timer'
-import BookmarkIcon from '@mui/icons-material/Bookmark'
+
+// localStorage key for saving study progress
+const STUDY_PROGRESS_KEY = 'memorix_study_progress';
+// Debounce delay for API calls (in ms)
+const SAVE_DEBOUNCE_DELAY = 1000;
 
 function StudyDeck() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const [flashcardSet, setFlashcardSet] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
   const [currentCardIndex, setCurrentCardIndex] = useState(0)
-  const [isFlipped, setIsFlipped] = useState(false)
   const [reviewLaterCards, setReviewLaterCards] = useState({})
-  const [studyStats, setStudyStats] = useState({
-    timeSpent: 0,
-    cardsStudied: 0,
-    masteryLevel: 0,
-    totalSessions: 0,
-    reviewLaterCount: 0,
-    learnedCount: 0
-  })
-  const [showEndSessionModal, setShowEndSessionModal] = useState(false)
-  const [studyStartTime, setStudyStartTime] = useState(null)
-  const [isTimerActive, setIsTimerActive] = useState(false)
-  const [elapsedTime, setElapsedTime] = useState(0)
   const [learnedCards, setLearnedCards] = useState({})
-  const [isDeckCompleted, setIsDeckCompleted] = useState(false)
-  const isMountedRef = useRef(true)
-  const retryCount = useRef(0)
+  const saveBackendTimeoutRef = useRef(null);
   
-  // Set up isMountedRef for cleanup
+  // Fetch flashcard set using React Query
+  const { 
+    data: flashcardSet,
+    isLoading: isLoadingFlashcardSet,
+    error: flashcardError 
+  } = useQuery({
+    queryKey: ['flashcardSet', id],
+    queryFn: () => flashcardService.getFlashcardSet(id),
+    onSuccess: (data) => {
+      if (data && data.studyProgress) {
+        // Initialize state from server data
+        if (data.studyProgress.currentCardIndex !== undefined) {
+          setCurrentCardIndex(data.studyProgress.currentCardIndex);
+        }
+        
+        if (data.studyProgress.learnedCards) {
+          setLearnedCards(data.studyProgress.learnedCards);
+        }
+        
+        if (data.studyProgress.reviewLaterCards) {
+          setReviewLaterCards(data.studyProgress.reviewLaterCards);
+        }
+      } else {
+        // If no server data, try local storage
+        loadSavedProgress();
+      }
+    },
+    onError: (err) => {
+      // Try loading from localStorage as fallback
+      loadSavedProgress();
+    }
+  });
+  
+  // Set loading and error states based on React Query state
   useEffect(() => {
-    isMountedRef.current = true;
+    setIsLoading(isLoadingFlashcardSet);
+    if (flashcardError) {
+      setError(flashcardError.message || 'Failed to load flashcards');
+    }
+  }, [isLoadingFlashcardSet, flashcardError]);
+  
+  // Clean up on unmount
+  useEffect(() => {
     return () => {
-      isMountedRef.current = false;
-      // Record study session when unmounting
-      recordSessionOnExit();
+      // Clear any pending save timeouts
+      if (saveBackendTimeoutRef.current) {
+        clearTimeout(saveBackendTimeoutRef.current);
+      }
     };
   }, []);
   
-  // Fetch the flashcard set
-  useEffect(() => {
-    const fetchFlashcardSet = async () => {
-      if (!isMountedRef.current) return;
-      
-      try {
-        setIsLoading(true)
-        setError(null)
+  // Load saved progress from localStorage
+  const loadSavedProgress = () => {
+    try {
+      const savedProgressJSON = localStorage.getItem(STUDY_PROGRESS_KEY);
+      if (savedProgressJSON) {
+        const savedProgress = JSON.parse(savedProgressJSON);
         
-        logger.debug(`Fetching flashcard set with ID: ${id}`)
-        const data = await flashcardService.getFlashcardSet(id)
-        
-        if (isMountedRef.current) {
-          // Verify cards are present and in the right format
-          if (!data.cards || !Array.isArray(data.cards) || data.cards.length === 0) {
-            throw new Error('No cards found in this flashcard set')
+        // Only restore progress for the current deck
+        if (savedProgress.deckId === id) {
+          if (savedProgress.currentCardIndex !== undefined) {
+            setCurrentCardIndex(savedProgress.currentCardIndex);
           }
           
-          // Transform the cards format if needed
-          const formattedCards = data.cards.map(card => ({
-            question: card.front,
-            answer: card.back,
-            id: card._id
-          }))
-          
-          // Set the flashcard set with formatted cards
-          setFlashcardSet({
-            ...data,
-            cards: formattedCards
-          })
-          
-          // Initialize review later cards from saved data if available
-          if (data.studyStats?.reviewLaterCards) {
-            const reviewLaterObj = {};
-            data.studyStats.reviewLaterCards.forEach(cardId => {
-              reviewLaterObj[cardId] = true;
-            });
-            setReviewLaterCards(reviewLaterObj);
+          if (savedProgress.learnedCards) {
+            setLearnedCards(savedProgress.learnedCards);
           }
           
-          // Initialize learned cards from saved data if available
-          if (data.studyStats?.learnedCards) {
-            const learnedObj = {};
-            data.studyStats.learnedCards.forEach(cardId => {
-              learnedObj[cardId] = true;
-            });
-            setLearnedCards(learnedObj);
+          if (savedProgress.reviewLaterCards) {
+            setReviewLaterCards(savedProgress.reviewLaterCards);
           }
-          
-          // Set study stats from the flashcard set data
-          setStudyStats({
-            timeSpent: data.studyStats?.totalTimeSpent || 0,
-            cardsStudied: data.cards.filter(card => card.lastReviewed).length,
-            masteryLevel: data.studyStats?.masteryLevel || 0,
-            totalSessions: data.studyStats?.totalStudySessions || 0,
-            reviewLaterCount: data.studyStats?.reviewLaterCards?.length || 0,
-            learnedCount: data.studyStats?.learnedCards?.length || 0
-          })
-          
-          // Record study start time
-          setStudyStartTime(Date.now())
-          setIsTimerActive(true)
-          
-          // Reset retry count on successful fetch
-          retryCount.current = 0;
-        }
-      } catch (err) {
-        logger.error('Error fetching flashcard set:', { value: err })
-        
-        // Check if it's a cancellation error - pass true to indicate this is a critical request
-        if (!handleRequestError(err, 'Flashcard set fetch', true)) {
-          if (isMountedRef.current) {
-            // If error is due to cancellation and we haven't retried too many times, retry fetch
-            if ((err.name === 'CanceledError' || err.message === 'canceled') && retryCount.current < 3) {
-              console.log(`Retrying flashcard fetch (attempt ${retryCount.current + 1})...`);
-              retryCount.current += 1;
-              
-              // Wait a moment then retry
-              setTimeout(() => {
-                if (isMountedRef.current) {
-                  fetchFlashcardSet();
-                }
-              }, 500);
-              return;
-            }
-            
-            setError(err.message || 'Failed to load flashcard set')
-          }
-        }
-      } finally {
-        if (isMountedRef.current) {
-          setIsLoading(false)
         }
       }
+    } catch (err) {
+      // If there's an error, we just continue without the saved progress
     }
-    
-    fetchFlashcardSet()
-  }, [id])
-  
-  // Record session when exiting or unmounting
-  const recordSessionOnExit = () => {
-    if (studyStartTime && flashcardSet) {
-      const studyDuration = Math.floor((Date.now() - studyStartTime) / 1000) // in seconds
-      
-      if (studyDuration > 10) { // Only record if studied for more than 10 seconds
-        logger.debug(`Recording study session: ${studyDuration} seconds`)
-        recordStudySession(studyDuration)
-      }
-    }
-  }
-  
-  // Update elapsed time every second when timer is active
-  useEffect(() => {
-    if (!studyStartTime || !isTimerActive) return;
-    
-    const intervalId = setInterval(() => {
-      const elapsedSeconds = Math.floor((Date.now() - studyStartTime) / 1000);
-      setElapsedTime(elapsedSeconds);
-    }, 1000);
-    
-    return () => clearInterval(intervalId);
-  }, [studyStartTime, isTimerActive]);
-  
-  // Format time for display (e.g., "5m 30s")
-  const formatTime = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}m ${secs}s`;
   };
   
-  // Format total study time (e.g., "2h 15m")
-  const formatTotalTime = (seconds) => {
-    const hours = Math.floor(seconds / 3600);
-    const mins = Math.floor((seconds % 3600) / 60);
-    
-    if (hours > 0) {
-      return `${hours}h ${mins}m`;
+  // Save progress with debouncing
+  const saveProgress = (progressData) => {
+    try {
+      // Save to localStorage
+      const progressToSave = {
+        deckId: id,
+        timestamp: Date.now(),
+        ...progressData
+      };
+      
+      localStorage.setItem(STUDY_PROGRESS_KEY, JSON.stringify(progressToSave));
+      
+      // Save to backend using debouncing
+      if (saveBackendTimeoutRef.current) {
+        clearTimeout(saveBackendTimeoutRef.current);
+      }
+      
+      saveBackendTimeoutRef.current = setTimeout(() => {
+        flashcardService.updateStudyProgress(id, progressData)
+          .catch(() => {
+            // Silent fail - we don't want to interrupt the user experience
+          });
+        
+        saveBackendTimeoutRef.current = null;
+      }, SAVE_DEBOUNCE_DELAY);
+      
+      // Update state if needed
+      if (progressData.currentCardIndex !== undefined) {
+        setCurrentCardIndex(progressData.currentCardIndex);
+      }
+      
+      if (progressData.learnedCards) {
+        setLearnedCards(progressData.learnedCards);
+      }
+      
+      if (progressData.reviewLaterCards) {
+        setReviewLaterCards(progressData.reviewLaterCards);
+      }
+    } catch (err) {
+      // Silent fail - we don't want to interrupt the user experience
     }
-    return `${mins}m`;
   };
   
   // Handle card completion
-  const handleCardCompletion = (cardId, performance) => {
-    // Update local state for learned cards
-    if (performance === 5) {
-      // Card is marked as learned
-      setLearnedCards(prev => ({
-        ...prev,
-        [cardId]: true
-      }));
-    } else if (performance === 0) {
-      // Card is reset
-      setLearnedCards(prev => {
-        const updated = { ...prev };
-        delete updated[cardId];
-        return updated;
+  const handleCardComplete = (cardId) => {
+    // Update learned cards
+    const newLearnedCards = {
+      ...learnedCards,
+      [cardId]: true
+    };
+    setLearnedCards(newLearnedCards);
+    
+    // Remove from review if it was there
+    if (reviewLaterCards[cardId]) {
+      const newReviewLaterCards = { ...reviewLaterCards };
+      delete newReviewLaterCards[cardId];
+      setReviewLaterCards(newReviewLaterCards);
+      
+      // Save progress
+      saveProgress({
+        learnedCards: newLearnedCards,
+        reviewLaterCards: newReviewLaterCards,
+        currentCardIndex: currentCardIndex + 1
+      });
+    } else {
+      // Save progress
+      saveProgress({
+        learnedCards: newLearnedCards,
+        currentCardIndex: currentCardIndex + 1
       });
     }
-    
-    // Update local stats for UI feedback
-    setStudyStats(prev => ({
-      ...prev,
-      cardsStudied: prev.cardsStudied + 1,
-      learnedCount: Object.keys(learnedCards).length
-    }));
-  }
+  };
   
   // Handle review later toggling
   const handleReviewLaterToggle = (cardId, isMarkedForReview) => {
-    setReviewLaterCards(prev => {
-      const updated = { ...prev };
-      if (isMarkedForReview) {
-        updated[cardId] = true;
-      } else {
-        delete updated[cardId];
-      }
-      return updated;
+    // Update review later cards
+    const newReviewLaterCards = { ...reviewLaterCards };
+    
+    if (isMarkedForReview) {
+      newReviewLaterCards[cardId] = true;
+    } else {
+      delete newReviewLaterCards[cardId];
+    }
+    
+    setReviewLaterCards(newReviewLaterCards);
+    
+    // Save progress
+    saveProgress({
+      reviewLaterCards: newReviewLaterCards,
+      currentCardIndex: currentCardIndex + 1
     });
-    
-    // Update stats
-    setStudyStats(prev => ({
-      ...prev,
-      reviewLaterCount: isMarkedForReview 
-        ? prev.reviewLaterCount + 1 
-        : Math.max(0, prev.reviewLaterCount - 1)
-    }));
-  }
+  };
   
-  // Handle deck navigation events
-  const handleDeckEvent = (event) => {
-    logger.debug('StudyDeck received deck event:', { value: event });
-    
-    switch (event.type) {
-      case 'deck_completed':
-        setIsTimerActive(false);
-        setIsDeckCompleted(true);
-        // Record the session when deck is completed
-        recordSessionOnExit();
-        break;
-      case 'deck_restarted':
-        logger.debug('Restarting deck in StudyDeck component');
-        // Always reset the timer when deck is restarted, not just if it was completed
-        setStudyStartTime(Date.now());
-        setElapsedTime(0);
-        setIsTimerActive(true);
-        setIsDeckCompleted(false);
-        
-        // Reload the flashcard set to ensure we have a fresh state
-        // This helps synchronize with child component
-        if (flashcardSet) {
-          setFlashcardSet(prev => ({
-            ...prev,
-            _reloadTrigger: Date.now() // Force a refresh
-          }));
-        }
-        break;
-      default:
-        break;
+  // Handle progress updates from the FocusStudyDeck component
+  const handleProgressUpdate = (progressData) => {
+    saveProgress(progressData);
+  };
+  
+  // Handle deck completion
+  const handleDeckComplete = (completionData) => {
+    // Update states with completion data
+    if (completionData.learnedCards) {
+      setLearnedCards(completionData.learnedCards);
     }
-  }
-  
-  // Record study session when component unmounts or deck completes
-  const recordStudySession = async (timeSpent) => {
-    try {
-      // Format card reviews for API
-      const cardReviews = Object.entries(learnedCards).map(([cardId, performance]) => ({
-        cardId,
-        performance,
-        timeSpent: Math.floor(timeSpent / Object.keys(learnedCards).length) // Distribute time evenly
-      }));
-      
-      const response = await flashcardService.recordStudySession(id, {
-        timeSpent,
-        cardReviews,
-        reviewLaterCards: Object.keys(reviewLaterCards),
-        learnedCards: Object.keys(learnedCards)
-      });
-      
-      logger.debug('Study session recorded successfully', { value: response });
-    } catch (err) {
-      logger.error('Error recording study session:', { value: err });
+    
+    if (completionData.reviewLaterCards) {
+      setReviewLaterCards(completionData.reviewLaterCards);
     }
-  }
+    
+    // Save final state
+    saveProgress({
+      learnedCards: completionData.learnedCards,
+      reviewLaterCards: completionData.reviewLaterCards,
+      studyMode: 'completed'
+    });
+  };
   
-  const handleGoBack = () => {
-    // Record session before navigating away
-    recordSessionOnExit();
+  // Handle deck reset
+  const handleDeckReset = () => {
+    setLearnedCards({});
+    setReviewLaterCards({});
+    setCurrentCardIndex(0);
+    
+    // Clear saved progress
+    localStorage.removeItem(STUDY_PROGRESS_KEY);
+    
+    // Save reset state to backend
+    flashcardService.updateStudyProgress(id, {
+      learnedCards: {},
+      reviewLaterCards: {},
+      currentCardIndex: 0,
+      studyMode: 'normal'
+    }).catch(() => {
+      // Silent fail
+    });
+  };
+  
+  // Handle exit
+  const handleExit = (exitData) => {
+    // Save current state before exiting
+    saveProgress(exitData);
+    
+    // Navigate back
     navigate('/dashboard');
-  }
+  };
   
-  // Calculate completion percentage
-  const getCompletionPercentage = () => {
-    if (!flashcardSet || !flashcardSet.cards.length) return 0;
-    return Math.round((Object.keys(learnedCards).length / flashcardSet.cards.length) * 100);
-  }
-  
-  // Loading state
+  // Render loading state
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-[#2E0033] via-[#260041] to-[#1b1b2f] text-white flex justify-center items-center">
-        <div className="w-12 h-12 border-4 border-white/20 border-t-[#00ff94] rounded-full animate-spin"></div>
+      <div className="flex items-center justify-center min-h-screen bg-[#18092a] text-white p-4">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-[#00ff94] mb-4"></div>
+          <p>Loading flashcards...</p>
+        </div>
       </div>
     )
   }
   
-  // Error state
+  // Render error state
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-[#2E0033] via-[#260041] to-[#1b1b2f] text-white flex flex-col justify-center items-center p-4">
-        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-6 max-w-md w-full text-center">
-          <h2 className="text-xl font-bold mb-2">Error</h2>
-          <p className="text-white/80 mb-4">{error}</p>
+      <div className="flex items-center justify-center min-h-screen bg-[#18092a] text-white p-4">
+        <div className="text-center max-w-md">
+          <div className="text-red-500 text-5xl mb-4">⚠️</div>
+          <h2 className="text-xl font-bold mb-2">Error Loading Flashcards</h2>
+          <p className="mb-4">{error}</p>
           <button 
-            onClick={handleGoBack}
-            className="bg-[#00ff94]/10 text-[#00ff94] px-4 py-2 rounded-lg hover:bg-[#00ff94]/20 transition-colors border border-[#00ff94]/30 inline-flex items-center"
+            onClick={() => navigate(-1)}
+            className="px-4 py-2 bg-[#00ff94] text-[#18092a] rounded-lg font-medium"
           >
-            <ArrowBackIcon fontSize="small" className="mr-1" /> Back to Dashboard
+            Go Back
           </button>
         </div>
       </div>
     )
   }
   
-  // No flashcard set found state
+  // Render empty state
   if (!flashcardSet) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-[#2E0033] via-[#260041] to-[#1b1b2f] text-white flex flex-col justify-center items-center p-4">
-        <div className="bg-[#18092a]/60 rounded-xl p-6 max-w-md w-full text-center">
-          <h2 className="text-xl font-bold mb-2">Flashcard Set Not Found</h2>
-          <p className="text-white/80 mb-4">The flashcard set you're looking for doesn't exist or might have been deleted.</p>
+      <div className="flex items-center justify-center min-h-screen bg-[#18092a] text-white p-4">
+        <div className="text-center max-w-md">
+          <div className="text-amber-500 text-5xl mb-4">🤔</div>
+          <h2 className="text-xl font-bold mb-2">No Flashcards Found</h2>
+          <p className="mb-4">This flashcard set appears to be empty or not found.</p>
           <button 
-            onClick={handleGoBack}
-            className="bg-[#00ff94]/10 text-[#00ff94] px-4 py-2 rounded-lg hover:bg-[#00ff94]/20 transition-colors border border-[#00ff94]/30 inline-flex items-center"
+            onClick={() => navigate(-1)}
+            className="px-4 py-2 bg-[#00ff94] text-[#18092a] rounded-lg font-medium"
           >
-            <ArrowBackIcon fontSize="small" className="mr-1" /> Back to Dashboard
+            Go Back
           </button>
         </div>
       </div>
     )
   }
-  
-  const completionPercentage = getCompletionPercentage();
-  
+    
+  // Render study deck
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#2E0033] via-[#260041] to-[#1b1b2f] text-white">
-      <div className="container mx-auto max-w-4xl px-3 py-3">
-        {/* Header and Stats Combined Row */}
-        <div className="flex justify-between items-center mb-3">
-          <button 
-            onClick={handleGoBack}
-            className="bg-[#18092a]/60 text-white px-2 py-1 text-sm rounded-lg hover:bg-[#18092a] transition-colors border border-gray-800/30 inline-flex items-center"
-          >
-            <ArrowBackIcon fontSize="small" className="mr-1" /> Back
-          </button>
-          
-          <h1 className="text-lg font-bold truncate max-w-[50%]">{flashcardSet.title}</h1>
-          
-          <div className="flex items-center gap-2 text-xs">
-            <div className="flex items-center text-[#00ff94]">
-              <StarIcon fontSize="small" className="mr-0.5" />
-              <span>{completionPercentage}%</span>
-            </div>
-            <div className="flex items-center text-[#a259ff]">
-              <TimerIcon fontSize="small" className="mr-0.5" />
-              <span>{formatTime(elapsedTime)}</span>
-            </div>
-          </div>
-        </div>
-        
-        {/* Study Statistics Compact Row */}
-        <div className="bg-[#18092a]/60 rounded-lg p-2 mb-3 flex justify-between items-center">
-          {/* Cards Studied */}
-          <div className="flex items-center">
-            <CheckCircleIcon className="text-[#3ec1ff] mr-1" fontSize="small" />
-            <div className="text-xs flex items-baseline">
-              <span className="font-bold">{Object.keys(learnedCards).length}</span>
-              <span className="text-white/60 ml-1">/ {flashcardSet.cards.length}</span>
-            </div>
-          </div>
-          
-          {/* Review Later */}
-          <div className="flex items-center">
-            <BookmarkIcon className="text-[#ff6b6b] mr-1" fontSize="small" />
-            <div className="text-xs">
-              <span className="font-bold">{Object.keys(reviewLaterCards).length}</span>
-            </div>
-          </div>
-        </div>
-        
-        <FlashcardDeck 
-          key={isDeckCompleted ? 'completed' : 'active'}
-          flashcards={flashcardSet.cards} 
-          onCardComplete={handleCardCompletion}
-          reviewLaterCards={reviewLaterCards}
+    <div className="flex flex-col min-h-screen bg-[#18092a]">
+      <div className="flex items-center p-4 bg-[#18092a]/80 backdrop-blur-sm border-b border-gray-800/30">
+        <button
+          onClick={() => navigate(-1)}
+          className="p-2 rounded-full hover:bg-white/5 transition-colors"
+          aria-label="Go back"
+        >
+          <ArrowBackIcon className="text-white" />
+        </button>
+        <h1 className="ml-4 text-xl font-medium text-white truncate">
+          {flashcardSet.title}
+        </h1>
+      </div>
+      
+      <div className="flex-1">
+        <FocusStudyDeck
+          cards={flashcardSet.cards}
+          initialCardIndex={currentCardIndex}
+          onCardComplete={handleCardComplete}
           onReviewLaterToggle={handleReviewLaterToggle}
-          onDeckEvent={handleDeckEvent}
+          onDeckComplete={handleDeckComplete}
+          onReset={handleDeckReset}
+          onExit={handleExit}
+          onProgressUpdate={handleProgressUpdate}
+          reviewLaterCards={reviewLaterCards}
+          learnedCards={learnedCards}
         />
       </div>
     </div>
-  )
+  );
 }
 
-export default StudyDeck 
+export default StudyDeck; 

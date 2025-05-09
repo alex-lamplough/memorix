@@ -71,6 +71,48 @@ const flashcardSetSchema = new mongoose.Schema({
       default: 0
     }
   },
+
+  // Enhanced study progress tracking
+  studyProgress: {
+    currentCardIndex: {
+      type: Number,
+      default: 0
+    },
+    learnedCards: {
+      type: Map,
+      of: Boolean,
+      default: new Map()
+    },
+    reviewLaterCards: {
+      type: Map,
+      of: Boolean,
+      default: new Map()
+    },
+    studyMode: {
+      type: String,
+      enum: ['normal', 'review', 'completed'],
+      default: 'normal'
+    },
+    // For analytics, we store session history
+    sessionHistory: [{
+      date: {
+        type: Date,
+        default: Date.now
+      },
+      timeSpent: Number,
+      cardsLearned: Number,
+      cardsReviewed: Number,
+      completedStatus: {
+        type: String,
+        enum: ['partial', 'completed'],
+        default: 'partial'
+      }
+    }],
+    lastUpdated: {
+      type: Date,
+      default: Date.now
+    }
+  },
   createdAt: {
     type: Date,
     default: Date.now

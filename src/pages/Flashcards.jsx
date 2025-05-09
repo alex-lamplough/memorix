@@ -28,7 +28,19 @@ import { flashcardService } from '../services/api'
 import { handleRequestError } from '../services/utils'
 import { useFlashcardSets, useDeleteFlashcardSet, useToggleFavorite } from '../api/queries/flashcards'
 
-function FlashcardCard({ title, cards, lastStudied, progress, id, onDelete, isFavorite = false, onToggleFavorite }) {
+// Local FlashcardCard component that shows all the stats
+function FlashcardCardWithStats({ 
+  title, 
+  cards, 
+  lastStudied, 
+  progress, 
+  id, 
+  onDelete, 
+  isFavorite = false, 
+  onToggleFavorite, 
+  correctPercentage = 0, 
+  totalStudied = 0 
+}) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
@@ -79,6 +91,17 @@ function FlashcardCard({ title, cards, lastStudied, progress, id, onDelete, isFa
     }
     setShowDeleteConfirm(false);
   }
+  
+  // Debug log to make sure data is coming through
+  console.log(`Rendering card ${id} with stats:`, { 
+    title, 
+    cards, 
+    isFavorite,
+    correctPercentage,
+    totalStudied,
+    progress,
+    lastStudied
+  });
   
   return (
     <div className="bg-[#18092a]/60 rounded-xl p-6 border border-gray-800/30 shadow-lg text-white">
@@ -149,11 +172,20 @@ function FlashcardCard({ title, cards, lastStudied, progress, id, onDelete, isFa
         }}
       />
       
+      {/* Stats Section - Explicitly Showing Stats */}
       <div className="mb-4">
-        <span className="text-white/70 text-sm">
-          {cards} {cards === 1 ? 'card' : 'cards'}
-        </span>
-        <div className="mt-2 h-1.5 bg-white/10 rounded-full overflow-hidden">
+        <div className="flex justify-between mb-2">
+          <span className="text-white/70 text-sm">
+            {cards} {cards === 1 ? 'card' : 'cards'}
+          </span>
+          {totalStudied > 0 && (
+            <span className="text-white/70 text-sm flex items-center gap-1">
+              <CheckCircleOutlineIcon fontSize="small" className="text-[#00ff94]" />
+              <span className="font-semibold text-[#00ff94]">{correctPercentage}%</span> correct
+            </span>
+          )}
+        </div>
+        <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
           <div 
             className="h-full bg-[#00ff94]" 
             style={{ width: `${progress}%` }}
@@ -161,9 +193,17 @@ function FlashcardCard({ title, cards, lastStudied, progress, id, onDelete, isFa
         </div>
       </div>
       
-      <div className="text-white/70 text-sm mb-5 flex items-center gap-1">
-        <AccessTimeIcon fontSize="small" />
-        <span>Last studied: {lastStudied}</span>
+      {/* Time and Sessions Stats */}
+      <div className="flex justify-between mb-5">
+        <div className="text-white/70 text-sm flex items-center gap-1">
+          <AccessTimeIcon fontSize="small" />
+          <span>Last studied: {lastStudied}</span>
+        </div>
+        {totalStudied > 0 && (
+          <div className="text-white/70 text-sm">
+            {totalStudied} {totalStudied === 1 ? 'session' : 'sessions'}
+          </div>
+        )}
       </div>
       
       <div className="flex gap-2">
@@ -225,23 +265,36 @@ function Flashcards() {
   const formatLastStudied = (dateString) => {
     if (!dateString) return 'Never';
     
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffTime = Math.abs(now - date);
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-    
-    if (diffDays === 0) {
-      // Check if it's today
-      return 'Today';
-    } else if (diffDays === 1) {
-      return 'Yesterday';
-    } else if (diffDays < 7) {
-      return `${diffDays} days ago`;
-    } else if (diffDays < 30) {
-      const weeks = Math.floor(diffDays / 7);
-      return `${weeks} ${weeks === 1 ? 'week' : 'weeks'} ago`;
-    } else {
-      return date.toLocaleDateString();
+    try {
+      const date = new Date(dateString);
+      
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        return 'Never';
+      }
+      
+      const now = new Date();
+      const diffTime = Math.abs(now - date);
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      
+      if (diffDays === 0) {
+        // Check if it's today
+        const hours = date.getHours();
+        const minutes = date.getMinutes();
+        return `Today at ${hours}:${minutes < 10 ? '0' + minutes : minutes}`;
+      } else if (diffDays === 1) {
+        return 'Yesterday';
+      } else if (diffDays < 7) {
+        return `${diffDays} days ago`;
+      } else if (diffDays < 30) {
+        const weeks = Math.floor(diffDays / 7);
+        return `${weeks} ${weeks === 1 ? 'week' : 'weeks'} ago`;
+      } else {
+        return date.toLocaleDateString();
+      }
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'Never';
     }
   };
   
@@ -252,17 +305,34 @@ function Flashcards() {
       return;
     }
     
+    // Debug the original data structure
+    console.log('Original flashcard sets from API:', JSON.stringify(flashcardSets, null, 2));
+    
     // Transform data for display
-    const transformedSets = flashcardSets.map(set => ({
-      id: set._id,
-      title: set.title,
-      cards: set.cardCount || 0,
-      lastStudied: set.lastStudied ? new Date(set.lastStudied) : null,
-      lastStudiedFormatted: formatLastStudied(set.lastStudied),
-      progress: set.progress || 0,
-      createdAt: new Date(set.createdAt || Date.now()),
-      favorite: set.isFavorite || false
-    }));
+    const transformedSets = flashcardSets.map(set => {
+      // Debug study stats data
+      console.log(`Processing set: ${set.title}`, { 
+        studyStats: set.studyStats,
+        lastStudied: set.lastStudied,
+        progress: set.progress,
+        correctPercentage: set.correctPercentage,
+        cardCount: set.cardCount
+      });
+      
+      return {
+        id: set._id,
+        title: set.title,
+        cards: set.cardCount || 0,
+        lastStudied: set.lastStudied ? new Date(set.lastStudied) : null,
+        lastStudiedFormatted: formatLastStudied(set.lastStudied || set.studyStats?.lastStudied),
+        progress: set.progress || 0,
+        createdAt: new Date(set.createdAt || Date.now()),
+        favorite: set.isFavorite || false,
+        correctPercentage: set.correctPercentage || 
+                      (set.studyStats?.masteryLevel ? Math.round(set.studyStats.masteryLevel) : 0),
+        studySessions: set.studySessions || set.studyStats?.totalStudySessions || 0
+      };
+    });
     
     // First apply search filter
     let result = transformedSets;
@@ -310,6 +380,7 @@ function Flashcards() {
     });
     
     setFilteredSets(result);
+    console.log('Transformed and filtered sets:', result);
   }, [flashcardSets, searchQuery, sortBy, sortOrder]);
   
   // Handle search input change
@@ -491,7 +562,7 @@ function Flashcards() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
           {filteredSets.map(set => (
-            <FlashcardCard 
+            <FlashcardCardWithStats 
               key={set.id}
               id={set.id}
               title={set.title}
@@ -501,6 +572,8 @@ function Flashcards() {
               onDelete={handleFlashcardDeleted}
               isFavorite={set.favorite}
               onToggleFavorite={handleToggleFavorite}
+              correctPercentage={set.correctPercentage}
+              totalStudied={set.studySessions}
             />
           ))}
         </div>

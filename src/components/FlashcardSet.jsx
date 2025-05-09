@@ -8,6 +8,7 @@ import MoreHorizIcon from '@mui/icons-material/MoreHoriz'
 import ShareIcon from '@mui/icons-material/Share'
 import StarIcon from '@mui/icons-material/Star'
 import StarBorderIcon from '@mui/icons-material/StarBorder'
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline'
 
 // Components
 import ShareModal from './ShareModal'
@@ -15,7 +16,7 @@ import ShareModal from './ShareModal'
 // Services
 import { flashcardService } from '../services/api'
 
-function FlashcardSet({ title, cards, lastStudied, progress, id = 1, isFavorite = false, onToggleFavorite }) {
+function FlashcardSet({ title, cards, lastStudied, progress, id = 1, isFavorite = false, onToggleFavorite, correctPercentage = 0, totalStudied = 0 }) {
   const [isShareModalOpen, setIsShareModalOpen] = useState(false)
   const [showOptionsMenu, setShowOptionsMenu] = useState(false)
   const [favorite, setFavorite] = useState(isFavorite)
@@ -105,10 +106,18 @@ function FlashcardSet({ title, cards, lastStudied, progress, id = 1, isFavorite 
       </div>
       
       <div className="mb-4">
-        <span className="text-white/70 text-sm">
-          {cards} {cards === 1 ? 'card' : 'cards'}
-        </span>
-        <div className="mt-2 h-1.5 bg-white/10 rounded-full overflow-hidden">
+        <div className="flex justify-between mb-2">
+          <span className="text-white/70 text-sm">
+            {cards} {cards === 1 ? 'card' : 'cards'}
+          </span>
+          {totalStudied > 0 && (
+            <span className="text-white/70 text-sm flex items-center gap-1">
+              <CheckCircleOutlineIcon fontSize="small" className="text-[#00ff94]" />
+              {correctPercentage}% correct
+            </span>
+          )}
+        </div>
+        <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
           <div 
             className="h-full bg-[#00ff94]" 
             style={{ width: `${progress}%` }}
@@ -116,9 +125,16 @@ function FlashcardSet({ title, cards, lastStudied, progress, id = 1, isFavorite 
         </div>
       </div>
       
-      <div className="text-white/70 text-sm mb-5 flex items-center gap-1">
-        <AccessTimeIcon fontSize="small" />
-        <span>Last studied: {lastStudied}</span>
+      <div className="flex justify-between mb-5">
+        <div className="text-white/70 text-sm flex items-center gap-1">
+          <AccessTimeIcon fontSize="small" />
+          <span>Last studied: {lastStudied}</span>
+        </div>
+        {totalStudied > 0 && (
+          <div className="text-white/70 text-sm">
+            {totalStudied} {totalStudied === 1 ? 'session' : 'sessions'}
+          </div>
+        )}
       </div>
       
       <div className="flex gap-2">

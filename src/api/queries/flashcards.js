@@ -16,13 +16,55 @@ export const useFlashcardSets = () => {
     queryFn: async () => {
       try {
         const response = await apiClient.get('/flashcards');
+        console.log('Raw flashcard API response:', response.data);
         
-        // Process the response to include cardCount
-        const flashcardSets = response.data.map(set => ({
-          ...set,
-          // Add cardCount if not present (backend might not include it)
-          cardCount: set.cardCount || (set.cards ? set.cards.length : 0)
-        }));
+        // Process the response to include cardCount and study stats
+        const flashcardSets = response.data.map(set => {
+          // Extract study stats data safely
+          const studyStats = set.studyStats || {};
+          const totalSessions = studyStats.totalStudySessions || 0;
+          const masteryLevel = studyStats.masteryLevel || 0;
+          const lastStudied = studyStats.lastStudied || set.lastStudied || null;
+          
+          // Extract study progress data safely
+          const studyProgress = set.studyProgress || {};
+          const learnedCardsCount = studyProgress.learnedCards ? 
+            (typeof studyProgress.learnedCards === 'object' ? 
+              Object.keys(studyProgress.learnedCards).length : 0) : 0;
+          
+          // Calculate progress based on learned cards vs total cards
+          const totalCards = set.cardCount || (set.cards ? set.cards.length : 0);
+          const progressPercentage = totalCards > 0 ? 
+            Math.round((learnedCardsCount / totalCards) * 100) : 0;
+          
+          // More detailed debugging
+          console.log(`Set ${set.title} full details:`, {
+            id: set._id,
+            rawStudyStats: set.studyStats,
+            extractedStudyStats: studyStats,
+            totalSessions,
+            masteryLevel,
+            lastStudied,
+            cardCount: totalCards,
+            learnedCards: learnedCardsCount,
+            progressPercentage
+          });
+          
+          return {
+            ...set,
+            // Add cardCount if not present (backend might not include it)
+            cardCount: totalCards,
+            // Add study statistics
+            correctPercentage: masteryLevel,
+            studySessions: totalSessions,
+            lastStudied: lastStudied,
+            // Add progress based on learned cards
+            progress: progressPercentage
+          };
+        });
+        
+        // Log the processed flashcard sets for debugging
+        console.log('Processed flashcard sets:', flashcardSets);
         
         return flashcardSets;
       } catch (error) {
@@ -44,7 +86,14 @@ export const useFlashcardSet = (id) => {
     queryFn: async () => {
       try {
         const response = await apiClient.get(`/flashcards/${id}`);
-        return response.data;
+        // Add study statistics if not present
+        const data = response.data;
+        if (data && data.studyStats) {
+          data.correctPercentage = data.studyStats.correctPercentage || 
+                                 (data.studyStats.masteryLevel ? Math.round(data.studyStats.masteryLevel) : 0);
+          data.studySessions = data.studyStats.totalStudySessions || 0;
+        }
+        return data;
       } catch (error) {
         logger.error(`Error fetching flashcard set ${id}:`, error);
         throw error;
@@ -65,10 +114,14 @@ export const useFavoriteFlashcardSets = () => {
       try {
         const response = await apiClient.get('/flashcards/favorites');
         
-        // Process the response to include cardCount
+        // Process the response to include cardCount and study stats
         const flashcardSets = response.data.map(set => ({
           ...set,
-          cardCount: set.cardCount || (set.cards ? set.cards.length : 0)
+          cardCount: set.cardCount || (set.cards ? set.cards.length : 0),
+          // Add study statistics
+          correctPercentage: set.studyStats?.correctPercentage || 
+                           (set.studyStats?.masteryLevel ? Math.round(set.studyStats.masteryLevel) : 0),
+          studySessions: set.studyStats?.totalStudySessions || 0
         }));
         
         return flashcardSets;
@@ -79,10 +132,14 @@ export const useFavoriteFlashcardSets = () => {
             // Some backends might expect /api/flashcards/favorites format
             const altResponse = await apiClient.get('/api/flashcards/favorites');
             
-            // Process the response to include cardCount
+            // Process the response to include cardCount and study stats
             const flashcardSets = altResponse.data.map(set => ({
               ...set,
-              cardCount: set.cardCount || (set.cards ? set.cards.length : 0)
+              cardCount: set.cardCount || (set.cards ? set.cards.length : 0),
+              // Add study statistics
+              correctPercentage: set.studyStats?.correctPercentage || 
+                               (set.studyStats?.masteryLevel ? Math.round(set.studyStats.masteryLevel) : 0),
+              studySessions: set.studyStats?.totalStudySessions || 0
             }));
             
             return flashcardSets;
