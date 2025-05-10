@@ -115,10 +115,15 @@ function FlashcardDeck({ flashcards, onCardComplete, reviewLaterCards = {}, onRe
 
   // Update progress calculation
   const updateProgress = (index) => {
+    if (!filteredCards || filteredCards.length === 0) {
+      setProgress(0);
+      return;
+    }
+    
     const calculatedProgress = filteredCards.length > 0 
-      ? Math.round(((index + 1) / filteredCards.length) * 100) 
-      : 0
-    setProgress(calculatedProgress)
+      ? Math.round(((Math.min(index + 1, filteredCards.length)) / filteredCards.length) * 100) 
+      : 0;
+    setProgress(calculatedProgress);
   }
   
   // Handle card flipping
@@ -301,7 +306,7 @@ function FlashcardDeck({ flashcards, onCardComplete, reviewLaterCards = {}, onRe
   }
   
   // If no cards are provided, display a message
-  if (!cards || cards.length === 0) {
+  if (!cards || !Array.isArray(cards) || cards.length === 0) {
     return (
       <div className="bg-[#18092a]/60 rounded-xl p-4 text-center">
         <p className="text-white/80">No flashcards available in this set.</p>
@@ -310,7 +315,7 @@ function FlashcardDeck({ flashcards, onCardComplete, reviewLaterCards = {}, onRe
   }
   
   // Show message if filtered set is empty
-  if (filteredCards.length === 0) {
+  if (!filteredCards || filteredCards.length === 0) {
     return (
       <div className="bg-[#18092a]/60 rounded-xl p-4 text-center">
         <p className="text-white/80">No cards match the current filter.</p>
@@ -327,6 +332,23 @@ function FlashcardDeck({ flashcards, onCardComplete, reviewLaterCards = {}, onRe
   }
   
   const currentCard = filteredCards[currentCardIndex]
+  // Safety check for undefined current card
+  if (!currentCard) {
+    return (
+      <div className="bg-[#18092a]/60 rounded-xl p-4 text-center">
+        <p className="text-white/80">Error: Current card not found.</p>
+        <div className="mt-2 flex justify-center">
+          <button
+            onClick={handleRestart}
+            className="bg-[#00ff94]/10 text-[#00ff94] px-3 py-1 text-sm rounded-lg hover:bg-[#00ff94]/20 transition-colors border border-[#00ff94]/30"
+          >
+            Restart Deck
+          </button>
+        </div>
+      </div>
+    )
+  }
+  
   const currentCardId = currentCard?.id;
   const isCurrentCardLearned = !!learnedCards[currentCardId];
   const isMarkedForReview = !!localReviewLaterCards[currentCardId];

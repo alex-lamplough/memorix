@@ -8,8 +8,16 @@ const requestMap = new Map();
 const createCancellableRequest = (endpoint) => {
   // Cancel any existing request for this endpoint
   if (requestMap.has(endpoint)) {
-    requestMap.get(endpoint).abort();
+    try {
+      requestMap.get(endpoint).abort();
+      logger.debug(`Cancelled existing request to: ${endpoint}`);
+    } catch (error) {
+      logger.error(`Error cancelling request to ${endpoint}:`, error);
+    }
   }
+  
+  // Small delay to prevent race conditions
+  const delay = () => new Promise(resolve => setTimeout(resolve, 50));
   
   // Create a new controller
   const controller = new AbortController();
@@ -17,7 +25,10 @@ const createCancellableRequest = (endpoint) => {
   
   return {
     signal: controller.signal,
-    cleanup: () => requestMap.delete(endpoint)
+    cleanup: async () => {
+      await delay();
+      requestMap.delete(endpoint);
+    }
   };
 };
 

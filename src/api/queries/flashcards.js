@@ -18,21 +18,25 @@ export const useFlashcardSets = () => {
     queryKey: [QUERY_KEYS.FLASHCARDS],
     queryFn: flashcardAdapter.getAllFlashcardSets,
     retry: 2,
-    staleTime: 1000 * 60, // Shorter stale time of 1 minute
-    refetchOnMount: true,
+    staleTime: 1000 * 60 * 5, // Increase stale time to 5 minutes
+    refetchOnMount: "if-stale", // Only refetch if data is stale
     refetchOnWindowFocus: false,
+    refetchInterval: false, // Disable automatic refetching
   });
 };
 
 // Hook to fetch a specific flashcard set by ID
-export const useFlashcardSet = (id) => {
+export const useFlashcardSet = (id, options = {}) => {
   return useQuery({
     queryKey: QUERY_KEYS.FLASHCARD(id),
     queryFn: () => flashcardAdapter.getFlashcardSet(id),
     // Don't fetch if no id is provided
     enabled: !!id,
     retry: 2,
-    staleTime: 1000 * 60 * 2, // 2 minute stale time
+    staleTime: 1000 * 60 * 5, // Increase to 5 minute stale time
+    refetchOnMount: "if-stale", // Only refetch if data is stale
+    refetchOnWindowFocus: false,
+    ...options
   });
 };
 

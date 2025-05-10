@@ -34,17 +34,6 @@ function FlashcardSetCard({
   const [favorite, setFavorite] = useState(isFavorite)
   const navigate = useNavigationWithCancellation()
   
-  // Debug log to verify props are received correctly
-  console.log(`FlashcardSetCard for "${title}":`, {
-    id,
-    cards,
-    lastStudied,
-    progress,
-    isFavorite,
-    learnedCount,
-    reviewLaterCount
-  });
-  
   // Ensure progress is always a number between 0-100
   const safeProgress = typeof progress === 'number' && progress >= 0 && progress <= 100 
     ? progress 

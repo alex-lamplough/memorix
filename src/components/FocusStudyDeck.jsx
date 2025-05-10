@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import PropTypes from 'prop-types';
 import styles from './FocusStudyDeck.module.css';
+import logger from '../utils/logger';
 
 // Icons
 import FlipIcon from '@mui/icons-material/Flip';
@@ -24,6 +25,7 @@ const FocusStudyDeck = ({
   onProgressUpdate,
   reviewLaterCards = {},
   learnedCards = {},
+  initialStudyMode = 'normal'
 }) => {
   // Main state
   const [currentCardIndex, setCurrentCardIndex] = useState(initialCardIndex);
@@ -33,7 +35,7 @@ const FocusStudyDeck = ({
   const [progress, setProgress] = useState(0);
   const [isChangingCard, setIsChangingCard] = useState(false);
   const [showZoomAnimation, setShowZoomAnimation] = useState(true); // Re-add this for animations
-  const [studyMode, setStudyMode] = useState('normal'); // 'normal', 'review', 'completed'
+  const [studyMode, setStudyMode] = useState(initialStudyMode); // Initialize with the provided mode
   
   // Track transitions to prevent multiple state changes
   const isTransitioning = useRef(false);
@@ -62,10 +64,17 @@ const FocusStudyDeck = ({
   
   // Create filtered arrays for review cards and active cards
   const reviewCards = useMemo(() => {
-    return cards.filter(card => localReviewLaterCards[card.id] && !localLearnedCards[card.id]);
+    const filteredReviewCards = cards.filter(card => localReviewLaterCards[card.id] && !localLearnedCards[card.id]);
+    logger.debug(`Found ${filteredReviewCards.length} cards for review mode`);
+    return filteredReviewCards;
   }, [cards, localReviewLaterCards, localLearnedCards]);
   
   const activeCards = useMemo(() => {
+    // If we're in review mode but there are no review cards, use regular cards instead
+    if (studyMode === 'review' && reviewCards.length === 0) {
+      logger.debug('No review cards available, falling back to normal cards');
+      return cards;
+    }
     return studyMode === 'review' ? reviewCards : cards;
   }, [studyMode, reviewCards, cards]);
   
@@ -109,6 +118,12 @@ const FocusStudyDeck = ({
     if (isTransitioning.current) return;
     isTransitioning.current = true;
     
+    // If trying to transition to review mode with no cards, complete instead
+    if (newMode === 'review' && reviewCards.length === 0) {
+      logger.debug('Attempted to transition to review mode with no review cards, switching to completed instead');
+      newMode = 'completed';
+    }
+    
     setIsChangingCard(true);
     
     // Add small delay for animation
@@ -121,12 +136,20 @@ const FocusStudyDeck = ({
       if (newMode === 'completed' && onDeckComplete) {
         onDeckComplete({
           learnedCards: learnedCardsRef.current,
-          reviewLaterCards: reviewLaterCardsRef.current
+          reviewLaterCards: reviewLaterCardsRef.current,
+          studyMode: newMode
         });
       }
       
-      // Update progress
-      triggerProgressUpdate();
+      // Notify parent about mode change
+      if (onProgressUpdate) {
+        onProgressUpdate({
+          currentCardIndex: newIndex,
+          learnedCards: learnedCardsRef.current,
+          reviewLaterCards: reviewLaterCardsRef.current,
+          studyMode: newMode
+        });
+      }
       
       // Complete animation
       setTimeout(() => {
@@ -134,7 +157,21 @@ const FocusStudyDeck = ({
         isTransitioning.current = false;
       }, 100);
     }, 200);
-  }, [onDeckComplete, triggerProgressUpdate]);
+  }, [onDeckComplete, onProgressUpdate, reviewCards.length]);
+  
+  // Set up effect to initialize review mode if needed
+  useEffect(() => {
+    // If we're starting in review mode, make sure we have the right cards filtered
+    if (initialStudyMode === 'review') {
+      if (reviewCards.length > 0) {
+        logger.debug('Restoring review mode from saved state with available review cards');
+        transitionToMode('review', 0);
+      } else {
+        logger.debug('Review mode requested but no review cards available, showing completion');
+        transitionToMode('completed', 0);
+      }
+    }
+  }, [initialStudyMode, reviewCards.length, transitionToMode]);
   
   // Check if deck is completed
   const checkCompletion = useCallback(() => {
@@ -162,9 +199,18 @@ const FocusStudyDeck = ({
       if (allCardsActedOn) {
         // If there are review cards, stay in current state and show review prompt
         // If no review cards, complete the deck
-        if (reviewCards.length === 0) {
+        const pendingReviewCount = Object.keys(reviewLaterCardsRef.current)
+          .filter(id => !learnedCardsRef.current[id])
+          .length;
+          
+        logger.debug(`checkCompletion: Found ${pendingReviewCount} cards pending review`);
+        
+        if (pendingReviewCount === 0) {
+          // No review cards, transition to completed
           transitionToMode('completed');
         }
+        // If there are pending review cards, do nothing - the Review Needed screen will be shown
+        // based on the condition in the render method
       }
     }
   }, [cards, reviewCards, studyMode, currentCardIndex, activeCards, transitionToMode]);
@@ -288,6 +334,8 @@ const FocusStudyDeck = ({
     const cardId = activeCards[currentCardIndex].id;
     if (!cardId) return;
     
+    logger.debug(`Marking card ${cardId} for review at index ${currentCardIndex}/${activeCards.length-1}`);
+    
     // Update review later cards
     const newReviewLaterCards = {
       ...reviewLaterCardsRef.current,
@@ -307,6 +355,7 @@ const FocusStudyDeck = ({
     
     // Check if this was the last card
     if (currentCardIndex === activeCards.length - 1) {
+      logger.debug(`Last card marked for review. Total review cards: ${Object.keys(newReviewLaterCards).length}`);
       checkCompletion();
     } else {
       // Move to next card
@@ -351,22 +400,56 @@ const FocusStudyDeck = ({
 
   // Exit study mode
   const handleExit = () => {
-    // Save current state before exiting
-    triggerProgressUpdate();
-    
+    // Save current state before exiting, preserving the current mode
     if (onExit) {
-      onExit({
-        currentCardIndex,
-        learnedCards: learnedCardsRef.current,
-        reviewLaterCards: reviewLaterCardsRef.current,
-        studyMode
-      });
+      // For review mode, we always want to continue with review mode when coming back
+      // and start from card index 0
+      if (studyMode === 'review') {
+        onExit({
+          currentCardIndex: 0, // Always restart at the beginning when returning to review mode
+          learnedCards: learnedCardsRef.current,
+          reviewLaterCards: reviewLaterCardsRef.current,
+          studyMode: 'review',
+          isExiting: true
+        });
+      } else {
+        // For normal mode, just save the current state
+        onExit({
+          currentCardIndex,
+          learnedCards: learnedCardsRef.current,
+          reviewLaterCards: reviewLaterCardsRef.current,
+          studyMode,
+          isExiting: true
+        });
+      }
     }
   };
   
   // Start review mode
   const handleStartReview = () => {
     if (isTransitioning.current) return;
+    
+    // Check if we have any review cards first
+    if (reviewCards.length === 0) {
+      logger.debug('Attempted to start review mode with no review cards');
+      // Show completion screen instead
+      transitionToMode('completed', 0);
+      return;
+    }
+    
+    logger.debug(`Starting review mode with ${reviewCards.length} cards`);
+    
+    // Before transition, ensure the parent component knows we're starting review mode
+    if (onProgressUpdate) {
+      onProgressUpdate({
+        studyMode: 'review',
+        learnedCards: learnedCardsRef.current,
+        reviewLaterCards: reviewLaterCardsRef.current,
+        currentCardIndex: 0 // Always start review at the beginning
+      });
+    }
+    
+    // Then transition to review mode
     transitionToMode('review', 0);
   };
 
@@ -422,54 +505,81 @@ const FocusStudyDeck = ({
   }
   
   // Review needed screen
-  if (studyMode === 'normal' && reviewCards.length > 0 && 
+  if (studyMode === 'normal' && 
       currentCardIndex >= activeCards.length - 1 && 
       cards.every(card => localLearnedCards[card.id] || localReviewLaterCards[card.id])) {
-    return (
-      <div className={styles.container}>
-        <button
-          onClick={handleExit}
-          className={styles.exitButton}
-          aria-label="Exit study mode"
-        >
-          <CloseIcon />
-        </button>
+    
+    const pendingReviewCount = Object.keys(localReviewLaterCards)
+      .filter(id => !localLearnedCards[id])
+      .length;
+      
+    logger.debug(`Review screen check: Pending review count: ${pendingReviewCount}`);
+    
+    // Only show the review needed screen if there are actually cards to review
+    if (pendingReviewCount > 0) {
+      // Special exit handler for review needed screen that FORCES review mode
+      const handleReviewExit = () => {
+        logger.debug('Exiting from review needed screen - forcing REVIEW mode for next session');
         
-        <div className={`${styles.completionScreen} ${showZoomAnimation ? styles.zoomIn : ''}`}>
-          <div className={styles.completionIcon}>
-            <FormatListBulletedIcon style={{ fontSize: '4rem', color: '#ed8936' }} />
-          </div>
-          <h2 className={styles.completionTitle}>Review Needed</h2>
-          <p className={styles.completionText}>
-            You've marked {reviewCount} {reviewCount === 1 ? 'card' : 'cards'} for review.
-          </p>
-          <div className={styles.completionStats}>
-            <div className={styles.statItem}>
-              <BookmarkIcon style={{ color: '#ed8936' }} />
-              <span>{reviewCount} for review</span>
+        // Force a direct exit to review mode
+        if (onExit) {
+          onExit({
+            currentCardIndex: 0,
+            learnedCards: learnedCardsRef.current,
+            reviewLaterCards: reviewLaterCardsRef.current,
+            studyMode: 'review', // FORCE review mode
+            reviewPending: true,
+            forceReviewMode: true // Add an extra flag just to be sure
+          });
+        }
+      };
+      
+      return (
+        <div className={styles.container}>
+          <button
+            onClick={handleReviewExit}
+            className={styles.exitButton}
+            aria-label="Exit study mode"
+          >
+            <CloseIcon />
+          </button>
+          
+          <div className={`${styles.completionScreen} ${showZoomAnimation ? styles.zoomIn : ''}`}>
+            <div className={styles.completionIcon}>
+              <FormatListBulletedIcon style={{ fontSize: '4rem', color: '#ed8936' }} />
             </div>
-            <div className={styles.statItem}>
-              <CheckCircleIcon style={{ color: '#00ff94' }} />
-              <span>{learnedCount} learned</span>
+            <h2 className={styles.completionTitle}>Review Needed</h2>
+            <p className={styles.completionText}>
+              You've marked {pendingReviewCount} {pendingReviewCount === 1 ? 'card' : 'cards'} for review.
+            </p>
+            <div className={styles.completionStats}>
+              <div className={styles.statItem}>
+                <BookmarkIcon style={{ color: '#ed8936' }} />
+                <span>{pendingReviewCount} for review</span>
+              </div>
+              <div className={styles.statItem}>
+                <CheckCircleIcon style={{ color: '#00ff94' }} />
+                <span>{learnedCount} learned</span>
+              </div>
             </div>
-          </div>
-          <div className={styles.completionButtons}>
-            <button 
-              onClick={handleStartReview}
-              className={styles.reviewButton}
-            >
-              <BookmarkIcon fontSize="small" style={{ marginRight: '4px' }} /> Review Cards
-            </button>
-            <button 
-              onClick={handleExit}
-              className={styles.exitFullButton}
-            >
-              <CloseIcon fontSize="small" style={{ marginRight: '4px' }} /> Exit
-            </button>
+            <div className={styles.completionButtons}>
+              <button 
+                onClick={handleStartReview}
+                className={styles.reviewButton}
+              >
+                <BookmarkIcon fontSize="small" style={{ marginRight: '4px' }} /> Review Cards
+              </button>
+              <button 
+                onClick={handleReviewExit}
+                className={styles.exitFullButton}
+              >
+                <CloseIcon fontSize="small" style={{ marginRight: '4px' }} /> Exit
+              </button>
+            </div>
           </div>
         </div>
-      </div>
-    );
+      );
+    }
   }
   
   // Main study screen
@@ -610,7 +720,8 @@ FocusStudyDeck.propTypes = {
   onExit: PropTypes.func,
   onProgressUpdate: PropTypes.func,
   reviewLaterCards: PropTypes.object,
-  learnedCards: PropTypes.object
+  learnedCards: PropTypes.object,
+  initialStudyMode: PropTypes.string
 };
 
 export default FocusStudyDeck;

@@ -208,7 +208,6 @@ function RecentActivity({ flashcardSets, quizSets }) {
 
 function Dashboard() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [transformedFlashcardSets, setTransformedFlashcardSets] = useState([]);
   const [activityModalOpen, setActivityModalOpen] = useState(false);
   const [selectedActivity, setSelectedActivity] = useState(null);
   const isMobile = useMediaQuery('(max-width:768px)');
@@ -272,24 +271,10 @@ function Dashboard() {
   
   // Transform flashcard data for display when flashcardSets changes
   // Using useMemo to prevent unnecessary recalculations
-  useMemo(() => {
-    if (!flashcardSets || !flashcardSets.length) return;
+  const transformedFlashcardSets = useMemo(() => {
+    if (!flashcardSets || !flashcardSets.length) return [];
     
-    // Debug the original data structure
-    console.log('Original flashcard sets from API:', JSON.stringify(flashcardSets, null, 2));
-    
-    const transformedSets = flashcardSets.map(set => {
-      // Debug study stats data for each set
-      console.log(`Processing set for dashboard: ${set.title}`, { 
-        studyStats: set.studyStats,
-        lastStudied: set.lastStudied,
-        progress: set.progress,
-        correctPercentage: set.correctPercentage,
-        cardCount: set.cardCount,
-        studySessions: set.studySessions,
-        isFavorite: set.isFavorite
-      });
-      
+    return flashcardSets.map(set => {
       return {
         id: set._id,
         title: set.title,
@@ -302,9 +287,7 @@ function Dashboard() {
         isFavorite: set.isFavorite || false
       };
     });
-    
-    setTransformedFlashcardSets(transformedSets);
-  }, [flashcardSets]);
+  }, [flashcardSets, formatLastStudied]);
   
   const handleCreateButtonClick = () => {
     setIsCreateModalOpen(true);
@@ -378,18 +361,6 @@ function Dashboard() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
             {limitedFlashcardSets.map(set => {
-              // Debug what's being passed to FlashcardSetCard
-              console.log(`Rendering FlashcardSetCard for ${set.title}:`, {
-                id: set.id,
-                title: set.title,
-                cards: set.cards,
-                lastStudied: set.lastStudied,
-                progress: set.progress,
-                correctPercentage: set.correctPercentage,
-                totalStudied: set.totalStudied,
-                isFavorite: set.isFavorite
-              });
-              
               return (
                 <FlashcardSetCard 
                   key={set.id}

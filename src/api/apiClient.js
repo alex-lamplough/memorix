@@ -96,6 +96,14 @@ apiClient.interceptors.response.use(
     return response;
   },
   async (error) => {
+    // Special handling for cancellation errors - log as debug instead of error
+    if (error.name === 'CanceledError' || error.name === 'AbortError' || error.message === 'canceled') {
+      logger.debug('API request was cancelled during navigation', {
+        url: error.config?.url
+      });
+      return Promise.reject(error);
+    }
+    
     if (error.response) {
       logger.error(`API Error: ${error.response.status} ${error.config?.method?.toUpperCase()} ${error.config?.url}`, {
         data: error.response.data
@@ -169,6 +177,12 @@ publicApiClient.interceptors.response.use(
     return response;
   },
   (error) => {
+    // Special handling for cancellations - log as debug instead of error
+    if (error.name === 'CanceledError' || error.name === 'AbortError' || error.message === 'canceled') {
+      logger.debug('Public API request was cancelled');
+      return Promise.reject(error);
+    }
+    
     if (error.response) {
       logger.error(`Public API Error: ${error.response.status} ${error.config?.method?.toUpperCase()} ${error.config?.url}`, {
         data: error.response.data
